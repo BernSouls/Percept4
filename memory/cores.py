@@ -1655,7 +1655,12 @@ def evidence_score(
                   / (core edges + query edges)
 
     An edgeless core keeps the vacuous relational reading (multiplier 1.0, no
-    absence) in every setting. Under P.EVIDENCE_ONLY_EDGES only "node" acts.
+    absence) in every setting; so with all three terms the score is symmetric
+    in its two arguments when both sides have edges or neither has, and not
+    when exactly one side is edgeless. Under P.EVIDENCE_ONLY_EDGES only "node"
+    acts: that branch keeps its own relational rule, the other names are
+    accepted and dropped, and the trace's `query_side_terms` lists the terms
+    the score used. An unknown name is an error before any matching is done.
 
     [NULL CALIBRATION] Under P.EVIDENCE_NODE_NULL_CALIBRATED the node term is
     read as evidence above chance, (N - N0) / (1 - N0) clamped to [0, 1]
@@ -1674,6 +1679,21 @@ def evidence_score(
     """
     internal_trace = trace if trace is not None else {}
     null_calibrated = bool(getattr(P, "EVIDENCE_NODE_NULL_CALIBRATED", False))
+    # [D3] Which terms read BOTH sides. Empty (the historical score): every
+    # term is a fraction of the CORE, so nothing asks how much of the QUERY
+    # the core explains and a small core is covered by almost anything.
+    # Balanced form, the one `mcs_similarity` and matching/fuzzy.py already
+    # use: numerator and denominator are each summed over the two sides.
+    # Read (and validated) before any work, so a mistyped name is an error on
+    # every path, the early exits included.
+    qs_terms = _query_side_terms()
+    if getattr(P, "EVIDENCE_ONLY_EDGES", False):
+        # RULE B16 fixes the relational reading of that branch (similarity
+        # over ALL core edges, no absence term): only the node term can read
+        # both sides there. The names that cannot act are dropped HERE, so
+        # the mirror loop is not run for them and the trace reports the terms
+        # the score used.
+        qs_terms = qs_terms & frozenset({"node"})
     q_mass, c_mass, q_nm, c_nm, q_em, c_em, corr = _mcs_accumulate(
         Q, C, q_sigs, c_sigs, trace=internal_trace,
         graded_node_credit=bool(
@@ -1682,13 +1702,6 @@ def evidence_score(
     )
     if c_mass <= 0.0:
         return 0.0, corr
-
-    # [D3] Which terms read BOTH sides. Empty (the historical score): every
-    # term is a fraction of the CORE, so nothing asks how much of the QUERY
-    # the core explains and a small core is covered by almost anything.
-    # Balanced form, the one `mcs_similarity` and matching/fuzzy.py already
-    # use: numerator and denominator are each summed over the two sides.
-    qs_terms = _query_side_terms()
 
     # 1. Node Coverage (Part Matching)
     c_node_total = internal_trace.get("c_node_total", c_nm)
