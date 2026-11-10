@@ -904,6 +904,7 @@ def _mcs_accumulate(
     q_sigs: Dict[int, Tuple[str, TypedSignature]],
     c_sigs: Dict[int, Tuple[str, TypedSignature]],
     trace: Optional[Dict[str, Any]] = None,
+    graded_node_credit: bool = False,
 ) -> Tuple[float, float, float, float, float, float, Dict[int, int]]:
     """[Kc2] Shared correspondence and mass accumulation.
 
@@ -911,6 +912,17 @@ def _mcs_accumulate(
     the Hungarian correspondence, the `GESTALT_LENS_BOOST` node
     weighting, the (optional) K.3 absorption blocks, and the trace
     writes, up to (but not including) the final normalization branch.
+
+    [D1] `graded_node_credit` -- how much MATCHED NODE MASS a pair earns.
+    False (default; `mcs_score`, `mcs_similarity`): the historical binary
+    credit -- any pair the correspondence keeps (similarity merely > 0)
+    earns its full `GESTALT_LENS_BOOST * node_weight`. True
+    (`evidence_score`, under P.EVIDENCE_GRADED_NODE_CREDIT): the pair earns
+    `GESTALT_LENS_BOOST * node_weight * signature_similarity`, the
+    similarity being `TypedSignature.similarity` of the two nodes (the
+    anchor-position factor steers WHO pairs with whom and is deliberately
+    not part of the credit). The correspondence, the totals (`q_mass`,
+    `c_mass`) and the whole edge accumulation are identical in both modes.
 
     Returns:
         q_mass, c_mass,
@@ -1021,6 +1033,18 @@ def _mcs_accumulate(
             for qi, ci in assignment:
                 if weights[qi][ci] > 0.0:
                     node_correspondence[q_ids[qi]] = c_ids[ci]
+
+    # [D1] Signature similarity of every credited pair, keyed by the query
+    # node. Empty in the binary mode: `.get(q_id, 1.0)` below then multiplies
+    # by exactly 1.0, which leaves every float bit-identical to the pre-D1
+    # accumulation (same values, same order).
+    pair_sim: Dict[int, float] = {}
+    if graded_node_credit:
+        for _q_id, _c_id in node_correspondence.items():
+            _iq, _ic = q_sigs.get(_q_id), c_sigs.get(_c_id)
+            _s = (_sig_similarity(_iq[1], _ic[1])
+                  if (_iq is not None and _ic is not None) else 0.0)
+            pair_sim[_q_id] = min(1.0, max(0.0, float(_s)))
 
     q_node_weights = getattr(Q, "node_weights", None) or {}
     # [U32 / Layer 3] Redundancy-aware weights replace the raw 1-per-edge
@@ -1171,14 +1195,20 @@ def _mcs_accumulate(
             _write_trace(q_mass, c_mass, 0.0, 0.0, 0.0, 0.0)
         return (q_mass, c_mass, 0.0, 0.0, 0.0, 0.0, node_correspondence)
 
+    # [D1] `_bin` accumulators keep the BINARY mass alongside the credited
+    # one, for the trace only (they equal the credited mass in binary mode).
+    q_matched_nm_bin = 0.0
+    c_matched_nm_bin = 0.0
     if q_node_weights:
         q_matched_nm = 0.0
         for q_id in node_correspondence.keys():
             info = q_sigs.get(q_id)
             lt = info[0] if info is not None else ""
             boost = GESTALT_LENS_BOOST.get(lt, 1.0)
-            _contrib = boost * float(q_node_weights.get(q_id, 0.0))
+            _full = boost * float(q_node_weights.get(q_id, 0.0))
+            _contrib = _full * pair_sim.get(q_id, 1.0)
             q_matched_nm += _contrib
+            q_matched_nm_bin += _full
             if trace is not None:
                 q_tier_node_matched[lens_tier(lt)] += _contrib
     else:
@@ -1186,27 +1216,33 @@ def _mcs_accumulate(
         for q_id in node_correspondence.keys():
             info = q_sigs.get(q_id)
             lt = info[0] if info is not None else ""
-            _contrib = GESTALT_LENS_BOOST.get(lt, 1.0)
+            _full = GESTALT_LENS_BOOST.get(lt, 1.0)
+            _contrib = _full * pair_sim.get(q_id, 1.0)
             q_matched_nm += _contrib
+            q_matched_nm_bin += _full
             if trace is not None:
                 q_tier_node_matched[lens_tier(lt)] += _contrib
     if c_node_weights:
         c_matched_nm = 0.0
-        for c_id in node_correspondence.values():
+        for q_id, c_id in node_correspondence.items():
             info = c_sigs.get(c_id)
             lt = info[0] if info is not None else ""
             boost = GESTALT_LENS_BOOST.get(lt, 1.0)
-            _contrib = boost * float(c_node_weights.get(c_id, 0.0))
+            _full = boost * float(c_node_weights.get(c_id, 0.0))
+            _contrib = _full * pair_sim.get(q_id, 1.0)
             c_matched_nm += _contrib
+            c_matched_nm_bin += _full
             if trace is not None:
                 c_tier_node_matched[lens_tier(lt)] += _contrib
     else:
         c_matched_nm = 0.0
-        for c_id in node_correspondence.values():
+        for q_id, c_id in node_correspondence.items():
             info = c_sigs.get(c_id)
             lt = info[0] if info is not None else ""
-            _contrib = GESTALT_LENS_BOOST.get(lt, 1.0)
+            _full = GESTALT_LENS_BOOST.get(lt, 1.0)
+            _contrib = _full * pair_sim.get(q_id, 1.0)
             c_matched_nm += _contrib
+            c_matched_nm_bin += _full
             if trace is not None:
                 c_tier_node_matched[lens_tier(lt)] += _contrib
 
@@ -1303,6 +1339,11 @@ def _mcs_accumulate(
         trace["verifiable_core_edges_count"] = len(verifiable_core_edges)
         trace["matched_rel_sim_sum"] = matched_rel_sim_sum
         trace["n_core_edges"] = len(C.edges)
+        # [D1] Which credit rule produced q/c_matched_nm, and the binary
+        # mass of the same correspondence (equal to it in binary mode).
+        trace["node_credit"] = "graded" if graded_node_credit else "binary"
+        trace["q_matched_nm_binary"] = q_matched_nm_bin
+        trace["c_matched_nm_binary"] = c_matched_nm_bin
 
     # [Kc2] The success-path trace write stays here
     if trace is not None:
@@ -1402,10 +1443,19 @@ def evidence_score(
     lambda_absence: Optional[float] = None,
     trace: Optional[Dict[str, Any]] = None,
 ) -> Tuple[float, Dict[int, int]]:
-    """Conjunctive evidence score with unconfounded two-component absence."""
+    """Conjunctive evidence score with unconfounded two-component absence.
+
+    [D1] Node coverage reads GRADED node credit under
+    P.EVIDENCE_GRADED_NODE_CREDIT (default True): a credited pair earns
+    boost * weight * signature_similarity, so two cores that both find a
+    partner for every node no longer tie on the node term -- the one whose
+    partners are more alike scores higher. See `_mcs_accumulate`.
+    """
     internal_trace = trace if trace is not None else {}
     q_mass, c_mass, q_nm, c_nm, q_em, c_em, corr = _mcs_accumulate(
-        Q, C, q_sigs, c_sigs, trace=internal_trace
+        Q, C, q_sigs, c_sigs, trace=internal_trace,
+        graded_node_credit=bool(
+            getattr(P, "EVIDENCE_GRADED_NODE_CREDIT", True)),
     )
     if c_mass <= 0.0:
         return 0.0, corr
@@ -1497,6 +1547,12 @@ def evidence_score(
 
     if trace is not None:
         trace["node_coverage"] = node_coverage
+        # [D1] The binary coverage of the same correspondence (== the
+        # node_coverage above when graded credit is off).
+        _c_nm_bin = internal_trace.get("c_matched_nm_binary", c_nm)
+        trace["node_coverage_binary"] = (
+            (_c_nm_bin / (c_node_total + P.EPSILON))
+            if c_node_total > 0 else 0.0)
         trace["relational_consistency"] = relational_consistency
         trace["relational_multiplier"] = relational_multiplier
         trace["edge_absence"] = edge_absence

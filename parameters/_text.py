@@ -1931,6 +1931,14 @@ MATCH_SEARCH_MAX_OPS = 200000
 # callers that pass `edge_types` (the live matcher, memory/cores.py) are
 # affected.
 EDGE_UNPARAMETERISED_STRUCTURAL_MATCH: bool = True
+# [D1] evidence_score: a credited node pair earns
+#     GESTALT_LENS_BOOST * node_weight * signature_similarity
+# instead of the full GESTALT_LENS_BOOST * node_weight for any pair whose
+# similarity is merely positive. False = the historical binary credit.
+# Scope: evidence_score only. mcs_score / mcs_similarity keep binary mass:
+# they feed containment and fusion gates (THETA_FUSE, mcs_contained, _classify)
+# whose thresholds are calibrated on it.
+EVIDENCE_GRADED_NODE_CREDIT: bool = True
 
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK
