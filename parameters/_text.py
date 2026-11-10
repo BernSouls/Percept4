@@ -1961,6 +1961,19 @@ EVIDENCE_QUERY_SIDE_TERMS: Tuple[str, ...] = ()
 # mean counted every unmeasured shared axis as a perfect agreement.
 # False = those floors.
 EDGE_UNMEASURED_IS_NOT_EVIDENCE: bool = True
+# [NULL CALIBRATION] evidence_score: node coverage is read as evidence ABOVE
+# CHANCE, with the null and the map of matching/calibration.py:
+#     node term = clamp((N - N0) / (1 - N0), 0, 1), and 0 when N0 >= 1
+# N0 is the coverage a RANDOM PAIRING inside each lens type would earn under
+# the live credit rule: a pair's expected credit is the mean of that lens
+# type's candidate similarity matrix (NullModel.from_matrix), weighted by the
+# same boost x node-weight masses as N, over the side(s) N reads.
+# MATCH_NULL_CALIBRATED (above) only removes the 0.85 conjunction floor; this
+# is the node-coverage calibration its comment describes.
+# CHANGES THE ABSOLUTE SCALE of the score (every threshold calibrated on the
+# uncalibrated score must be re-read), and a graph whose nodes are
+# interchangeable inside every lens type scores 0 against itself.
+EVIDENCE_NODE_NULL_CALIBRATED: bool = False
 
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK

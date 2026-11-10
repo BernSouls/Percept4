@@ -905,6 +905,7 @@ def _mcs_accumulate(
     c_sigs: Dict[int, Tuple[str, TypedSignature]],
     trace: Optional[Dict[str, Any]] = None,
     graded_node_credit: bool = False,
+    node_chance: bool = False,
 ) -> Tuple[float, float, float, float, float, float, Dict[int, int]]:
     """[Kc2] Shared correspondence and mass accumulation.
 
@@ -923,6 +924,15 @@ def _mcs_accumulate(
     anchor-position factor steers WHO pairs with whom and is deliberately
     not part of the credit). The correspondence, the totals (`q_mass`,
     `c_mass`) and the whole edge accumulation are identical in both modes.
+
+    [NULL CALIBRATION] `node_chance` (needs `trace`) -- also accumulate the
+    matched node mass a RANDOM PAIRING would earn under the same credit
+    rule, into trace["q_chance_nm"] / trace["c_chance_nm"]. Inside a lens
+    type a given pair belongs to a uniformly random maximum pairing with
+    probability 1 / max(|Q_l|, |C_l|), so a node's expected credit is the
+    sum of the credit over its candidates divided by that maximum (the mean
+    of the candidate matrix, matching/calibration.py NullModel.from_matrix).
+    Nothing the function returns changes.
 
     Returns:
         q_mass, c_mass,
@@ -980,8 +990,26 @@ def _mcs_accumulate(
             trace["c_size"] = c_size
             trace["correspondence"] = {}
         return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, {})
+    # [NULL CALIBRATION] expected credit of each node under a random pairing
+    _want_chance = bool(node_chance) and trace is not None
+    q_chance: Dict[int, float] = {}
+    c_chance: Dict[int, float] = {}
     if getattr(P, "MATCH_GLOBAL_CONSISTENCY_ENABLED", False):
         node_correspondence = _global_correspondence(Q, C, q_sigs, c_sigs)
+        if _want_chance:
+            # The global alignment keeps its matrix to itself; the null is
+            # the same per-lens-type random pairing, from the same signature
+            # similarities.
+            for lt in common_types:
+                q_ids = q_by_type[lt]
+                c_ids = c_by_type[lt]
+                if not q_ids or not c_ids:
+                    continue
+                _chance_credit(
+                    q_ids, c_ids,
+                    [[_sig_similarity(q_sigs[q][1], c_sigs[c][1])
+                      for c in c_ids] for q in q_ids],
+                    graded_node_credit, q_chance, c_chance)
     else:
         _q_anchor = getattr(Q, "anchor_of_node", None) or {}
         _c_anchor = getattr(C, "anchor_of_node", None) or {}
@@ -1024,11 +1052,27 @@ def _mcs_accumulate(
             c_ids = c_by_type[lt]
             if not q_ids or not c_ids:
                 continue
-            weights = [
-                [_sig_similarity(q_sigs[q][1], c_sigs[c][1]) *
-                 _anchor_similarity(q, c) for c in c_ids]
-                for q in q_ids
-            ]
+            if _want_chance:
+                # [NULL CALIBRATION] The same matrix, with the signature
+                # factor kept: `weights` holds the identical products.
+                _sims = [
+                    [_sig_similarity(q_sigs[q][1], c_sigs[c][1])
+                     for c in c_ids]
+                    for q in q_ids
+                ]
+                weights = [
+                    [_sims[_i][_j] * _anchor_similarity(q, c)
+                     for _j, c in enumerate(c_ids)]
+                    for _i, q in enumerate(q_ids)
+                ]
+                _chance_credit(q_ids, c_ids, _sims, graded_node_credit,
+                               q_chance, c_chance)
+            else:
+                weights = [
+                    [_sig_similarity(q_sigs[q][1], c_sigs[c][1]) *
+                     _anchor_similarity(q, c) for c in c_ids]
+                    for q in q_ids
+                ]
             assignment = _max_weight_match(weights)
             for qi, ci in assignment:
                 if weights[qi][ci] > 0.0:
@@ -1344,6 +1388,25 @@ def _mcs_accumulate(
         trace["node_credit"] = "graded" if graded_node_credit else "binary"
         trace["q_matched_nm_binary"] = q_matched_nm_bin
         trace["c_matched_nm_binary"] = c_matched_nm_bin
+        if _want_chance:
+            # [NULL CALIBRATION] The mass a random pairing would earn: the
+            # masses of the matched-mass loops above (boost x node weight,
+            # or boost alone when the side carries no weights), times each
+            # node's expected credit.
+            def _chance_mass(chance, sigs, node_weights):
+                terms = []
+                for _nid in sorted(chance):
+                    _info = sigs.get(_nid)
+                    _lt = _info[0] if _info is not None else ""
+                    _m = GESTALT_LENS_BOOST.get(_lt, 1.0)
+                    if node_weights:
+                        _m *= float(node_weights.get(_nid, 0.0))
+                    terms.append(_m * chance[_nid])
+                return math.fsum(terms)
+            trace["q_chance_nm"] = _chance_mass(q_chance, q_sigs,
+                                                q_node_weights)
+            trace["c_chance_nm"] = _chance_mass(c_chance, c_sigs,
+                                                c_node_weights)
 
     # [Kc2] The success-path trace write stays here
     if trace is not None:
@@ -1356,6 +1419,43 @@ def _mcs_accumulate(
         q_matched_em, c_matched_em,
         node_correspondence,
     )
+
+def _chance_credit(
+    q_ids: Sequence[int],
+    c_ids: Sequence[int],
+    sims: Sequence[Sequence[float]],
+    graded: bool,
+    q_chance: Dict[int, float],
+    c_chance: Dict[int, float],
+) -> None:
+    """[NULL CALIBRATION] Expected node credit under a RANDOM PAIRING of one
+    lens type's query nodes with its core nodes.
+
+    `sims[i][j]` is the signature similarity of q_ids[i] and c_ids[j]. The
+    credit of a pair is what the live rule gives it once paired: the
+    similarity clipped to [0, 1] (graded), or 1.0 when it is positive
+    (binary). A uniformly random maximum pairing of the two sets contains a
+    given pair with probability 1 / max(|Q|, |C|); the expected credit of a
+    node is therefore the sum of the credit over its candidates divided by
+    that maximum -- the mean of the candidate matrix, scaled by the share of
+    the side a pairing can cover. Writes into `q_chance` / `c_chance`.
+    """
+    n_q, n_c = len(q_ids), len(c_ids)
+    if n_q == 0 or n_c == 0:
+        return
+    denom = float(max(n_q, n_c))
+    col = [0.0] * n_c
+    for i, row in enumerate(sims):
+        r = 0.0
+        for j, s in enumerate(row):
+            g = (min(1.0, max(0.0, float(s))) if graded
+                 else (1.0 if s > 0.0 else 0.0))
+            r += g
+            col[j] += g
+        q_chance[q_ids[i]] = r / denom
+    for j, c_id in enumerate(c_ids):
+        c_chance[c_id] = col[j] / denom
+
 
 def _edge_side_evidence(
     A: Subgraph,
@@ -1556,12 +1656,20 @@ def evidence_score(
 
     An edgeless core keeps the vacuous relational reading (multiplier 1.0, no
     absence) in every setting. Under P.EVIDENCE_ONLY_EDGES only "node" acts.
+
+    [NULL CALIBRATION] Under P.EVIDENCE_NODE_NULL_CALIBRATED the node term is
+    read as evidence above chance, (N - N0) / (1 - N0) clamped to [0, 1]
+    (matching/calibration.py), N0 being the coverage a random pairing inside
+    each lens type would earn under the same credit rule over the same
+    side(s). A coverage any pairing would reach is then worth 0.
     """
     internal_trace = trace if trace is not None else {}
+    null_calibrated = bool(getattr(P, "EVIDENCE_NODE_NULL_CALIBRATED", False))
     q_mass, c_mass, q_nm, c_nm, q_em, c_em, corr = _mcs_accumulate(
         Q, C, q_sigs, c_sigs, trace=internal_trace,
         graded_node_credit=bool(
             getattr(P, "EVIDENCE_GRADED_NODE_CREDIT", True)),
+        node_chance=null_calibrated,
     )
     if c_mass <= 0.0:
         return 0.0, corr
@@ -1585,6 +1693,28 @@ def evidence_score(
         node_coverage = ((q_nm + c_nm) / (_nt + P.EPSILON)) if _nt > 0 else 0.0
     else:
         node_coverage = core_node_coverage
+
+    # [NULL CALIBRATION] Node coverage as evidence ABOVE CHANCE. N0 is the
+    # coverage a random pairing inside each lens type would earn under the
+    # same credit rule, over the same side(s) and with the same masses as
+    # the coverage itself; the map is matching/calibration.py's
+    # (observed - chance) / (1 - chance), clamped, 0 when chance >= 1.
+    node_coverage_raw = node_coverage
+    node_coverage_chance = 0.0
+    if null_calibrated:
+        from matching.calibration import calibrate_fraction
+        _q_ch = float(internal_trace.get("q_chance_nm", 0.0))
+        _c_ch = float(internal_trace.get("c_chance_nm", 0.0))
+        if "node" in qs_terms:
+            _nt = q_node_total + c_node_total
+            node_coverage_chance = (
+                ((_q_ch + _c_ch) / (_nt + P.EPSILON)) if _nt > 0 else 0.0)
+        else:
+            node_coverage_chance = (
+                (_c_ch / (c_node_total + P.EPSILON))
+                if c_node_total > 0 else 0.0)
+        node_coverage = calibrate_fraction(node_coverage_raw,
+                                           node_coverage_chance)
 
     # 2. Relational Consistency
     n_core_edges = internal_trace.get("n_core_edges", len(C.edges))
@@ -1707,6 +1837,12 @@ def evidence_score(
         trace["query_side_terms"] = tuple(sorted(qs_terms))
         trace["core_node_coverage"] = core_node_coverage
         trace["query_node_coverage"] = query_node_coverage
+        # [NULL CALIBRATION] `node_coverage` is what the score used; the
+        # uncalibrated value and the chance level are traced next to it.
+        trace["node_null_calibrated"] = null_calibrated
+        trace["node_coverage_raw"] = node_coverage_raw
+        if null_calibrated:
+            trace["node_coverage_chance"] = node_coverage_chance
         if _edge_terms:
             trace["n_query_edges"] = n_query_edges
             trace["q_verifiable_edges_count"] = q_verifiable
