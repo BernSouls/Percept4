@@ -24,4 +24,6 @@ def test_declared_defaults(declared_defaults):
         "EVIDENCE_NODE_NULL_CALIBRATED": False,
         # mixture reversal -- on: the library's own contract (flipped_copy)
         "EDGE_REVERSE_FLIPS_MIXTURE": True,
+        # exact assignment -- on: the contract of the function's name
+        "MATCH_ASSIGNMENT_EXACT": True,
     }

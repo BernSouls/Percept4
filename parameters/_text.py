@@ -1989,6 +1989,18 @@ EVIDENCE_NODE_NULL_CALIBRATED: bool = False
 # graphs -- re-read THETA_FUSE / mcs_contained / _classify under either
 # value before relying on it.
 EDGE_REVERSE_FLIPS_MIXTURE: bool = True
+# [EXACT ASSIGNMENT] matching/structural_similarity.py
+# _max_weight_bipartite_matching (the node correspondence of mcs_score,
+# mcs_similarity and evidence_score; also the consolidator, the structural
+# similarity and the seed of the global alignment): solve the maximum-weight
+# assignment EXACTLY (scipy.optimize.linear_sum_assignment) instead of the
+# per-row top-8 sparse greedy + 2-opt. The approximation left a node
+# unmatched while a partner with a positive weight was still free, returned
+# a different correspondence for (Q, C) than for (C, Q), and did not reach
+# the maximum weight. False = the historical approximation. The weights are
+# untouched; only WHO is paired changes -- every gate calibrated on scores
+# of the approximate correspondence must be re-read under either value.
+MATCH_ASSIGNMENT_EXACT: bool = True
 
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK
