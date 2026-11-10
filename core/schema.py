@@ -1834,8 +1834,29 @@ def polymorphic_edge_similarity(
         # EdgeTypes are topology-only and never receive params, so this is
         # the common case rather than an edge case. Missing the edge-type
         # pair (default) keeps the old strict-0.0 behaviour.
-        if edge_types is not None and edge_types[0] == edge_types[1]:
-            return 0.0
+        #
+        # [F6 / PHASE 1] The branch below used to `return 0.0` as well, so
+        # the fix described above was inert: a topology-only core edge could
+        # never be matched, whatever the query held. It now returns 1.0 when
+        #   * the caller supplied the predicate pair and the two are EQUAL, and
+        #   * BOTH sides carry no params (the "carry no EdgeParams" case).
+        # A pair with params on ONE side only stays 0.0: a missing
+        # measurement must not read as a perfect one, and it keeps
+        # EdgeParams.similarity(None) == 0.0 true from either direction.
+        # The result is a structural (topological) match with zero measured
+        # axes -- edge_measured_axes(None, None) == 0 -- so it earns no
+        # coverage facilitation in the matcher's edge mass.
+        # P.EDGE_UNPARAMETERISED_STRUCTURAL_MATCH = False restores the
+        # historical strict 0.0.
+        if (
+            ep1 is None
+            and ep2 is None
+            and edge_types is not None
+            and edge_types[0] is not None
+            and edge_types[0] == edge_types[1]
+            and getattr(P, "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH", True)
+        ):
+            return 1.0
         return 0.0
 
     # 1. Same schema: full multi-slot Gaussian fidelity

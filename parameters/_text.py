@@ -1915,6 +1915,23 @@ MATCH_MIN_CONSENSUS_SUPPORT = 0.5
 MATCH_SEARCH_MAX_EXPANSIONS = 4096
 MATCH_SEARCH_MAX_OPS = 200000
 
+# -----------------------------------------------------------------------------
+# GAP-CLOSURE matcher evidence switches (handoff 2026-11; see
+# diagnostics/REPORT.md). Each one is a general matcher behaviour -- none
+# names or reads a benchmark. They exist so every change can be A/B-measured
+# in one tree and so a reddened pin is answered by one line, not a file revert.
+# -----------------------------------------------------------------------------
+# [F6 / PHASE 1] polymorphic_edge_similarity: two corresponding edges of the
+# SAME relational predicate that BOTH carry no EdgeParams (topology-only edge
+# types, e.g. TOPOLOGY / DEGREE) are a structural match and read 1.0. The
+# function's own BLACK-HOLE comment asked for this; the code returned 0.0 on
+# both branches, so a topology-only core edge could never be matched. False =
+# the historical strict 0.0. A pair with params on ONE side only stays 0.0
+# under either setting (a missing measurement is not a perfect one). Only
+# callers that pass `edge_types` (the live matcher, memory/cores.py) are
+# affected.
+EDGE_UNPARAMETERISED_STRUCTURAL_MATCH: bool = True
+
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK
 # =============================================================================
