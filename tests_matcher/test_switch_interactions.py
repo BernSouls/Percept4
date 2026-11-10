@@ -1,0 +1,475 @@
+"""PIN -- the gap-closure switches IN COMBINATION.
+
+Every switch has its own pin file, and every pin there is written against one
+setting of the OTHER switches (``conftest.PIN_BASELINE``).  Run without that
+baseline under another setting, those pins fail wherever their expected value
+is the value of the form the setting replaces (triage:
+``diagnostics/phase2_pin_triage.py``; classification in REPORT.md).  A pin
+that states the old form is not wrong, but it leaves the new form unpinned.
+This file pins it:
+
+  1. THE DEFINITION, EVERYWHERE.  The node term -- matched masses, form,
+     chance level, calibration, binary twin -- equals ``_oracle.node_term``
+     (written from the definitions; the chance level by exhaustive
+     enumeration of every maximum pairing) under all 12 combinations of
+     graded/binary credit x one-sided/balanced x calibrated or not, on the
+     scenarios of the single-switch pins and on random graphs with several
+     lens types, node weights and PARTIAL node weights.
+  2. THE VALUES BY HAND, for the scenarios whose single-switch pins fail
+     without the baseline: what each one reads under the other setting,
+     written out as arithmetic.
+  3. Two boundaries of the balanced score that follow from pre-registered
+     details and are easy to misread: one edgeless side (the one exception to
+     its symmetry) and F6 off (a graph with parameter-less edges does not
+     score 1.0 against itself).
+
+Every test sets every switch it depends on; none relies on the baseline.
+"""
+from __future__ import annotations
+
+import random
+
+import pytest
+
+from core.schema import EdgeParams
+from core.types import EdgeType, TypedSignature
+from matching.calibration import calibrate_fraction
+from matching.structural_similarity import GESTALT_LENS_BOOST
+from memory.cores import _edge_side_evidence, evidence_score
+
+import _oracle
+from _graphs import graph, tex
+
+T, CO = EdgeType.TOPOLOGY, EdgeType.CO_LOCATED
+ALL = ("node", "relation", "absence")
+B = GESTALT_LENS_BOOST["Contour"]
+
+
+def _ev(Q, C):
+    trace: dict = {}
+    score, corr = evidence_score(Q[0], C[0], Q[1], C[1], trace=trace)
+    return score, corr, trace
+
+
+def _g(bins, lens="Texture", base=0, **kw):
+    """One node per entry of ``bins``; node k carries tex(b, b)."""
+    return graph({base + k: (lens, tex(b, b)) for k, b in enumerate(bins)},
+                 **kw)
+
+
+def _sim(a, b):
+    return tex(a, a).similarity(tex(b, b))
+
+
+def _matrix_sum(qb, cb):
+    return sum(_sim(a, b) for a in qb for b in cb)
+
+
+POL = TypedSignature(kind="CANONICAL", class_="POLARITY", quantized=(1.0,))
+
+# -- the scenarios of the single-switch pins ------------------------------
+QUERY = graph({1: ("Texture", tex(1, 1)), 2: ("Texture", tex(4, 4)),
+               3: ("Texture", tex(8, 8))})
+NEAR = graph({11: ("Texture", tex(1, 2)), 12: ("Texture", tex(4, 5)),
+              13: ("Texture", tex(8, 9))})
+FAR = graph({21: ("Texture", tex(2, 3)), 22: ("Texture", tex(5, 6)),
+             23: ("Texture", tex(9, 6))})
+WB_Q = graph({1: ("Texture", tex(1, 1)), 2: ("Contour", tex(4, 4))})
+WB_C = graph({11: ("Texture", tex(1, 3)), 12: ("Contour", tex(4, 5))},
+             node_weights={11: 0.25, 12: 2.0})
+UNM_Q = graph({1: ("Texture", tex(1, 1))})
+UNM_C = graph({11: ("Texture", tex(1, 1)), 12: ("Polarity", POL)})
+FRAG_Q = graph({k: ("Texture", tex(k, k)) for k in range(6)})
+FRAG_C = graph({100 + k: ("Texture", tex(k, k)) for k in range(3)})
+WHOLE_C = graph({200 + k: ("Texture", tex(k, k)) for k in range(6)})
+GRD_Q = graph({1: ("Texture", tex(1, 1)), 2: ("Texture", tex(5, 5))})
+GRD_C = graph({11: ("Texture", tex(1, 2)), 12: ("Texture", tex(5, 6)),
+               13: ("Texture", tex(9, 9))})
+BOOST_Q = graph({0: ("Texture", tex(1, 1)), 1: ("Texture", tex(6, 6)),
+                 2: ("Contour", tex(3, 3)), 3: ("Contour", tex(9, 9))})
+BOOST_C = graph({100: ("Texture", tex(2, 2)), 101: ("Texture", tex(7, 7)),
+                 102: ("Contour", tex(4, 4))})
+WQ, WC = {0: 1.0, 1: 3.0}, {100: 2.0, 101: 0.5}
+
+SCENARIOS = {
+    "d1 near": (QUERY, NEAR),
+    "d1 far": (QUERY, FAR),
+    "d1 identical": (QUERY, QUERY),
+    "d1 weights and boost": (WB_Q, WB_C),
+    "d1 unmatched core node": (UNM_Q, UNM_C),
+    "d3 fragment": (FRAG_Q, FRAG_C),
+    "d3 whole": (FRAG_Q, WHOLE_C),
+    "d3 graded": (GRD_Q, GRD_C),
+    "null 2x3": (_g((1, 6)), _g((2, 7, 12), base=100)),
+    "null 3x2": (_g((1, 6, 12)), _g((2, 7), base=100)),
+    "null boost": (BOOST_Q, BOOST_C),
+    "null weights": (_g((1, 6), node_weights=WQ),
+                     _g((2, 7), base=100, node_weights=WC)),
+    "null interchangeable": (_g((1, 1, 1)), _g((2, 2, 2), base=100)),
+    "null specific": (_g((1, 6, 12)), _g((1, 6, 12), base=100)),
+    "null homogeneous self": (_g((4, 4, 4)), _g((4, 4, 4))),
+    "null 4x3": (_g((1, 6, 12, 3)), _g((2, 7, 11), base=100)),
+    # a weights dict that leaves nodes out: the live convention gives a node
+    # missing from a non-empty dict the weight 0.0
+    "partial weights": (_g((1, 6, 11), node_weights={0: 1.0, 2: 3.0}),
+                        _g((2, 7), base=100, node_weights={101: 0.5})),
+}
+
+
+def _random_scenarios():
+    rng = random.Random(20261110)
+    for i in range(30):
+        def one(base):
+            return graph({base + k: ("Texture", tex(rng.randrange(10),
+                                                    rng.randrange(10)))
+                          for k in range(rng.randrange(1, 7))})
+        yield "random %02d" % i, (one(0), one(100))
+    rng = random.Random(7)
+    lenses = ("Texture", "Contour", "Junction")
+    for i in range(30):
+        def mixed(base):
+            nodes = {base + k: (rng.choice(lenses),
+                                tex(rng.randrange(10), rng.randrange(10)))
+                     for k in range(rng.randrange(1, 8))}
+            r, w = rng.random(), None
+            if r < 0.4:
+                w = {k: rng.choice((0.25, 0.5, 1.0, 2.0)) for k in nodes}
+            elif r < 0.6:
+                w = {k: rng.choice((0.5, 1.0, 3.0)) for k in nodes
+                     if rng.random() < 0.6} or None
+            return graph(nodes, node_weights=w)
+        yield "mixed %02d" % i, (mixed(0), mixed(100))
+
+
+SCENARIOS.update(_random_scenarios())
+
+#: random scenarios whose two graphs share no lens type
+N_DISJOINT = 2
+
+NODE_KEYS = ("node_coverage", "node_coverage_raw", "node_coverage_binary",
+             "core_node_coverage", "query_node_coverage",
+             "node_coverage_chance", "q_chance_nm", "c_chance_nm")
+
+
+# ===================================================== 1. the definition
+
+@pytest.mark.parametrize("calibrated", [False, True])
+@pytest.mark.parametrize("terms", [(), ("node",), ALL])
+@pytest.mark.parametrize("graded", [True, False])
+def test_node_term_is_its_definition_under_every_setting(
+        params, graded, terms, calibrated):
+    params(EVIDENCE_GRADED_NODE_CREDIT=graded,
+           EVIDENCE_QUERY_SIDE_TERMS=terms,
+           EVIDENCE_NODE_NULL_CALIBRATED=calibrated)
+    assert len(SCENARIOS) == 77
+    n_disjoint = 0
+    for name, (Q, C) in SCENARIOS.items():
+        score, corr, tr = _ev(Q, C)
+        if not ({lt for lt, _s in Q[1].values()}
+                & {lt for lt, _s in C[1].values()}):
+            # no lens type in common: the historical early exit.  The score
+            # is 0.0, nothing is paired, and the trace carries NO evidence
+            # key -- a reader of trace["node_coverage"] must allow for it.
+            assert score == 0.0 and corr == {}, name
+            assert "node_coverage" not in tr, name
+            n_disjoint += 1
+            continue
+        want = _oracle.node_term(Q, C, corr, graded, "node" in terms,
+                                 calibrated)
+        for key in NODE_KEYS:
+            if key in want:
+                assert tr[key] == pytest.approx(want[key], abs=1e-9), (
+                    name, key)
+            else:                       # the chance keys, calibration off
+                assert key not in tr, (name, key)
+        # calibrated <= raw <= its binary twin <= 1, whatever the setting
+        assert tr["node_coverage"] <= tr["node_coverage_raw"] + 1e-12, name
+        assert tr["node_coverage_raw"] <= tr["node_coverage_binary"] + 1e-12, \
+            name
+        assert tr["node_coverage_binary"] <= 1.0, name
+    assert n_disjoint == N_DISJOINT
+
+
+# ======================================== 2. the values, written by hand
+
+def test_d1_scenarios_under_the_balanced_node_term(params):
+    """What test_d1_graded_node_credit's scenarios read with the node term
+    two-sided (its own assertions state the one-sided value)."""
+    params(EVIDENCE_GRADED_NODE_CREDIT=True, EVIDENCE_QUERY_SIDE_TERMS=("node",),
+           EVIDENCE_NODE_NULL_CALIBRATED=False)
+    # node weights on the core only: the query's masses are its boosts
+    _s, corr, tr = _ev(WB_Q, WB_C)
+    assert corr == {1: 11, 2: 12}
+    s1 = tex(1, 1).similarity(tex(1, 3))
+    s2 = tex(4, 4).similarity(tex(4, 5))
+    core = 0.25 * s1 + B * 2.0 * s2
+    query = 1.0 * s1 + B * 1.0 * s2
+    assert tr["node_coverage"] == pytest.approx(
+        (query + core) / ((1.0 + B) + (0.25 + B * 2.0)), abs=1e-9)
+    assert tr["core_node_coverage"] == pytest.approx(
+        core / (0.25 + B * 2.0), abs=1e-9)        # what the D1 pin states
+    # a core node with no partner: one of two core nodes, the only query node
+    for graded in (True, False):
+        params(EVIDENCE_GRADED_NODE_CREDIT=graded)
+        _s, corr, tr = _ev(UNM_Q, UNM_C)
+        assert corr == {1: 11}
+        assert tr["node_coverage"] == pytest.approx((1 + 1) / (1 + 2),
+                                                    abs=1e-6)
+        assert tr["core_node_coverage"] == pytest.approx(0.5, abs=1e-6)
+        assert tr["query_node_coverage"] == pytest.approx(1.0, abs=1e-6)
+    # equal sizes, no weights: the two forms coincide
+    params(EVIDENCE_GRADED_NODE_CREDIT=True)
+    for core_g in (NEAR, FAR):
+        _s, corr, tr = _ev(QUERY, core_g)
+        sims = [QUERY[1][q][1].similarity(core_g[1][c][1])
+                for q, c in corr.items()]
+        assert tr["node_coverage"] == pytest.approx(sum(sims) / 3, abs=1e-9)
+        assert tr["node_coverage"] == pytest.approx(tr["core_node_coverage"],
+                                                    abs=1e-9)
+
+
+def test_d1_scenarios_under_the_null(params):
+    """What the D1 scenarios read with the node term calibrated."""
+    params(EVIDENCE_GRADED_NODE_CREDIT=True, EVIDENCE_QUERY_SIDE_TERMS=(),
+           EVIDENCE_NODE_NULL_CALIBRATED=True)
+    for core_g, bins in ((NEAR, ((1, 2), (4, 5), (8, 9))),
+                         (FAR, ((2, 3), (5, 6), (9, 6)))):
+        _s, corr, tr = _ev(QUERY, core_g)
+        assert len(corr) == 3
+        n = sum(QUERY[1][q][1].similarity(core_g[1][c][1])
+                for q, c in corr.items()) / 3
+        # the chance level is the mean of the 3 x 3 candidate matrix
+        n0 = sum(tex(a, a).similarity(tex(*b))
+                 for a in (1, 4, 8) for b in bins) / 9
+        assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+        assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+        assert tr["node_coverage"] == pytest.approx((n - n0) / (1 - n0),
+                                                    abs=1e-9)
+        assert 0.0 < tr["node_coverage"] < n
+    # ONE candidate per lens type: the only pairing is the random pairing,
+    # so what it earns is chance and the calibrated term is 0
+    for Q, C in ((WB_Q, WB_C), (UNM_Q, UNM_C)):
+        score, _c, tr = _ev(Q, C)
+        assert tr["node_coverage_chance"] == pytest.approx(
+            tr["node_coverage_raw"], abs=1e-12)
+        assert tr["node_coverage"] == pytest.approx(0.0, abs=1e-9)
+        assert score == pytest.approx(0.0, abs=1e-9)
+    # the uncalibrated one-sided coverage stays in the trace
+    _s, _c, tr = _ev(UNM_Q, UNM_C)
+    assert tr["core_node_coverage"] == pytest.approx(0.5, abs=1e-6)
+    # binary credit: a count is what a random pairing earns
+    params(EVIDENCE_GRADED_NODE_CREDIT=False)
+    for core_g in (NEAR, FAR):
+        score, _c, tr = _ev(QUERY, core_g)
+        assert tr["node_coverage_raw"] == pytest.approx(1.0, abs=1e-6)
+        assert tr["node_coverage_chance"] == pytest.approx(1.0, abs=1e-6)
+        assert tr["node_coverage"] == 0.0 and score == 0.0
+
+
+def test_d3_scenarios_under_the_null(params):
+    """What test_d3_query_side_terms's scenarios read calibrated."""
+    six, three = tuple(range(6)), tuple(range(3))
+    total = _matrix_sum(six, three)               # the 6 x 3 candidate matrix
+    # empty setting: the one-sided identity holds for the UNCALIBRATED term
+    params(EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True,
+           EVIDENCE_GRADED_NODE_CREDIT=True, EVIDENCE_QUERY_SIDE_TERMS=(),
+           EVIDENCE_NODE_NULL_CALIBRATED=True)
+    q = graph(dict(FRAG_Q[1]), [(0, 1, T), (1, 2, T), (4, 5, T)])
+    c = graph(dict(FRAG_C[1]), [(100, 101, T)])
+    score, corr, tr = _ev(q, c)
+    assert corr == {0: 100, 1: 101, 2: 102}
+    assert tr["node_coverage_raw"] == tr["core_node_coverage"]
+    n0 = (total / 6.0) / 3.0          # column sums / max(6, 3), over 3 nodes
+    assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+    assert 0.5 < n0 < 0.8
+    assert tr["node_coverage"] == pytest.approx(
+        calibrate_fraction(tr["node_coverage_raw"], n0), abs=1e-12)
+    assert score == pytest.approx(
+        tr["node_coverage"] * tr["relational_consistency"]
+        - 0.15 * tr["edge_absence"], abs=1e-12)
+    assert score == pytest.approx(1.0, abs=1e-6)  # a specific full cover
+    # the fragment under the balanced node term: N = 6/9, both chance masses
+    # are total / 6, over 6 + 3 nodes
+    params(EVIDENCE_QUERY_SIDE_TERMS=("node",))
+    s_frag, _c, tr = _ev(FRAG_Q, FRAG_C)
+    n, n0 = (3 + 3) / (6 + 3), (total / 6.0 + total / 6.0) / (6 + 3)
+    assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-6)
+    assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+    assert s_frag == pytest.approx((n - n0) / (1 - n0), abs=1e-6)
+    s_whole = _ev(FRAG_Q, WHOLE_C)[0]
+    assert s_whole == pytest.approx(1.0, abs=1e-6)
+    assert s_whole > s_frag + 0.3             # the preference for the whole
+    # graded credit, 2 query nodes against 3 core nodes
+    _s, corr, tr = _ev(GRD_Q, GRD_C)
+    assert corr == {1: 11, 2: 12}
+    sims = [tex(1, 1).similarity(tex(1, 2)), tex(5, 5).similarity(tex(5, 6))]
+    tot = sum(tex(a, a).similarity(tex(*b))
+              for a in (1, 5) for b in ((1, 2), (5, 6), (9, 9)))
+    n, n0 = 2 * sum(sims) / (2 + 3), (tot / 3.0 + tot / 3.0) / (2 + 3)
+    assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+    assert tr["node_coverage"] == pytest.approx((n - n0) / (1 - n0), abs=1e-9)
+
+
+def test_null_scenarios_under_the_balanced_node_term(params):
+    """What test_nullcal_node_coverage's chance scenarios read two-sided."""
+    params(EVIDENCE_GRADED_NODE_CREDIT=True, EVIDENCE_QUERY_SIDE_TERMS=("node",),
+           EVIDENCE_NODE_NULL_CALIBRATED=True)
+    # 2 against 3: both chance masses are total / 3, over 2 + 3 nodes
+    qb, cb = (1, 6), (2, 7, 12)
+    _s, corr, tr = _ev(_g(qb), _g(cb, base=100))
+    assert corr == {0: 100, 1: 101}
+    total = _matrix_sum(qb, cb)
+    n0 = (total / 3.0 + total / 3.0) / (2 + 3)
+    n = 2.0 * (_sim(1, 2) + _sim(6, 7)) / (2 + 3)
+    assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+    assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+    assert tr["node_coverage"] == pytest.approx(calibrate_fraction(n, n0),
+                                                abs=1e-9)
+    # lens boosts: the two sides hold the same chance mass, over both totals
+    _s, corr, tr = _ev(BOOST_Q, BOOST_C)
+    tex_sum = sum(_sim(a, b) for a in (1, 6) for b in (2, 7)) / 2.0
+    con_sum = sum(_sim(a, 4) for a in (3, 9)) / 2.0
+    chance = tex_sum + B * con_sum
+    assert tr["c_chance_nm"] == pytest.approx(chance, abs=1e-12)
+    assert tr["q_chance_nm"] == pytest.approx(chance, abs=1e-12)
+    assert tr["node_coverage_chance"] == pytest.approx(
+        2.0 * chance / ((2.0 + B) + (2.0 + 2.0 * B)), abs=1e-9)
+    # node weights on both sides
+    qb, cb = (1, 6), (2, 7)
+    _s, corr, tr = _ev(_g(qb, node_weights=WQ),
+                       _g(cb, base=100, node_weights=WC))
+    c_ch = sum(WC[100 + j] * sum(_sim(a, b) for a in qb) / 2.0
+               for j, b in enumerate(cb))
+    q_ch = sum(WQ[i] * sum(_sim(a, b) for b in cb) / 2.0
+               for i, a in enumerate(qb))
+    assert tr["node_coverage_chance"] == pytest.approx(
+        (q_ch + c_ch) / (4.0 + 2.5), abs=1e-9)
+
+
+def test_null_scenarios_under_binary_credit(params):
+    """Binary credit: every positive candidate is worth 1, so the chance mass
+    is the count a maximum pairing covers -- with boosts and weights."""
+    params(EVIDENCE_GRADED_NODE_CREDIT=False, EVIDENCE_QUERY_SIDE_TERMS=(),
+           EVIDENCE_NODE_NULL_CALIBRATED=True)
+    _s, _c, tr = _ev(_g((1, 6)), _g((2, 7, 12), base=100))
+    assert tr["c_chance_nm"] == pytest.approx(2.0, abs=1e-12)   # 6 / max(2, 3)
+    assert tr["q_chance_nm"] == pytest.approx(2.0, abs=1e-12)
+    assert tr["node_coverage_chance"] == pytest.approx(2 / 3, abs=1e-6)
+    assert tr["node_coverage_raw"] == pytest.approx(2 / 3, abs=1e-6)
+    assert tr["node_coverage"] == 0.0
+    _s, _c, tr = _ev(BOOST_Q, BOOST_C)
+    assert tr["c_chance_nm"] == pytest.approx(2.0 + B, abs=1e-12)
+    assert tr["node_coverage_chance"] == pytest.approx(1.0, abs=1e-6)
+    _s, _c, tr = _ev(_g((1, 6), node_weights=WQ),
+                     _g((2, 7), base=100, node_weights=WC))
+    assert tr["c_chance_nm"] == pytest.approx(2.5, abs=1e-12)
+    assert tr["q_chance_nm"] == pytest.approx(4.0, abs=1e-12)
+    # ... so a full self-match of DISTINGUISHABLE nodes calibrates to 0 too:
+    # the calibration presupposes graded credit
+    score, _c, tr = _ev(_g((4, 4, 9)), _g((4, 4, 9)))
+    assert tr["node_coverage_raw"] == pytest.approx(1.0, abs=1e-6)
+    assert score == 0.0
+    params(EVIDENCE_GRADED_NODE_CREDIT=True)
+    assert _ev(_g((4, 4, 9)), _g((4, 4, 9)))[0] == pytest.approx(1.0, abs=1e-6)
+
+
+def test_chance_mass_follows_the_live_weight_convention(params):
+    """A node missing from a non-empty weights dict weighs 0.0 in the totals
+    and in the matched mass; its chance mass is 0.0 as well."""
+    params(EVIDENCE_GRADED_NODE_CREDIT=True, EVIDENCE_QUERY_SIDE_TERMS=("node",),
+           EVIDENCE_NODE_NULL_CALIBRATED=True)
+    qb, cb = (1, 6, 11), (2, 7)
+    q = _g(qb, node_weights={0: 1.0, 2: 3.0})          # node 1 left out
+    c = _g(cb, base=100, node_weights={101: 0.5})      # node 100 left out
+    _s, corr, tr = _ev(q, c)
+    assert tr["q_node_total"] == pytest.approx(4.0)
+    assert tr["c_node_total"] == pytest.approx(0.5)
+    # expected credit of a node: its row / column sum over max(3, 2)
+    q_ch = (1.0 * sum(_sim(1, b) for b in cb)
+            + 0.0 * sum(_sim(6, b) for b in cb)
+            + 3.0 * sum(_sim(11, b) for b in cb)) / 3.0
+    c_ch = (0.0 * sum(_sim(a, 2) for a in qb)
+            + 0.5 * sum(_sim(a, 7) for a in qb)) / 3.0
+    assert tr["q_chance_nm"] == pytest.approx(q_ch, abs=1e-12)
+    assert tr["c_chance_nm"] == pytest.approx(c_ch, abs=1e-12)
+    assert tr["node_coverage_chance"] == pytest.approx(
+        (q_ch + c_ch) / 4.5, abs=1e-9)
+    want = _oracle.node_term(q, c, corr, True, True, True)
+    assert tr["node_coverage"] == pytest.approx(want["node_coverage"],
+                                                abs=1e-9)
+
+
+# ============================================ 3. two boundaries to know
+
+def _nodes(ids, base=0):
+    return {base + k: ("Texture", tex(k, k)) for k in ids}
+
+
+def _co(salience: float) -> EdgeParams:
+    return EdgeParams(class_="EDGE_CO_LOCATED", quantized=(-1.0, salience))
+
+
+def _mixed_pair():
+    q = graph(_nodes(range(5)),
+              [(0, 1, T), (1, 2, CO), (2, 3, CO), (3, 4, T), (0, 4, CO)],
+              edge_params={(1, 2, CO): _co(5.0), (2, 3, CO): _co(2.0),
+                           (0, 4, CO): _co(7.0)})
+    c = graph(_nodes(range(4), base=100),
+              [(100, 101, T), (101, 102, CO), (102, 103, CO), (100, 103, T)],
+              edge_params={(101, 102, CO): _co(5.0), (102, 103, CO): _co(4.0)})
+    return q, c
+
+
+def test_one_edgeless_side_is_the_exception_to_the_symmetry(params):
+    """D3 addendum (a): an edgeless CORE keeps the vacuous relational reading
+    in every setting.  With all three terms two-sided the score is therefore
+    symmetric only when both sides have edges, or neither: with exactly one
+    edgeless side the two directions read 1.0 and 0.0."""
+    params(EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True,
+           EVIDENCE_GRADED_NODE_CREDIT=True, EVIDENCE_QUERY_SIDE_TERMS=ALL,
+           EVIDENCE_NODE_NULL_CALIBRATED=False)
+    bare = graph(_nodes(range(3)))
+    wired = graph(_nodes(range(3), base=100), [(100, 101, T), (101, 102, T)])
+    s_core_bare, _c, tr = _ev(wired, bare)        # the core asserts nothing
+    assert tr["relational_consistency"] == 1.0 and tr["edge_absence"] == 0.0
+    assert s_core_bare == pytest.approx(1.0, abs=1e-6)
+    s_query_bare, _c, tr = _ev(bare, wired)       # no core relation is found
+    assert tr["relational_consistency"] == 0.0
+    assert s_query_bare == 0.0
+    # both sides wired, or both bare: symmetric
+    q, c = _mixed_pair()
+    assert _ev(q, c)[0] == pytest.approx(_ev(c, q)[0], abs=1e-9)
+    assert _ev(bare, graph(_nodes(range(2), base=100)))[0] == pytest.approx(
+        _ev(graph(_nodes(range(2), base=100)), bare)[0], abs=1e-9)
+
+
+def test_d3_scenarios_without_the_structural_match(params):
+    """F6 off: a parameter-less edge is never matched, on either side.  The
+    D3 pins build their relations from such edges, so with F6 off their
+    scores are 0, and a graph that holds them no longer scores 1.0 against
+    itself -- under any setting of the query-side terms."""
+    params(EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=False,
+           EVIDENCE_GRADED_NODE_CREDIT=True,
+           EVIDENCE_NODE_NULL_CALIBRATED=False)
+    q = graph(_nodes(range(3)), [(0, 1, T), (1, 2, T)])
+    c = graph(_nodes(range(3), base=100), [(100, 101, T)])
+    for terms in ((), ("relation",), ALL):
+        params(EVIDENCE_QUERY_SIDE_TERMS=terms)
+        score, _c, tr = _ev(q, c)
+        assert tr["matched_rel_sim_sum"] == 0.0
+        assert tr["relational_consistency"] == 0.0
+        assert score == 0.0
+    mixed, core = _mixed_pair()
+    for terms in ((), ("node",), ("node", "absence"), ALL):
+        params(EVIDENCE_QUERY_SIDE_TERMS=terms)
+        # 5 edges, the 3 parameterised ones match themselves: 3 / 5
+        assert _ev(mixed, mixed)[0] == pytest.approx(3 / 5, abs=1e-6), terms
+    # the mirror loop is the matcher's loop under this setting too
+    params(EVIDENCE_QUERY_SIDE_TERMS=())
+    _s, corr, tr = _ev(mixed, core)
+    inv = {cid: qid for qid, cid in corr.items()}
+    n_edges, n_ver, sim_sum = _edge_side_evidence(core[0], mixed[0], inv)
+    assert (n_edges, n_ver) == (tr["n_core_edges"],
+                                tr["verifiable_core_edges_count"])
+    assert sim_sum == tr["matched_rel_sim_sum"]
+    assert 1.0 < sim_sum < 2.0          # one exact, one graded; no topology
