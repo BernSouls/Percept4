@@ -1661,7 +1661,16 @@ def evidence_score(
     read as evidence above chance, (N - N0) / (1 - N0) clamped to [0, 1]
     (matching/calibration.py), N0 being the coverage a random pairing inside
     each lens type would earn under the same credit rule over the same
-    side(s). A coverage any pairing would reach is then worth 0.
+    side(s). A coverage any pairing would reach is then worth 0. The
+    calibration presupposes graded credit: under binary credit a count is
+    exactly what a random pairing earns, so the term is 0 for every pair.
+
+    Trace: `node_coverage` is the node term the score used;
+    `node_coverage_raw` the same term before calibration;
+    `node_coverage_binary` its binary twin (same form, every kept pair
+    credited in full, never calibrated); `core_node_coverage` and
+    `query_node_coverage` the two one-sided graded fractions. On the early
+    exits (an empty side, no lens type in common) none of them is written.
     """
     internal_trace = trace if trace is not None else {}
     null_calibrated = bool(getattr(P, "EVIDENCE_NODE_NULL_CALIBRATED", False))
@@ -1821,12 +1830,24 @@ def evidence_score(
 
     if trace is not None:
         trace["node_coverage"] = node_coverage
-        # [D1] The binary coverage of the same correspondence (== the
-        # node_coverage above when graded credit is off).
+        # [D1] The BINARY TWIN of `node_coverage_raw`: the same form (the
+        # one-sided core fraction, or the balanced one under D3 "node") over
+        # the same correspondence, every kept pair credited in full. Never
+        # calibrated. In every setting
+        #     node_coverage <= node_coverage_raw <= node_coverage_binary
+        # and under binary credit node_coverage_raw IS this value (the same
+        # floats in the same expression). Trace only: no score reads it.
         _c_nm_bin = internal_trace.get("c_matched_nm_binary", c_nm)
-        trace["node_coverage_binary"] = (
-            (_c_nm_bin / (c_node_total + P.EPSILON))
-            if c_node_total > 0 else 0.0)
+        _q_nm_bin = internal_trace.get("q_matched_nm_binary", q_nm)
+        if "node" in qs_terms:
+            _nt = q_node_total + c_node_total
+            trace["node_coverage_binary"] = (
+                ((_q_nm_bin + _c_nm_bin) / (_nt + P.EPSILON))
+                if _nt > 0 else 0.0)
+        else:
+            trace["node_coverage_binary"] = (
+                (_c_nm_bin / (c_node_total + P.EPSILON))
+                if c_node_total > 0 else 0.0)
         trace["relational_consistency"] = relational_consistency
         trace["relational_multiplier"] = relational_multiplier
         trace["edge_absence"] = edge_absence
