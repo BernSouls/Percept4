@@ -1954,6 +1954,13 @@ EVIDENCE_GRADED_NODE_CREDIT: bool = True
 # (THETA_EVIDENCE_POS, per-class thresholds) must be re-read before any
 # non-empty value is used as a default.
 EVIDENCE_QUERY_SIDE_TERMS: Tuple[str, ...] = ()
+# [PHASE 4 / EDGE HONESTY] EdgeParams.similarity / polymorphic_edge_similarity:
+# a pair of edge parameters with NO slot measured on both sides is not a
+# comparison and reads 0.0. Historically an all-UNKNOWN pair read 0.2, a
+# differing pair with no common measured slot read 1.0, and the cross-schema
+# mean counted every unmeasured shared axis as a perfect agreement.
+# False = those floors.
+EDGE_UNMEASURED_IS_NOT_EVIDENCE: bool = True
 
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK

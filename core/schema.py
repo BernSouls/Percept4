@@ -1519,6 +1519,24 @@ class EdgeParams:
         # tuple is not evidence of ANYTHING — if every value is unmeasured,
         # sim = 0 rather than 1. A single measured slot is enough to put the
         # pair through the Gaussian instead of the flat 1.0 fallback.
+        #
+        # [PHASE 4 / EDGE HONESTY] The rule above was only half in the code:
+        # an all-UNKNOWN pair read 0.2 (the branch just below), and a pair
+        # whose tuples DIFFER but share no measured slot read 1.0 (the
+        # `evaluated_graded_count == 0` fallback further down, or whatever
+        # the population path made of two unmeasured axes). Both are a
+        # comparison in which nothing was compared. With no slot measured on
+        # BOTH sides the similarity is 0.0: no physical evidence. Whether the
+        # two edges are the same relation at all is a topological fact the
+        # caller already holds (the pair exists); it is not physics.
+        # A slot measured on both sides -- categorical or graded -- keeps the
+        # pair on the historical path, so categorical agreement that passed
+        # the gate above still reads 1.0.
+        # P.EDGE_UNMEASURED_IS_NOT_EVIDENCE = False restores the floors.
+        if getattr(P, "EDGE_UNMEASURED_IS_NOT_EVIDENCE", True) and not any(
+                a != UNKNOWN and b != UNKNOWN
+                for a, b in zip(self.quantized, other.quantized)):
+            return 0.0
         _n_measured_self = sum(1 for v in self.quantized if v != UNKNOWN)
         _n_measured_other = sum(1 for v in other.quantized if v != UNKNOWN)
         if self.quantized == other.quantized:
@@ -1883,6 +1901,7 @@ def polymorphic_edge_similarity(
     cycles1 = CIRCULAR_EDGE_CYCLE_LENGTHS.get(ep1.class_, {})
 
     total_sq = 0.0
+    n_compared = 0
     for idx_a, idx_b, _tag in shared:
         if idx_a >= len(ep1.quantized) or idx_b >= len(ep2.quantized):
             continue
@@ -1890,6 +1909,7 @@ def polymorphic_edge_similarity(
         vb = ep2.quantized[idx_b]
         if va == UNKNOWN or vb == UNKNOWN:
             continue
+        n_compared += 1
         d = abs(va - vb)
         if idx_a in cycles1:
             n = cycles1[idx_a]
@@ -1897,7 +1917,18 @@ def polymorphic_edge_similarity(
         sigma = (ranges1[idx_a] / 3.0) if idx_a < len(ranges1) and ranges1[idx_a] > 0 else 1.0
         total_sq += (d / sigma) ** 2
 
-    base_sim = math.exp(-total_sq / float(max(1, n_shared)))
+    if getattr(P, "EDGE_UNMEASURED_IS_NOT_EVIDENCE", True):
+        # [PHASE 4 / EDGE HONESTY] The mean runs over the shared axes that
+        # were MEASURED ON BOTH SIDES, as the same-schema Gaussian already
+        # does. Dividing by n_shared counted every unmeasured shared axis as
+        # a perfect agreement, and a pair with no measured shared axis read
+        # exp(0) = 1.0. The dimensional discount below is structure, not
+        # measurement, and is unchanged.
+        if n_compared == 0:
+            return 0.0
+        base_sim = math.exp(-total_sq / float(n_compared))
+    else:
+        base_sim = math.exp(-total_sq / float(max(1, n_shared)))
     conf_factor = min(ep1.confidence, ep2.confidence) if use_confidence else 1.0
     # [P2] The matching-time specificity cap (see EDGE_SPECIFICITY).
     spec_w = min(edge_match_weight(ep1.class_),
