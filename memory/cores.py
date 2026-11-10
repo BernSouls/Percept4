@@ -1357,6 +1357,99 @@ def _mcs_accumulate(
         node_correspondence,
     )
 
+def _edge_side_evidence(
+    A: Subgraph,
+    B: Subgraph,
+    a_to_b: Dict[int, int],
+) -> Tuple[int, int, float]:
+    """[D3] Edge evidence read from ONE side: the edges of `A` under the node
+    map `a_to_b`, searched in `B`.
+
+    Returns (n_edges, n_verifiable, sim_sum):
+      n_edges       edges of A
+      n_verifiable  edges of A with BOTH endpoints mapped
+      sim_sum       over those, the best similarity to an edge of B between
+                    the two mapped endpoints (0.0 when B has none there)
+
+    This is the edge loop of `_mcs_accumulate` with the two roles named
+    instead of fixed. `_mcs_accumulate` verifies the CORE's edges in the
+    query: `_edge_side_evidence(C, Q, inverse_correspondence)` returns its
+    `verifiable_core_edges_count` and `matched_rel_sim_sum` exactly (same
+    calls, same order -- pinned). `evidence_score` calls it the other way
+    round, `(Q, C, correspondence)`, for the query-side terms. Kept as a
+    separate function so the historical loop is not touched.
+    """
+    from core.schema import polymorphic_edge_similarity, reverse_edge_params
+    from orchestration.binder import UNDIRECTED_EDGE_TYPES
+
+    def _canon(e):
+        if e[2] in UNDIRECTED_EDGE_TYPES:
+            return (min(e[0], e[1]), max(e[0], e[1]), e[2])
+        return e
+
+    a_edge_params = getattr(A, "edge_params", None) or {}
+    b_edge_params = getattr(B, "edge_params", None) or {}
+
+    # the searched side, indexed by endpoint pair; an undirected edge is also
+    # reachable in reverse, with its asymmetric parameters reversed
+    b_index: Dict[Tuple[int, int], List[Tuple[Any, Any, Any]]] = defaultdict(list)
+    for b_e in B.edges:
+        bs, bd, bet = b_e
+        b_key = _canon(b_e)
+        bp = b_edge_params.get(b_key) or b_edge_params.get(b_e)
+        if bp is None and bet in UNDIRECTED_EDGE_TYPES:
+            bp = b_edge_params.get((b_e[1], b_e[0], b_e[2]))
+        b_index[(bs, bd)].append((bet, bp, b_key))
+        if bet in UNDIRECTED_EDGE_TYPES:
+            bp_rev = reverse_edge_params(bp) if bp is not None else None
+            b_index[(bd, bs)].append((bet, bp_rev, b_key))
+
+    n_verifiable = 0
+    sim_sum = 0.0
+    for a_s, a_d, aet in A.edges:
+        if a_s not in a_to_b or a_d not in a_to_b:
+            continue
+        n_verifiable += 1
+        bs = a_to_b[a_s]
+        bd = a_to_b[a_d]
+        a_key = _canon((a_s, a_d, aet))
+        ap = a_edge_params.get(a_key) or a_edge_params.get((a_s, a_d, aet))
+
+        cand_list = list(b_index.get((bs, bd), []))
+        if aet in UNDIRECTED_EDGE_TYPES and bs != bd:
+            seen = {bk for _, _, bk in cand_list}
+            for bet_r, bp_r, bk_r in b_index.get((bd, bs), []):
+                if bk_r not in seen:
+                    cand_list.append((bet_r, bp_r, bk_r))
+
+        best_sim = 0.0
+        for bet, bp, _bk in cand_list:
+            sim = polymorphic_edge_similarity(
+                bp, ap, use_confidence=False, edge_types=(bet, aet))
+            if sim > best_sim:
+                best_sim = sim
+        sim_sum += best_sim
+    return len(A.edges), n_verifiable, sim_sum
+
+
+#: [D3] The terms of `evidence_score` that can read BOTH sides.
+_QUERY_SIDE_TERM_NAMES = frozenset({"node", "relation", "absence"})
+
+
+def _query_side_terms() -> FrozenSet[str]:
+    """P.EVIDENCE_QUERY_SIDE_TERMS as a validated frozenset (empty = off)."""
+    raw = getattr(P, "EVIDENCE_QUERY_SIDE_TERMS", ()) or ()
+    if isinstance(raw, str):
+        raw = (raw,)
+    terms = frozenset(str(t) for t in raw)
+    unknown = terms - _QUERY_SIDE_TERM_NAMES
+    if unknown:
+        raise ValueError(
+            "EVIDENCE_QUERY_SIDE_TERMS: unknown term(s) %s (known: %s)"
+            % (sorted(unknown), sorted(_QUERY_SIDE_TERM_NAMES)))
+    return terms
+
+
 def mcs_score(
     Q: Subgraph,
     C: Subgraph,
@@ -1450,6 +1543,19 @@ def evidence_score(
     boost * weight * signature_similarity, so two cores that both find a
     partner for every node no longer tie on the node term -- the one whose
     partners are more alike scores higher. See `_mcs_accumulate`.
+
+    [D3] P.EVIDENCE_QUERY_SIDE_TERMS names the terms that read both sides
+    (any of "node", "relation", "absence"; empty = the historical one-sided
+    score):
+
+        node      (q_matched_nm + c_matched_nm) / (q_node_total + c_node_total)
+        relation  (core-side sim sum + query-side sim sum)
+                  / (verifiable core edges + verifiable query edges)
+        absence   (uncovered core edges + uncovered query edges)
+                  / (core edges + query edges)
+
+    An edgeless core keeps the vacuous relational reading (multiplier 1.0, no
+    absence) in every setting. Under P.EVIDENCE_ONLY_EDGES only "node" acts.
     """
     internal_trace = trace if trace is not None else {}
     q_mass, c_mass, q_nm, c_nm, q_em, c_em, corr = _mcs_accumulate(
@@ -1460,17 +1566,49 @@ def evidence_score(
     if c_mass <= 0.0:
         return 0.0, corr
 
+    # [D3] Which terms read BOTH sides. Empty (the historical score): every
+    # term is a fraction of the CORE, so nothing asks how much of the QUERY
+    # the core explains and a small core is covered by almost anything.
+    # Balanced form, the one `mcs_similarity` and matching/fuzzy.py already
+    # use: numerator and denominator are each summed over the two sides.
+    qs_terms = _query_side_terms()
+
     # 1. Node Coverage (Part Matching)
     c_node_total = internal_trace.get("c_node_total", c_nm)
-    node_coverage = (c_nm / (c_node_total + P.EPSILON)) if c_node_total > 0 else 0.0
+    q_node_total = internal_trace.get("q_node_total", q_nm)
+    core_node_coverage = (
+        (c_nm / (c_node_total + P.EPSILON)) if c_node_total > 0 else 0.0)
+    query_node_coverage = (
+        (q_nm / (q_node_total + P.EPSILON)) if q_node_total > 0 else 0.0)
+    if "node" in qs_terms:
+        _nt = q_node_total + c_node_total
+        node_coverage = ((q_nm + c_nm) / (_nt + P.EPSILON)) if _nt > 0 else 0.0
+    else:
+        node_coverage = core_node_coverage
 
     # 2. Relational Consistency
     n_core_edges = internal_trace.get("n_core_edges", len(C.edges))
     n_verifiable = internal_trace.get("verifiable_core_edges_count", 0)
     matched_rel_sim_sum = internal_trace.get("matched_rel_sim_sum", c_em)
 
+    # [D3] Query-side edge evidence: the mirror of the core-side loop. Only
+    # read when a term asks for it AND the core has edges -- an edgeless core
+    # asserts no relation and keeps its vacuous reading in every setting.
+    n_query_edges = len(Q.edges)
+    q_verifiable = 0
+    q_rel_sim_sum = 0.0
+    _edge_terms = bool(qs_terms & {"relation", "absence"}) and n_core_edges > 0
+    if _edge_terms:
+        n_query_edges, q_verifiable, q_rel_sim_sum = _edge_side_evidence(
+            Q, C, corr)
+
     if n_core_edges == 0:
         relational_consistency = 1.0  # Edgeless core: relations vacuously satisfied
+    elif "relation" in qs_terms:
+        _nv = n_verifiable + q_verifiable
+        relational_consistency = (
+            clamp((matched_rel_sim_sum + q_rel_sim_sum) / float(_nv), 0.0, 1.0)
+            if _nv > 0 else 0.0)
     elif n_verifiable == 0:
         relational_consistency = 0.0  # Relations exist in C, but none were verifiable under M
     else:
@@ -1536,7 +1674,13 @@ def evidence_score(
         if lambda_absence is not None and lambda_absence > 0.0:
             lambda_missing = float(lambda_absence)
 
-        if n_core_edges > 0:
+        if n_core_edges > 0 and "absence" in qs_terms:
+            # [D3] edges of EITHER side the correspondence failed to cover
+            edge_absence = (
+                (float(n_core_edges) - float(n_verifiable))
+                + (float(n_query_edges) - float(q_verifiable))
+            ) / float(n_core_edges + n_query_edges)
+        elif n_core_edges > 0:
             edge_absence = (float(n_core_edges) - float(n_verifiable)) / float(n_core_edges)
         else:
             edge_absence = 0.0
@@ -1558,6 +1702,15 @@ def evidence_score(
         trace["edge_absence"] = edge_absence
         trace["total_absence"] = absence
         trace["core_coverage"] = core_coverage
+        # [D3] `node_coverage` above is the node term the score USED. The two
+        # one-sided coverages are always traced, whichever was used.
+        trace["query_side_terms"] = tuple(sorted(qs_terms))
+        trace["core_node_coverage"] = core_node_coverage
+        trace["query_node_coverage"] = query_node_coverage
+        if _edge_terms:
+            trace["n_query_edges"] = n_query_edges
+            trace["q_verifiable_edges_count"] = q_verifiable
+            trace["q_matched_rel_sim_sum"] = q_rel_sim_sum
 
     return float(score), corr
 

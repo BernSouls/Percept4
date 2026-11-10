@@ -1939,6 +1939,21 @@ EDGE_UNPARAMETERISED_STRUCTURAL_MATCH: bool = True
 # they feed containment and fusion gates (THETA_FUSE, mcs_contained, _classify)
 # whose thresholds are calibrated on it.
 EVIDENCE_GRADED_NODE_CREDIT: bool = True
+# [D3] evidence_score: the terms that read BOTH sides of the match. Empty =
+# the historical score, in which every term is a fraction of the CORE and
+# nothing asks how much of the QUERY the core explains. Any of
+#     "node"      (q_matched + c_matched) / (q_total + c_total)
+#     "relation"  (core-side sim sum + query-side sim sum)
+#                 / (verifiable core edges + verifiable query edges)
+#     "absence"   (uncovered core edges + uncovered query edges)
+#                 / (core edges + query edges)
+# -- the balanced form mcs_similarity and matching/fuzzy.py already use. An
+# edgeless core keeps its vacuous relational reading in every setting.
+# CHANGES THE ABSOLUTE SCALE of the score wherever the query is much larger
+# than the core: thresholds calibrated on the one-sided score
+# (THETA_EVIDENCE_POS, per-class thresholds) must be re-read before any
+# non-empty value is used as a default.
+EVIDENCE_QUERY_SIDE_TERMS: Tuple[str, ...] = ()
 
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK
