@@ -1,0 +1,77 @@
+"""PIN -- [PHASE 4] a pair that agrees on a categorical slot only.
+
+The Phase 4 pre-registration says "any pair with a slot measured on both
+sides is untouched", and the code comment adds that categorical agreement
+that passed the identity gate "still reads 1.0".  The Phase 4 pins use a
+relation without an identity slot, so that sentence had no pin.  The matched
+edge census found no such pair on the ETH-80 EVAL graphs (its CATEGORICAL
+ONLY bin is empty): this is stated behaviour, unexercised there.
+
+Pinned here, on EDGE_JUNCTION_CONTOUR (dist, incidence, topology_class; the
+last is its identity slot):
+  * identity agrees, no graded slot measured on both sides -> 1.0 under
+    either value of the switch, with ZERO graded axes measured: a categorical
+    match, which earns no coverage facilitation
+  * identity differs -> 0.0 (the hard gate), under either value
+  * identity unmeasured on one side and nothing else in common -> 0.0 (no
+    slot measured on both sides); 1.0 with the switch off
+  * a graded slot in common -> the graded value, under either value
+"""
+from __future__ import annotations
+
+import pytest
+
+from core.schema import EDGE_IDENTITY_SLOTS
+from core.schema import UNKNOWN as U
+from core.schema import (EdgeParams, edge_measured_axes,
+                         polymorphic_edge_similarity)
+from core.types import EdgeType
+
+JC = EdgeType.JUNCTION_CONTOUR
+
+
+def jc(dist: float, incidence: float, topology: float) -> EdgeParams:
+    return EdgeParams(class_="EDGE_JUNCTION_CONTOUR",
+                      quantized=(dist, incidence, topology))
+
+
+def sim(a: EdgeParams, b: EdgeParams) -> float:
+    return polymorphic_edge_similarity(a, b, use_confidence=False,
+                                       edge_types=(JC, JC))
+
+
+CASES = {
+    # name: (a, b, value with the switch on, value with it off, graded axes)
+    "identity agrees, nothing else measured":
+        (jc(U, U, 3.0), jc(U, U, 3.0), 1.0, 1.0, 0),
+    "identity agrees, graded slots on different axes":
+        (jc(2.0, U, 3.0), jc(U, 5.0, 3.0), 1.0, 1.0, 0),
+    "identity differs":
+        (jc(2.0, U, 3.0), jc(U, 5.0, 4.0), 0.0, 0.0, 0),
+    "identity unmeasured on one side, nothing in common":
+        (jc(2.0, U, U), jc(U, 5.0, 3.0), 0.0, 1.0, 0),
+}
+
+
+def test_the_relation_has_the_identity_slot_this_pin_assumes():
+    assert tuple(EDGE_IDENTITY_SLOTS["EDGE_JUNCTION_CONTOUR"]) == (2,)
+
+
+@pytest.mark.parametrize("name", sorted(CASES))
+def test_categorical_agreement_alone(params, name):
+    a, b, on, off, axes = CASES[name]
+    assert edge_measured_axes(a, b) == axes
+    params(EDGE_UNMEASURED_IS_NOT_EVIDENCE=True)
+    assert sim(a, b) == on and sim(b, a) == on
+    params(EDGE_UNMEASURED_IS_NOT_EVIDENCE=False)
+    assert sim(a, b) == off and sim(b, a) == off
+
+
+def test_a_graded_slot_in_common_gives_the_graded_value(params):
+    a, b = jc(2.0, U, 3.0), jc(3.0, 5.0, 3.0)       # dist one bin apart
+    assert edge_measured_axes(a, b) == 1
+    params(EDGE_UNMEASURED_IS_NOT_EVIDENCE=True)
+    on = sim(a, b)
+    params(EDGE_UNMEASURED_IS_NOT_EVIDENCE=False)
+    assert sim(a, b) == on
+    assert 0.5 < on < 1.0
