@@ -1974,6 +1974,21 @@ EDGE_UNMEASURED_IS_NOT_EVIDENCE: bool = True
 # uncalibrated score must be re-read), and a graph whose nodes are
 # interchangeable inside every lens type scores 0 against itself.
 EVIDENCE_NODE_NULL_CALIBRATED: bool = False
+# [MIXTURE REVERSAL] memory/cores.py edge loops (mcs_score, mcs_similarity,
+# evidence_score): an undirected edge read AGAINST its stored direction has
+# its parameters reversed. reverse_edge_params returns anything that is not
+# an EdgeParams unchanged, so an EdgeParamsMixture was read backwards with
+# its prototypes NOT reversed, and the same edge pair got two different
+# similarities from its two ends. True = a mixture is reversed with its own
+# flipped_copy(), as matching/structural_similarity.py already does; a
+# single-prototype mixture then reads exactly as its plain prototype.
+# False = the historical reading. Only a mixture that a reversal changes is
+# affected. The loop is SHARED with the containment and fusion scores: their
+# values move wherever such a mixture is matched against its stored
+# direction, and consolidated cores hold more of them than single-view
+# graphs -- re-read THETA_FUSE / mcs_contained / _classify under either
+# value before relying on it.
+EDGE_REVERSE_FLIPS_MIXTURE: bool = True
 
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK

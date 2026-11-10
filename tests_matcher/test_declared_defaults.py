@@ -22,4 +22,6 @@ def test_declared_defaults(declared_defaults):
         "EDGE_UNMEASURED_IS_NOT_EVIDENCE": True,
         # null calibration -- in the tree, OFF: its rule failed
         "EVIDENCE_NODE_NULL_CALIBRATED": False,
+        # mixture reversal -- on: the library's own contract (flipped_copy)
+        "EDGE_REVERSE_FLIPS_MIXTURE": True,
     }

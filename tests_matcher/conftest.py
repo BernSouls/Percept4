@@ -37,6 +37,7 @@ PIN_BASELINE = {
     "EVIDENCE_QUERY_SIDE_TERMS": (),                   # D3
     "EDGE_UNMEASURED_IS_NOT_EVIDENCE": True,           # Phase 4
     "EVIDENCE_NODE_NULL_CALIBRATED": False,            # null calibration
+    "EDGE_REVERSE_FLIPS_MIXTURE": True,                # mixture reversal
 }
 
 #: the tree's own values, read once before any pin touches them

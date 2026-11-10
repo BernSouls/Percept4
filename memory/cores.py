@@ -1306,7 +1306,9 @@ def _mcs_accumulate(
         q_edge_index[(qs, qd)].append((qet, qp, q_key))
         if qet in UNDIRECTED_EDGE_TYPES:
             # Reverse asymmetric parameters for reverse traversal
-            qp_rev = reverse_edge_params(qp) if qp is not None else None
+            # [MIXTURE REVERSAL] through the helper, so a mixture is
+            # reversed too (reverse_edge_params alone returns it unchanged)
+            qp_rev = _reverse_for_traversal(qp)
             q_edge_index[(qd, qs)].append((qet, qp_rev, q_key))
 
     # 2. Verifiable core edges: both endpoints mapped under M
@@ -1420,6 +1422,32 @@ def _mcs_accumulate(
         node_correspondence,
     )
 
+def _reverse_for_traversal(ep: Any) -> Any:
+    """[MIXTURE REVERSAL] Edge parameters as read AGAINST the stored
+    direction of their (undirected) edge.
+
+    `reverse_edge_params` reverses an `EdgeParams` and returns anything else
+    unchanged, so the edge loops read an `EdgeParamsMixture` backwards with
+    its prototypes not reversed: a mixture and the plain prototype it holds
+    then compared differently, and the same edge pair got two similarities
+    from its two ends. Under P.EDGE_REVERSE_FLIPS_MIXTURE (default True) a
+    mixture is reversed with its own `flipped_copy()` -- what
+    matching/structural_similarity.py does at its call sites. False = the
+    historical call, `reverse_edge_params(ep)`. `None` stays `None`.
+
+    Used by both edge loops (`_mcs_accumulate`, `_edge_side_evidence`) where
+    the reversed index entry of an undirected edge is built, so the two stay
+    the same loop under either value.
+    """
+    if ep is None:
+        return None
+    if getattr(P, "EDGE_REVERSE_FLIPS_MIXTURE", True):
+        from core.schema import EdgeParamsMixture
+        if isinstance(ep, EdgeParamsMixture):
+            return ep.flipped_copy()
+    return reverse_edge_params(ep)
+
+
 def _chance_credit(
     q_ids: Sequence[int],
     c_ids: Sequence[int],
@@ -1501,7 +1529,7 @@ def _edge_side_evidence(
             bp = b_edge_params.get((b_e[1], b_e[0], b_e[2]))
         b_index[(bs, bd)].append((bet, bp, b_key))
         if bet in UNDIRECTED_EDGE_TYPES:
-            bp_rev = reverse_edge_params(bp) if bp is not None else None
+            bp_rev = _reverse_for_traversal(bp)
             b_index[(bd, bs)].append((bet, bp_rev, b_key))
 
     n_verifiable = 0
