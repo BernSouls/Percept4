@@ -53,6 +53,20 @@ The graph cache is keyed by a digest of the front-end source (`perception/`,
 by the whole source tree plus the harness, and are never re-used across a
 change.
 
+**The stored records and `main`.** The records carry the digests of the
+branch they were measured on (source `f66ea9ac0eea`). The source digest
+covers every `.py` outside `diagnostics/`, the tests and `data/`, root-level
+scripts included. `main` deleted `_u27_selftest.py` after the branch point
+(`5be15a1`, its only commit since), so on a tree without that file the
+source digest is `ec8a7ebce62d`, and a script that re-uses records measures
+again and rewrites the record under the new digest (17 s on full and 7 s on
+v1 per configuration; the front-end digest is unchanged, so the graph cache
+is re-used). Nothing imports that script, so no measured value depends on
+it. Checked on a scratch merge of `main` into the branch: the merge is
+clean, the pins and figground pass as on the branch, and five stored
+configurations re-run on both windows give 0 of 112,200 values differing —
+`results/logs/merge_with_main_5be15a1.txt`.
+
 ## Commands
 
 | what | command |
@@ -75,7 +89,7 @@ change.
 | a bar under explicit switch values, with reach | `PERCEPT_PARAMS='NAME=VALUE;…' PERCEPT_REACH=1 PYTHONPATH=.:diagnostics:diagnostics/_export_shims python -m pytest <dir> -p _param_overrides_plugin -q` |
 | do two front-end states build the same graphs | `python diagnostics/eth80_frontend_compare.py --old <digest>` (a prefix is resolved from the stored records) |
 | the whole measurement of the last session, in order | `results/logs/measurement_chain_stage4.sh` (stage 3: `measurement_chain_final.sh`) |
-| selftest | `PYTHONPATH=.:diagnostics/_export_shims python _u27_selftest.py` |
+| selftest | `PYTHONPATH=.:diagnostics/_export_shims python _u27_selftest.py` — the script exists on the branch this work was done on; `main` deleted it afterwards (`5be15a1`) |
 
 `--set` writes `parameters.NAME` before the run. Every library change made in
 this work sits behind one such general parameter, so "before" and "after" are

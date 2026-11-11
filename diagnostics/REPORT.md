@@ -41,7 +41,10 @@ moves no value.
 Bars on the final tree (`results/logs/`): matcher pins **390 passed**; pin
 triage **0 unclassified** over 17 settings; bug hunt sections A–F **0
 findings**; figground **99 passed, 4 xfailed** (the same four as before any
-change); `_u27_selftest.py` all pass. Not checkable here: the 329-test
+change); `_u27_selftest.py` all pass (run on this branch; `main` deleted
+the script after the branch point, so it is no longer a bar there, and the
+stored records' source digest will not match a tree without it — see
+`README.md`, "The stored records and `main`"). Not checkable here: the 329-test
 figground bar (103 tests exist in this checkout), U20 WRONG=0, `_u24_*`,
 the per-class L0/L1 thresholds. The figground bar calls the matcher 0
 times, so it says nothing about a matcher change (stage 2 §4).
