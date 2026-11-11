@@ -1,4 +1,4 @@
-PHASE 5 / A -- slot truth, 79 EVAL graphs, front-end digest e12a5a4ca862
+PHASE 5 / A -- slot truth, 79 EVAL graphs, front-end digest f2461c926fd2
 
 EDGE SLOTS  (n = edges carrying the slot; measured = not UNKNOWN)
   class                       slot                  n  meas%  bins modal%   top%  state
@@ -27,8 +27,8 @@ EDGE SLOTS  (n = edges carrying the slot; measured = not UNKNOWN)
   CO_LOCATED                  scale_ratio       17516    0.0     0    0.0    0.0  ABSENT
   CO_LOCATED                  salience_ratio    17516  100.0     8   29.3   28.3  varies
   CURVATURE                   signed_turn          87  100.0     5   78.2    0.0  varies
-  CURVATURE                   chord_len            87  100.0     1  100.0    0.0  FROZEN
-  CURVATURE                   curv_rate            87  100.0     1  100.0    0.0  FROZEN
+  CURVATURE                   chord_len            87    0.0     0    0.0    0.0  ABSENT
+  CURVATURE                   curv_rate            87    0.0     0    0.0    0.0  ABSENT
   CURVATURE_SIGN_CONTINUITY   curv_diff          2496  100.0     1  100.0    0.0  FROZEN
   CURVATURE_SIGN_CONTINUITY   dist               2496  100.0     5   38.8   23.3  varies
   CURVE_CONTAINMENT           rel_dist           1090    0.0     0    0.0    0.0  ABSENT
@@ -63,19 +63,19 @@ EDGE SLOTS  (n = edges carrying the slot; measured = not UNKNOWN)
   PARALLEL                    stagger_dist       1029  100.0     8   31.1    0.7  varies
   PARALLEL                    convergence        1029  100.0     5   39.2    0.0  varies
   RADIALITY                   hub_bearing        1691  100.0    24    7.1    4.6  varies
-  RADIALITY                   alignment          1691  100.0     1  100.0    0.0  FROZEN
+  RADIALITY                   alignment          1691    0.0     0    0.0    0.0  ABSENT
   RADIALITY                   hub_ratio          1691  100.0     4   82.9    0.0  varies
   RADIALITY                   spoke_separation    1691  100.0    12   20.2    8.9  varies
   REGION_CONTENT              containment        5489  100.0     1  100.0  100.0  index
   SPIRALITY                   pitch               939  100.0     9   22.8    0.0  varies
   SPIRALITY                   consistency         939  100.0     7   26.3   23.2  varies
   SPIRALITY                   chirality           939  100.0     3   76.6   12.0  index
-  SPIRALITY                   expansion           939  100.0     1  100.0    0.0  FROZEN
+  SPIRALITY                   expansion           939    0.0     0    0.0    0.0  ABSENT
   SYMMETRY                    sym_score          1145  100.0     4   59.1   33.4  varies
   SYMMETRY                    axis_angle         1145  100.0    12   28.6    0.0  varies
   SYMMETRY                    dist               1145  100.0     5   42.4   23.3  varies
 
-edge slots by state: {'ABSENT': 6, 'FROZEN': 11, 'NARROW': 1, 'SATURATED': 1, 'index': 10, 'varies': 43}
+edge slots by state: {'ABSENT': 10, 'FROZEN': 7, 'NARROW': 1, 'SATURATED': 1, 'index': 10, 'varies': 43}
 
 NODE SIGNATURE SLOTS that take ONE value over every node of the class
   Contour          CONTOUR            corner_count     = 0  (n = 1509)

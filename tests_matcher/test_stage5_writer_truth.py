@@ -425,3 +425,103 @@ def test_a_closed_and_an_open_chain_do_not_overlap_on_the_closure_axis():
     assert axis_similarity(closed, closed) == 1.0
     assert axis_similarity(open_, closed) == 0.0
 
+
+# --------------------------------------------------------------------------
+# the same two rules, in three more writers (scope extended: see REPORT.md)
+# --------------------------------------------------------------------------
+
+def _oriented(tag, anchor, theta_bin):
+    """A Contour whose mean orientation is bin `theta_bin` of 24 over pi."""
+    return Detection(
+        k="Contour", source_layer=2, scale=0,
+        sigma=TypedSignature(kind="CANONICAL", class_="TEST", relation="T",
+                             quantized=(float(tag), float(theta_bin)),
+                             population=()),
+        alpha=anchor, z=1.0, t=0, rho=())
+
+
+def _slots(ep):
+    names = [s.name for s in S.EDGE_UNIT_TABLE[ep.class_]]
+    return dict(zip(names, ep.quantized))
+
+
+def test_radiality_alignment_is_absent_because_the_hub_is_defined_by_it():
+    """RULE: a quantity compared with itself is not a measurement.
+
+    The RADIALITY writer defines the hub as the intersection of the two
+    elements' own orientation lines and then asks how well each element
+    points at the hub.  It points at it exactly, by construction: the
+    deviation was 0 (to 1e-14) on every one of the 1,691 RADIALITY edges of
+    the 79 graphs.  The slot is ABSENT; the hub's bearing, its distance
+    ratio and the spoke separation are real measurements and stay.
+    """
+    a = _oriented(1, "p", 5)       # 41.25 deg, through (0, 0)
+    b = _oriented(2, "q", 17)      # 131.25 deg, through (20, 0)
+    pos = {"p": (0.0, 0.0, 0.0), "q": (20.0, 0.0, 0.0)}
+    bd = _Capture()
+    bd._run_radiality((a, b), {a: 1, b: 2}, pos)
+    (cand,) = bd.seen[EdgeType.RADIALITY]
+    got = _slots(cand[4])
+    assert got["alignment"] == UNKNOWN
+    assert all(v != UNKNOWN for k, v in got.items() if k != "alignment")
+
+
+def test_spirality_expansion_is_absent_because_the_hub_is_the_midpoint():
+    """RULE: a quantity compared with itself is not a measurement.
+
+    The SPIRALITY writer puts the hub at the MIDPOINT of the pair, so the
+    two radii are equal and the log radius ratio -- the expansion -- is 0
+    for every pair of every image (939 of 939 edges).  ABSENT.
+    """
+    a = _oriented(1, "p", 5)
+    b = _oriented(2, "q", 5)
+    pos = {"p": (0.0, 0.0, 0.0), "q": (20.0, 0.0, 0.0)}
+    bd = _Capture()
+    bd._run_spirality((a, b), {a: 1, b: 2}, pos)
+    (cand,) = bd.seen[EdgeType.SPIRALITY]
+    got = _slots(cand[4])
+    assert got["expansion"] == UNKNOWN
+    assert all(v != UNKNOWN for k, v in got.items() if k != "expansion")
+
+
+def _segment(tag, anchor, theta_bin, idx, n=2):
+    return Detection(
+        k="Orientation", source_layer=0, scale=0,
+        sigma=TypedSignature(kind="CANONICAL", class_="ORIENTATION_SEGMENT",
+                             relation="SEGMENT",
+                             # slot 2 is the chain bin the writer buckets on
+                             quantized=(float(theta_bin), 1.0, 0.0, float(tag)),
+                             population=()),
+        alpha=anchor, z=1.0, t=0,
+        rho=(("entity", "E", 0, "+"), ("segment", idx, 0, "+"),
+             ("num_segments", n, 0, "+"), ("closed", False, 0, "+")))
+
+
+def test_curvature_chord_is_measured_between_the_two_segments_or_is_absent():
+    """RULE: absence is never a neutral number.
+
+    The chord between two boundary segments was looked up through their
+    MEMBER anchors; a segment has none, so the lookup found nothing and the
+    writer fell back to chord 0.0 and rate 0.0 -- on all 87 CURVATURE edges
+    of the 79 graphs.  A segment is located at its own anchor: two segments
+    30 apart (3 wavelengths at R = 10) have a chord of 3 and a rate of
+    |turn| / 3.  With no position, both are ABSENT.
+    """
+    a, b = _segment(1, "s0", 2, 0), _segment(2, "s1", 10, 1)
+    ids = {a: 1, b: 2}
+    pos = {"s0": (0.0, 0.0, 0.0), "s1": (30.0, 0.0, 0.0)}
+    bd = _Capture()
+    bd._run_curvature((a, b), ids, pos)
+    (cand,) = bd.seen[EdgeType.CURVATURE]
+    ep = cand[4]
+    got = _slots(ep)
+    spec = S.edge_slot_spec("EDGE_CURVATURE", "chord_len")
+    assert got["chord_len"] == float(S.quantise(spec, 3.0))
+    assert got["curv_rate"] != UNKNOWN and got["signed_turn"] != UNKNOWN
+
+    bd = _Capture()
+    bd._run_curvature((a, b), ids, {"elsewhere": (1.0, 1.0, 0.0)})
+    (cand,) = bd.seen[EdgeType.CURVATURE]
+    got = _slots(cand[4])
+    assert got["chord_len"] == UNKNOWN and got["curv_rate"] == UNKNOWN
+    assert got["signed_turn"] != UNKNOWN          # the turn needs no position

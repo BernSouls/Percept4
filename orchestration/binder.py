@@ -3700,7 +3700,12 @@ class Binder:
                 ep = _edge_params(
                     "EDGE_SPIRALITY",
                     {"pitch": mean_pitch, "consistency": consistency,
-                     "chirality": chirality_bin, "expansion": expansion},
+                     # [STAGE 5] A QUANTITY COMPARED WITH ITSELF IS NOT A
+                     # MEASUREMENT.  The hub is DEFINED above as the
+                     # midpoint of the pair, so r_a == r_b and the log
+                     # radius ratio is 0 for every pair of every image.  The
+                     # expansion is ABSENT.
+                     "chirality": chirality_bin, "expansion": None},
                     sign=1,
                     confidence=float(clamp(signal, 0.0, 1.0)),
                 )
@@ -3825,7 +3830,15 @@ class Binder:
                 # spoke separation (axial, it folds) in RADIANS.
                 ep = _edge_params(
                     "EDGE_RADIALITY",
-                    {"hub_bearing": hub_bearing, "alignment": mean_dev,
+                    # [STAGE 5] A QUANTITY COMPARED WITH ITSELF IS NOT A
+                    # MEASUREMENT.  The hub is DEFINED above as the
+                    # intersection of the two elements' own orientation
+                    # lines, so each element points at the hub exactly:
+                    # dev_a = dev_b = 0 to rounding (measured: |mean_dev| <=
+                    # 1.4e-14 on every RADIALITY candidate).  Written as a
+                    # measurement it was one more axis on which every
+                    # RADIALITY edge agreed with every other.  It is ABSENT.
+                    {"hub_bearing": hub_bearing, "alignment": None,
                      "hub_ratio": hub_ratio, "spoke_separation": spoke_angle},
                     sign=1,
                     confidence=float(clamp(signal, 0.0, 1.0)),
@@ -6214,17 +6227,26 @@ class Binder:
                 # difference over a fixed constant, i.e. not a rate at all.
                 # Both are measured now: the chord between the two segments'
                 # own positions, and the turn per unit chord.
-                chord_px = 0.0
-                if anchor_positions:
-                    pi_a = _mean_position(
-                        _extract_member_anchors(d_i), anchor_positions)
-                    pi_b = _mean_position(
-                        _extract_member_anchors(d_j), anchor_positions)
-                    if pi_a is not None and pi_b is not None:
-                        chord_px = _pos_dist(pi_a, pi_b)
-                scale = max(self._step_extraction_scale, 1e-6)
-                chord_w = chord_px / scale
-                curv_rate = (abs(turn) / chord_w) if chord_w > 1e-6 else 0.0
+                # [STAGE 5] ...and they were NOT measured: the positions
+                # were looked up through the segments' MEMBER anchors, a
+                # segment has no member roles, so the lookup found nothing
+                # and the chord fell back to 0.0 -- with a curvature rate
+                # of 0.0 derived from it.  Every CURVATURE edge of the 79
+                # ETH-80 graphs carried (chord 0, rate 0): two measurements
+                # nobody made.  A segment is located at its own anchor
+                # (`_footprint`: the member centroid, else the anchor); when
+                # either segment has no position the chord is ABSENT, and
+                # the rate -- a turn per unit chord -- is ABSENT whenever
+                # the chord is absent or zero.
+                chord_w: Optional[float] = None
+                curv_rate: Optional[float] = None
+                pi_a, _ext_a = self._footprint(d_i, anchor_positions)
+                pi_b, _ext_b = self._footprint(d_j, anchor_positions)
+                if pi_a is not None and pi_b is not None:
+                    scale = max(self._step_extraction_scale, 1e-6)
+                    chord_w = _pos_dist(pi_a, pi_b) / scale
+                    if chord_w > 1e-6:
+                        curv_rate = abs(turn) / chord_w
                 ep = _edge_params(
                     "EDGE_CURVATURE",
                     {"signed_turn": turn, "chord_len": chord_w,

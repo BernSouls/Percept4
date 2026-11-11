@@ -1,5 +1,5 @@
 PHASE 5 step 0 -- graph census, 79 EVAL graphs (read-only)
-front-end digest e12a5a4ca862
+front-end digest f2461c926fd2
 
 nodes per graph: median 713 (min 454, max 916);  edges per graph: median 801 (min 444, max 1703)
 
@@ -57,7 +57,7 @@ edges: type, count, same-anchor share, endpoint lens pairs (top 4), slots (measu
       slots: angle_delta 100% 4 | bisector_theta 100% 21 | spatial_dist 100% 1
   RADIALITY                    1691  same-anchor   0.0% (unknown 0)
       pairs: Contour>Contour 1691
-      slots: hub_bearing 100% 24 | alignment 100% 1 | hub_ratio 100% 4 | spoke_separation 100% 12
+      slots: hub_bearing 100% 24 | alignment 0% - | hub_ratio 100% 4 | spoke_separation 100% 12
   ORIENTATION_JUNCTION         1536  same-anchor   0.0% (unknown 0)
       pairs: Orientation>Orientation 1536
       slots: angle_delta 100% 3 | bisector_theta 100% 17 | spatial_dist 100% 1
@@ -75,7 +75,7 @@ edges: type, count, same-anchor share, endpoint lens pairs (top 4), slots (measu
       slots: perp_dist 100% 8 | stagger_dist 100% 8 | convergence 100% 5
   SPIRALITY                     939  same-anchor   0.0% (unknown 0)
       pairs: Contour>Contour 939
-      slots: pitch 100% 9 | consistency 100% 7 | chirality 100% 3 | expansion 100% 1
+      slots: pitch 100% 9 | consistency 100% 7 | chirality 100% 3 | expansion 0% -
   COCIRCULAR                    921  same-anchor   0.0% (unknown 0)
       pairs: Contour>Contour 921
       slots: cocirc_asym 100% 7 | dist 100% 5
@@ -99,7 +99,7 @@ edges: type, count, same-anchor share, endpoint lens pairs (top 4), slots (measu
       slots: junction_type 100% 5 | sharpness 100% 4 | curvature 100% 8 | parent_theta 100% 12
   CURVATURE                      87  same-anchor   0.0% (unknown 0)
       pairs: Orientation>Orientation 87
-      slots: signed_turn 100% 5 | chord_len 100% 1 | curv_rate 100% 1
+      slots: signed_turn 100% 5 | chord_len 0% - | curv_rate 0% -
   DEGREE                         36  same-anchor   0.0% (unknown 0)
       pairs: Position>Position 36
       slots: (no parameters)

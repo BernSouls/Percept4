@@ -1,4 +1,4 @@
-PHASE 5 / A2 -- CurveComplex membership, 79 EVAL graphs, front-end digest e12a5a4ca862
+PHASE 5 / A2 -- CurveComplex membership, 79 EVAL graphs, front-end digest f2461c926fd2
 
   Contour nodes                                        median 18.000   p10 11.000   min 10.000   max 40.000
   CurveComplex nodes                                   median 13.000   p10  9.000   min  7.000   max 25.000
