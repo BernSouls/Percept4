@@ -150,9 +150,8 @@ def build_one(name):
     random.Random(len(ids)).shuffle(shuffled)
     perm = dict(zip(ids, (10 ** 6 + x for x in shuffled)))
 
-    class _G:
-        subgraph, sigs = sg, sigs
-    sg2, sigs2 = relabel(_G, perm)
+    from types import SimpleNamespace
+    sg2, sigs2 = relabel(SimpleNamespace(subgraph=sg, sigs=sigs), perm)
     res = W.walk(sg, sg2, sigs, sigs2)
     out["self"] = {"frame": res.frame_q, "mapped": len(res.mapping),
                    "identity": sum(1 for u, v in res.mapping.items() if perm[u] == v),
