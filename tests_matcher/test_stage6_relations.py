@@ -153,7 +153,8 @@ def test_two_near_equal_hosts_are_not_a_measurement():
     far = _host("far", [(0.0, 20.0), (100.0, 20.0)])            # d = 1.7
     atts, stats = A.attach([f], [near, rival], R)
     assert atts == [] and stats[("EndStopped", "PEAK_CHAIN")] == {
-        A.KNOWN: 0, A.UNAMBIGUOUS: 0, A.BY_TANGENT: 0, A.AMBIGUOUS: 1, A.NO_HOST: 0}
+        A.KNOWN: 0, A.KNOWN_SEVERAL: 0, A.UNAMBIGUOUS: 0, A.BY_TANGENT: 0,
+        A.AMBIGUOUS: 1, A.NO_HOST: 0}
     (a,), stats = A.attach([f], [near, far], R)
     assert a.host.key == "near" and stats[("EndStopped", "PEAK_CHAIN")][A.UNAMBIGUOUS] == 1
     # the margin is exactly AMBIGUITY_MARGIN: 0.3 against 0.8 passes
@@ -177,8 +178,8 @@ def test_ambiguity_is_judged_inside_one_host_kind():
 
 def test_a_host_the_data_names_needs_no_test():
     """RULE: membership IDENTIFIES the host; the attachment MEASURES the place.
-    A named host is used even when a rival is as near; two named hosts of one
-    kind are not one fact, so nothing is written."""
+    A named host is used even when a rival is as near.  Several named hosts
+    of one kind: see `test_several_named_hosts_are_several_facts`."""
     near = _host("near", LINE)
     rival = _host("rival", [(0.0, 6.0), (100.0, 6.0)])
     f = _feat("f", (50.0, 3.0), known=(("PEAK_CHAIN", "rival"),))
@@ -189,9 +190,11 @@ def test_a_host_the_data_names_needs_no_test():
     g = _feat("g", (50.0, 60.0), known=(("PEAK_CHAIN", "near"),))
     (b,), _ = A.attach([g], [near], R)
     assert b.known and b.perp_dist == pytest.approx(6.0)
-    two = _feat("t", (50.0, 3.0), known=(("PEAK_CHAIN", "near"), ("PEAK_CHAIN", "rival")))
-    atts, stats = A.attach([two], [near, rival], R)
-    assert atts == [] and stats[("EndStopped", "PEAK_CHAIN")][A.AMBIGUOUS] == 1
+    # a named host that is not among the hosts (it has no polyline) is not a
+    # fact about any host: the feature is then placed by geometry, like any other
+    gone = _feat("h", (50.0, 3.0), known=(("PEAK_CHAIN", "missing"),))
+    (c,), stats = A.attach([gone], [near], R)
+    assert c.host.key == "near" and not c.known
 
 
 def test_a_ring_has_no_end():
@@ -308,12 +311,13 @@ def test_the_attachment_writer_lays_one_edge_per_host_and_feature_node():
         assert by[node].quantized == S.edge_quantise(ATT, {
             "arc_end_dist": min(arc, 1 - arc), "tangent_angle": 0.0, "perp_dist": 0.0})
         assert by[node].ordinal == pytest.approx(arc)
-    # the terminator: beyond the end, 0.4 scales off, at the angle its own
-    # tangent makes with the chain
-    e_tangent = A.feature_tangent(_endstop("e"), N_THETA)
+    # the terminator: beyond the end, 0.4 scales off.  Its angle is ABSENT:
+    # truth does not support an EndStopped orientation (Amendment 3.2)
+    assert A.feature_tangent(_endstop("e"), N_THETA) is None
     assert by[7].quantized == S.edge_quantise(ATT, {
-        "arc_end_dist": 0.0, "tangent_angle": A.axial_difference(e_tangent, 0.0),
-        "perp_dist": 0.4})
+        "arc_end_dist": 0.0, "tangent_angle": None, "perp_dist": 0.4})
+    assert by[7].quantized != S.edge_quantise(ATT, {
+        "arc_end_dist": 0.0, "tangent_angle": 0.0, "perp_dist": 0.4})
     assert by[7].ordinal == pytest.approx(1.0)
     d = b.diagnostics["stage6_attachment"]
     assert d["CONTOUR_PEAK|PEAK_CHAIN|known"] == 3
@@ -746,39 +750,76 @@ def test_switch_off_is_the_old_graph_and_switch_on_adds_only_the_relations(param
 # --------------------------------------------------------------------------
 
 def test_the_endstopped_slot_is_the_bars_orientation_not_a_carrier():
-    """RULE: the ENDSTOPPED `theta` slot is the bank channel of the bar that
-    ends (measured on isolated bars: a median 7.5 degrees from the bar, none
-    beyond 67.5).  It is used as it is; a second 90-degree turn is a defect."""
+    """RULE: the ENDSTOPPED `theta` slot is the bank channel whose response
+    ends.  On isolated bars that is the bar (a median 7.5 degrees from it,
+    none beyond 67.5), so what the detection says is the slot AS IT IS: a
+    second 90-degree turn is a defect."""
     for b in (0, 5, 12, 23):
-        assert A.feature_tangent(_endstop("e", b), N_THETA) == pytest.approx(
+        assert A.raw_orientation(_endstop("e", b), N_THETA) == pytest.approx(
             b * math.pi / N_THETA)
-    # a terminator whose bar runs ALONG the chain reads 0, one that abuts it 90
-    chain = _host("h", LINE)
-    along = _feat("a", (100.0, 3.0), tangent=A.feature_tangent(_endstop("a", 0), N_THETA))
-    abuts = _feat("b", (50.0, 3.0), tangent=A.feature_tangent(_endstop("b", 12), N_THETA))
-    a_along, a_abuts = A.attach([along, abuts], [chain], R)[0]
-    assert a_along.tangent_angle == pytest.approx(0.0)
-    assert a_abuts.tangent_angle == pytest.approx(math.pi / 2)
+
+
+def test_an_orientation_truth_does_not_support_is_absent_and_the_place_stays():
+    """RULE (Amendment 3.2): a kind's own orientation is used only if renderer
+    truth supports it.  EndStopped (a leak channel on a boundary: 9 % within
+    15 degrees), ContourFragment (its chord is the boundary normal by
+    construction) and Corner (24 % within 15 degrees of the true bisector)
+    say something, and it is not used: the angle is ABSENT.  Where the feature
+    sits on its host is still measured.  A fabricated angle is worse than
+    none."""
+    assert A.TANGENT_KINDS == ("CONTOUR_PEAK", "Orientation")
+    frag = _det("ContourFragment", "region", (4, 16, 7, 2),
+                (("entity", "region", 0, "+"), ("fragment", 0, 0, "+")))
+    object.__setattr__(frag, "_frag_mid", (25.0, 4.0))
+    object.__setattr__(frag, "_frag_tangent", 0.25)
+    corner = Detection(
+        k="Corner", source_layer=1, scale=0, alpha="c", z=1.0, t=0, rho=(),
+        sigma=TypedSignature(kind="CANONICAL", class_="CORNER", relation="T",
+                             quantized=(4.0, 3.0, 2.0, 1.0), population=()))
+    for det in (_endstop("e", 5), frag, corner):
+        assert A.raw_orientation(det, N_THETA) is not None      # it does say something
+        assert A.feature_tangent(det, N_THETA) is None          # and it is not used
+    for det in (_peak("p", 3), _det("Orientation", "o", (3, 0, 0))):
+        assert A.feature_tangent(det, N_THETA) == A.raw_orientation(det, N_THETA)
+    hosts, feats = A.hosts_and_features(
+        [(_chain("C", ["a", "b"]), 1), (_endstop("e", 5), 2), (frag, 3)],
+        {"a": (0.0, 0.0), "b": (100.0, 0.0), "e": (50.0, 3.0), "region": (500.0, 500.0)},
+        N_THETA)
+    atts, _ = A.attach(feats, hosts, R)
+    got = {a.feature.kind: a for a in atts}
+    assert got["EndStopped"].tangent_angle is None
+    assert (got["EndStopped"].arc_pos, got["EndStopped"].perp_dist) == pytest.approx((0.5, 0.3))
+    assert got["ContourFragment"].tangent_angle is None
+    assert (got["ContourFragment"].arc_pos, got["ContourFragment"].perp_dist) == pytest.approx(
+        (0.25, 0.4))
+    # ... and a kind with no usable orientation cannot be told apart by it
+    flat = _host("flat", [(0.0, 0.0), (100.0, 0.0)])
+    steep = _host("steep", [(50.0, -40.0), (50.0, 40.0)])
+    hosts2, feats2 = A.hosts_and_features(
+        [(_endstop("e", 0), 2)], {"e": (53.0, 3.0)}, N_THETA)
+    atts2, stats2 = A.attach(feats2, [flat, steep], R)
+    assert atts2 == [] and stats2[("EndStopped", "PEAK_CHAIN")][A.AMBIGUOUS] == 1
 
 
 def test_a_corners_orientation_is_its_bisector():
-    """RULE: two arms are not a reason for silence.  A Corner's direction is
-    its BISECTOR: the CORNER class' own `orient` slot (bin centre of 12 over
-    [0, pi)).  A junction-class Corner with two arms: ref_theta + gap0 / 2;
-    with three arms there is no one direction."""
+    """RULE: two arms are not a reason for silence.  What a Corner says its
+    direction is: its BISECTOR, the CORNER class' own `orient` slot (bin
+    centre of 12 over [0, pi)).  A junction-class Corner with two arms:
+    ref_theta + gap0 / 2; with three arms there is no one direction.
+    (Whether that is USED is truth's call: see the pin on TANGENT_KINDS.)"""
     def corner(cls, q):
         sig = TypedSignature(kind="CANONICAL", class_=cls, relation="T",
                              quantized=tuple(float(v) for v in q), population=())
         return Detection(k="Corner", source_layer=1, scale=0, sigma=sig,
                          alpha="c", z=1.0, t=0, rho=())
 
-    assert A.feature_tangent(corner("CORNER", (4, 3, 2, 1)), N_THETA) == pytest.approx(
+    assert A.raw_orientation(corner("CORNER", (4, 3, 2, 1)), N_THETA) == pytest.approx(
         3.5 * math.pi / 12.0)
     ref, gap = 2.5 * 2 * math.pi / 24, 1.5 * 2 * math.pi / 8
-    assert A.feature_tangent(corner("JUNCTION", (2, 2, 0, 0, 1)), N_THETA) == pytest.approx(
+    assert A.raw_orientation(corner("JUNCTION", (2, 2, 0, 0, 1)), N_THETA) == pytest.approx(
         (ref + gap / 2) % math.pi)
-    assert A.feature_tangent(corner("JUNCTION", (3, 2, 0, 0, 1)), N_THETA) is None
-    assert A.feature_tangent(corner("TEST", (4, 3, 2, 1)), N_THETA) is None
+    assert A.raw_orientation(corner("JUNCTION", (3, 2, 0, 0, 1)), N_THETA) is None
+    assert A.raw_orientation(corner("TEST", (4, 3, 2, 1)), N_THETA) is None
     # on its own chain the bisector-to-arm angle is (pi - turn) / 2
     square = [(0.0, 0.0), (40.0, 0.0), (40.0, 40.0)]
     from lenses.corner_lens import _turn_and_bisector
@@ -821,18 +862,23 @@ def test_a_fragment_carries_its_own_place_and_chord_direction():
     twin = _det("ContourFragment", "region", (4, 16, 7, 2),
                 (("entity", "region", 0, "+"), ("fragment", 0, 0, "+")))
     pos = {"region": (500.0, 500.0)}
-    assert A.feature_tangent(frag, N_THETA) is None                    # nothing carried
+    assert A.raw_orientation(frag, N_THETA) is None                    # nothing carried
     assert A.feature_position(frag, pos) == (500.0, 500.0)
     object.__setattr__(frag, "_frag_mid", (25.0, 4.0))
     object.__setattr__(frag, "_frag_tangent", 0.25)
-    assert A.feature_tangent(frag, N_THETA) == 0.25
+    assert A.raw_orientation(frag, N_THETA) == 0.25
     assert A.feature_position(frag, pos) == (25.0, 4.0)                # not the anchor
     assert frag == twin and hash(frag) == hash(twin)                   # the same detection
+    # two fragments of one contour share the anchor: the fragment index is
+    # part of the feature's identity
+    other = _det("ContourFragment", "region", (4, 17, 7, 2),
+                 (("entity", "region", 0, "+"), ("fragment", 1, 0, "+")))
+    assert A.feature_key(frag) == ("region", 0) != A.feature_key(other)
     hosts, feats = A.hosts_and_features(
         [(_chain("C", ["a", "b"]), 1), (frag, 2)],
         dict(pos, a=(0.0, 0.0), b=(100.0, 0.0)), N_THETA)
     (a,), _ = A.attach(feats, hosts, R)
-    assert (a.arc_pos, a.perp_dist, a.tangent_angle) == pytest.approx((0.25, 0.4, 0.25))
+    assert (a.arc_pos, a.perp_dist) == pytest.approx((0.25, 0.4))
 
 
 def test_a_feature_attaches_to_the_near_equidistant_host_it_parallels():
@@ -842,53 +888,87 @@ def test_a_feature_attaches_to_the_near_equidistant_host_it_parallels():
     nothing is written."""
     flat = _host("flat", [(0.0, 0.0), (100.0, 0.0)])
     steep = _host("steep", [(50.0, -40.0), (50.0, 40.0)])        # crosses it
-    key = ("EndStopped", "PEAK_CHAIN")
+    key = ("Orientation", "PEAK_CHAIN")
     p = (53.0, 3.0)                                              # 0.3 from each
-    (a,), stats = A.attach([_feat("f", p, tangent=0.05)], [flat, steep], R)
+    (a,), stats = A.attach([_feat("f", p, tangent=0.05, kind="Orientation")], [flat, steep], R)
     assert a.host.key == "flat" and a.by_tangent and not a.known
     assert a.tangent_angle == pytest.approx(0.05) and stats[key][A.BY_TANGENT] == 1
-    (b,), _ = A.attach([_feat("f", p, tangent=math.pi / 2 - 0.05)], [flat, steep], R)
+    (b,), _ = A.attach([_feat("f", p, tangent=math.pi / 2 - 0.05, kind="Orientation")], [flat, steep], R)
     assert b.host.key == "steep" and b.by_tangent
     # parallel to neither: 45 degrees from both
-    atts, stats = A.attach([_feat("f", p, tangent=math.pi / 4)], [flat, steep], R)
+    atts, stats = A.attach([_feat("f", p, tangent=math.pi / 4, kind="Orientation")], [flat, steep], R)
     assert atts == [] and stats[key][A.AMBIGUOUS] == 1
     # no tangent: nothing to agree with
-    assert A.attach([_feat("f", p, tangent=None)], [flat, steep], R)[0] == []
+    assert A.attach([_feat("f", p, tangent=None, kind="Orientation")], [flat, steep], R)[0] == []
     # the distance-only rule, for the before/after report
-    assert A.attach([_feat("f", p, tangent=0.05)], [flat, steep], R, use_tangent=False)[0] == []
+    assert A.attach([_feat("f", p, tangent=0.05, kind="Orientation")], [flat, steep], R, use_tangent=False)[0] == []
     # two PARALLEL near-equidistant hosts: the tangent cannot tell them apart
     twin = _host("twin", [(0.0, 6.0), (100.0, 6.0)])
-    atts, stats = A.attach([_feat("f", (50.0, 3.0), tangent=0.0)], [flat, twin], R)
+    atts, stats = A.attach([_feat("f", (50.0, 3.0), tangent=0.0, kind="Orientation")], [flat, twin], R)
     assert atts == [] and stats[key][A.AMBIGUOUS] == 1
     # the rival must be a full PARALLEL_MARGIN less parallel
     def crossing(alpha):
         return _host("x", [(53.0 - 40 * math.cos(alpha), -40 * math.sin(alpha)),
                            (53.0 + 40 * math.cos(alpha), 40 * math.sin(alpha))])
 
-    f = _feat("f", (53.0, 2.0), tangent=0.0)
+    f = _feat("f", (53.0, 2.0), tangent=0.0, kind="Orientation")
     assert A.attach([f], [flat, crossing(0.2)], R)[0] == []          # 11.5 degrees apart
     (c,), _ = A.attach([f], [flat, crossing(0.4)], R)                # 22.9 degrees apart
     assert c.host.key == "flat" and c.by_tangent
     # a contender whose own tangent cannot be read cannot be ruled out
     dot = A.Host(kind="PEAK_CHAIN", key="dot", node=None,
                  pts=((53.0, 5.0), (53.0, 5.0), (60.0, 30.0)), closed=False)
-    atts, stats = A.attach([_feat("f", (53.0, 3.0), tangent=0.0)], [flat, dot], R)
+    atts, stats = A.attach([_feat("f", (53.0, 3.0), tangent=0.0, kind="Orientation")], [flat, dot], R)
     assert atts == [] and stats[key][A.AMBIGUOUS] == 1
 
 
-def test_two_named_hosts_are_told_apart_by_the_tangent_or_not_at_all():
-    """RULE: a cell listed by two Contours belongs to the one it parallels."""
-    flat = _host("flat", [(0.0, 0.0), (100.0, 0.0)], kind="Contour", tangent=0.0)
-    steep = _host("steep", [(50.0, -40.0), (50.0, 40.0)], kind="Contour",
+def test_several_named_hosts_are_several_facts():
+    """RULE (Amendment 3.1): a cell where the cell graph branches is listed by
+    every Contour that ends on it.  Recorded memberships are facts, not rival
+    guesses: the feature is attached to EACH host that names it and measured
+    on each.  (The ambiguity rule is about a guess.)"""
+    flat = _host("flat", [(50.0, 0.0), (100.0, 0.0)], kind="Contour", tangent=0.0)
+    steep = _host("steep", [(50.0, 0.0), (50.0, 40.0)], kind="Contour",
                   tangent=math.pi / 2)
-    named = (("Contour", "flat"), ("Contour", "steep"))
+    third = _host("third", [(0.0, 0.0), (50.0, 0.0)], kind="Contour", tangent=0.0)
+    named = (("Contour", "flat"), ("Contour", "steep"), ("Contour", "third"))
     f = _feat("f", (50.0, 0.0), tangent=0.1, kind="Orientation", known=named)
-    (a,), stats = A.attach([f], [flat, steep], R)
-    assert a.host.key == "flat" and a.known and a.by_tangent
+    atts, stats = A.attach([f], [flat, steep, third], R)
+    assert [a.host.key for a in atts] == ["flat", "steep", "third"]
+    assert all(a.known and not a.by_tangent and a.perp_dist == 0.0 for a in atts)
+    assert [a.arc_end_dist for a in atts] == [0.0, 0.0, 0.0]        # the end of each
+    assert [a.tangent_angle for a in atts] == pytest.approx([0.1, math.pi / 2 - 0.1, 0.1])
     assert stats[("Orientation", "Contour")] == {
-        A.KNOWN: 0, A.UNAMBIGUOUS: 0, A.BY_TANGENT: 1, A.AMBIGUOUS: 0, A.NO_HOST: 0}
-    g = _feat("g", (50.0, 0.0), tangent=math.pi / 4, kind="Orientation", known=named)
-    assert A.attach([g], [flat, steep], R)[0] == []
+        A.KNOWN: 0, A.KNOWN_SEVERAL: 1, A.UNAMBIGUOUS: 0, A.BY_TANGENT: 0,
+        A.AMBIGUOUS: 0, A.NO_HOST: 0}
+    # a host named twice is one host
+    twice = _feat("g", (50.0, 0.0), tangent=0.1, kind="Orientation",
+                  known=(("Contour", "flat"), ("Contour", "flat")))
+    (only,), stats = A.attach([twice], [flat, steep], R)
+    assert only.host.key == "flat" and stats[("Orientation", "Contour")][A.KNOWN] == 1
+    # the Amendment-2 treatment, kept for the before/after report: the one it
+    # parallels, or nothing
+    (a,), stats = A.attach([f], [flat, steep], R, every_named=False)
+    assert a.host.key == "flat" and a.known and a.by_tangent
+    assert stats[("Orientation", "Contour")][A.BY_TANGENT] == 1
+    assert A.attach([f], [flat, steep, third], R, every_named=False)[0] == []
+
+
+def test_the_writer_attaches_a_branch_cell_to_every_contour_that_names_it(params):
+    """RULE: the binder writer follows `ATTACHMENT_EVERY_NAMED_HOST`."""
+    o = _det("Orientation", "o", (0, 0, 0))
+    k1 = _contour("k1", ["o", "x"], mean_theta_bin=0)
+    k2 = _contour("k2", ["o", "y"], mean_theta_bin=6)
+    pos = {"o": (0.0, 0.0), "x": (40.0, 0.0), "y": (0.0, 40.0)}
+
+    def edges(flag):
+        params(ATTACHMENT_EVERY_NAMED_HOST=flag)
+        b = _Capture(higher=[(k1, 10), (k2, 11)], positions=dict(pos), v1=[(o, 1)])
+        b._run_boundary_attachment()
+        return sorted((c[0], c[1]) for c in b.seen[EdgeType.BOUNDARY_ATTACHMENT])
+
+    assert edges(True) == [(10, 1), (11, 1)]
+    assert edges(False) == [(10, 1)]         # Amendment 2: only the one it parallels
 
 
 def test_a_terminator_with_two_near_equal_parents_writes_nothing(params):

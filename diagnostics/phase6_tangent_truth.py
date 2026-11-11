@@ -14,6 +14,11 @@
       b. per host kind: error of the host's tangent at its vertices;
       c. per attachment: error of `tangent_angle` against the angle between
          the two true tangents (at the feature and at its foot).
+ 3. THE TESTS OF AMENDMENT 3.2:
+      a. Corner against the TRUE BISECTOR (a bisector is not a tangent);
+      b. EndStopped: is the winning channel the locally dominant channel?
+      c. the stream-2 polylines against the true tangent, as traced and with
+         the tracer's 90-degree rotation removed.
 
     python diagnostics/phase6_tangent_truth.py [--out NAME]
 """
@@ -144,6 +149,69 @@ class Truth:
         return float(self.tang[i]), bool(self.smooth[i])
 
 
+def true_bisector(truth, pos, scale):
+    """(true bisector, axial) at the true corner nearest `pos`, or None.
+
+    Registered in Amendment 3.2: the corner is the centroid of the non-smooth
+    boundary pixels within 4 px of the non-smooth pixel nearest the detection
+    (within one scale); the bisector is the direction of the mean unit vector
+    from it to the boundary pixels 0.75-1.5 scales away."""
+    if truth.tree is None:
+        return None
+    near = [i for i in truth.tree.query_ball_point([float(pos[0]), float(pos[1])], r=scale)
+            if not truth.smooth[i]]
+    if not near:
+        return None
+    d = np.hypot(truth.xy[near, 0] - pos[0], truth.xy[near, 1] - pos[1])
+    i0 = near[int(np.argmin(d))]
+    cl = [i for i in truth.tree.query_ball_point(truth.xy[i0], r=4.0) if not truth.smooth[i]]
+    c = truth.xy[cl].mean(axis=0)
+    ring = truth.tree.query_ball_point(c, r=1.5 * scale)
+    v = truth.xy[ring] - c
+    r = np.hypot(v[:, 0], v[:, 1])
+    keep = r >= 0.75 * scale
+    if int(keep.sum()) < 6:
+        return None
+    u = (v[keep] / r[keep, None]).mean(axis=0)
+    if float(np.hypot(u[0], u[1])) < 0.2:
+        return None
+    return math.atan2(float(u[1]), float(u[0])) % math.pi
+
+
+def stream2_rows(obs, truth, scale):
+    """Angle between the local direction of every stream-2 polyline and the
+    true tangent: as traced, and with the tracer's rotation removed (the
+    energy rolled by half the channels: the tracer then follows the channel
+    index as it is)."""
+    from perception.contour_structure import _extract_association_field_contours
+    Eg = getattr(obs, "_gabor_complex", None)
+    th = getattr(obs, "_gabor_thetas", None)
+    sf = getattr(obs, "_gabor_sfs", None)
+    if Eg is None or th is None or sf is None:
+        return None
+    nt, _nsf, h, w = Eg.shape
+    out = {}
+    for label, energy in (("as traced", Eg), ("rotation removed", np.roll(Eg, nt // 2, axis=0))):
+        cs = _extract_association_field_contours(energy, np.asarray(th), np.asarray(sf), h, w)
+        err, lens, closed = [], [], 0
+        for c in cs:
+            pl = c["polyline"]
+            lens.append(float(c.get("length", 0.0)))
+            closed += int(bool(c.get("is_closed")))
+            for i in range(3, len(pl) - 3, 3):
+                a, b = pl[i - 3], pl[i + 3]
+                if a == b:
+                    continue
+                t = truth.at(pl[i], scale)
+                if t is None:
+                    continue
+                err.append(math.degrees(axial(math.atan2(b[1] - a[1], b[0] - a[0]), t[0])))
+        out[label] = {"n": len(cs), "len": lens, "closed": closed, "err": err}
+    same = len(out["as traced"]["len"]) == len(obs.get_contours())
+    out["reproduces_the_observation"] = bool(same)
+    return out
+
+
 def foot_point(h, pos):
     poly = A._Poly(h.pts, h.closed)
     _d, s, i = poly.project(pos)
@@ -162,18 +230,50 @@ def scene_rows(name, scene):
     scale = float(tr["extraction_scale"])
     truth = Truth(scene)
     out = {"feature": [], "feature_alt": [], "host": [], "attach": [],
-           "counts": defaultdict(int)}
+           "corner": [], "endstop": [], "counts": defaultdict(int)}
+    # what each detection ITSELF says (every kind, admitted or not)
+    raw, cls_of = {}, {}
+    for d, _n in dn:
+        if d.k in A.FEATURE_KINDS:
+            raw[(d.k, A.feature_key(d))] = A.raw_orientation(d, N_THETA)
+            if d.k == "Corner":
+                cls_of[A.feature_key(d)] = str(getattr(d.sigma, "class_", "?"))
+    obs = tr.get("obs")
+    Eg = getattr(obs, "_gabor_complex", None)
+    for d, _n in dn:
+        if d.k != "EndStopped" or Eg is None:
+            continue
+        p = positions.get(d.alpha)
+        if p is None:
+            continue
+        nt = Eg.shape[0]
+        x = int(min(Eg.shape[3] - 1, max(0, round(p[0]))))
+        y = int(min(Eg.shape[2] - 1, max(0, round(p[1]))))
+        e = Eg[:, :, y, x].max(axis=1)
+        it = int(round(float(d.sigma.quantized[0]) * nt / N_THETA)) % nt
+        dom = int(np.argmax(e))
+        step = min((it - dom) % nt, (dom - it) % nt)
+        t = truth.at(p, scale)
+        out["endstop"].append((step * 180.0 / nt, float(e[it] / max(e[dom], 1e-12)),
+                               -1 if t is None else int(t[1])))
     for f in feats:
         out["counts"]["features|" + f.kind] += 1
+        own = raw.get((f.kind, f.key))
+        if f.kind == "Corner" and own is not None:
+            tb = true_bisector(truth, f.pos, scale)
+            out["counts"]["corner_with_true_bisector"] += int(tb is not None)
+            if tb is not None:
+                out["corner"].append((math.degrees(axial(own, tb)), cls_of.get(f.key, "?")))
         t = truth.at(f.pos, scale)
         if t is None:
             continue
         out["counts"]["near_boundary|" + f.kind] += 1
-        if f.tangent is None:
+        if own is None:
             continue
-        out["feature"].append((f.kind, math.degrees(axial(f.tangent, t[0])), int(t[1])))
-        if f.kind == "EndStopped":      # the rejected reading, for the record
-            out["feature_alt"].append((math.degrees(axial(f.tangent + math.pi / 2, t[0])), int(t[1])))
+        out["feature"].append((f.kind, math.degrees(axial(own, t[0])), int(t[1])))
+        if f.kind == "EndStopped":      # the reading with a 90-degree turn, for the record
+            out["feature_alt"].append((math.degrees(axial(own + math.pi / 2, t[0])), int(t[1])))
+    out["stream2"] = stream2_rows(obs, truth, scale)
     for h in hosts:
         poly = A._Poly(h.pts, h.closed)
         for vi, p in enumerate(h.pts):
@@ -244,19 +344,32 @@ def main(argv=None) -> int:
     scenes = dict(build_all())
     scenes.update(build_fresh_all())
     feat, feat_alt, host, att, counts = [], [], [], [], defaultdict(int)
+    corner, endstop = [], []
+    s2 = {"as traced": {"n": 0, "len": [], "closed": 0, "err": []},
+          "rotation removed": {"n": 0, "len": [], "closed": 0, "err": []}}
+    s2_same = 0
     for name, sc in scenes.items():
         r = scene_rows(name, sc)
         feat += r["feature"]
         feat_alt += r["feature_alt"]
         host += r["host"]
         att += r["attach"]
+        corner += r["corner"]
+        endstop += r["endstop"]
+        if r["stream2"] is not None:
+            s2_same += int(r["stream2"]["reproduces_the_observation"])
+            for k in s2:
+                s2[k]["n"] += r["stream2"][k]["n"]
+                s2[k]["closed"] += r["stream2"][k]["closed"]
+                s2[k]["len"] += r["stream2"][k]["len"]
+                s2[k]["err"] += r["stream2"][k]["err"]
         for k, v in r["counts"].items():
             counts[k] += v
     L += ["", "2. THE SYNTHETIC SCENES (%d scenes; error in degrees against the true boundary tangent" % len(scenes),
           "   at the nearest boundary pixel, for things within one scale of a true boundary)", "",
           "   a. the feature's own orientation",
           "      kind              features  near a boundary   on SMOOTH boundary                                         on any boundary"]
-    kinds = sorted({k for k, _e, _s in feat} | {k.split("|")[1] for k in counts})
+    kinds = sorted({k for k, _e, _s in feat} | {k.split("|")[1] for k in counts if "|" in k})
     for k in kinds:
         sm = [e for kk, e, s in feat if kk == k and s]
         al = [e for kk, e, _s in feat if kk == k]
@@ -285,12 +398,70 @@ def main(argv=None) -> int:
     allsm = [abs(t[3] - t[4]) for t in att if t[5]]
     L.append("      ALL                                        %s   | %s" % (
         _stat(allsm), _stat([abs(t[3] - t[4]) for t in att])))
+    L += ["", "3. THE TESTS OF AMENDMENT 3.2", ""]
+    L.append("   THE RULE: a kind's orientation is used iff at least half of its detections on smooth boundary lie within 15 degrees of truth.")
+    for k in kinds:
+        sm = [e for kk, e, s_ in feat if kk == k and s_]
+        if not sm:
+            continue
+        share = float(np.mean(np.asarray(sm) < 15.0))
+        L.append("      %-16s %.2f within 15 degrees of the true TANGENT (n %d) -> %s%s" % (
+            k, share, len(sm), "USED" if share >= 0.5 else "ABSENT",
+            "  (a bisector is not a tangent: judged in 3a)" if k == "Corner" else ""))
+    c_ = np.asarray([e for e, _c in corner], dtype=float)
+    L += ["", "   a. Corner against the TRUE BISECTOR: %d Corner detections, %d with a true bisector" % (
+        counts.get("features|Corner", 0), len(c_))]
+    if len(c_):
+        share = float(np.mean(c_ < 15.0))
+        L.append("      THE REGISTERED TEST (the internal bisector: the mean direction of the two arms): median %.1f deg, "
+                 "p90 %.1f, within 15: %.2f, within 30: %.2f -> %s" % (
+                     np.median(c_), np.percentile(c_, 90), share, np.mean(c_ < 30.0),
+                     "USED" if share >= 0.5 else "ABSENT"))
+        L.append("      beside it, the perpendicular reading (the external-angle bisector, which is what the CORNER slot is "
+                 "documented to hold; NOT the registered truth): within 15: %.2f, within 30: %.2f" % (
+                     np.mean(c_ > 75.0), np.mean(c_ > 60.0)))
+        for cls in sorted({c for _e, c in corner}):
+            g = np.asarray([e for e, c in corner if c == cls], dtype=float)
+            L.append("         class %-9s n %3d: internal within 15: %.2f; external within 15: %.2f; median error to the internal %.1f" % (
+                cls, len(g), np.mean(g < 15.0), np.mean(g > 75.0), np.median(g)))
+    L += ["", "   b. EndStopped: the winning channel against the locally dominant channel (max energy over frequencies at the detection)"]
+    for label, sel in (("on smooth boundary", 1), ("at corners / junctions", 0), ("away from any boundary", -1)):
+        g = [(st_, ratio) for st_, ratio, where in endstop if where == sel]
+        if not g:
+            continue
+        st_ = np.asarray([x for x, _r in g])
+        ra = np.asarray([r_ for _x, r_ in g])
+        L.append("      %-24s n %4d: winning = dominant %.2f; within one channel (15 deg) %.2f; median offset %.0f deg; "
+                 "energy of the winning channel / dominant: median %.2f" % (
+                     label, len(g), np.mean(st_ == 0), np.mean(st_ <= 15.0 + 1e-9),
+                     np.median(st_), np.median(ra)))
+    L += ["", "   c. stream-2 polylines (the traces behind the contour regions and the ContourFragments) against the true tangent",
+          "      (the as-traced call reproduces the observation's own contour count in %d of %d scenes)" % (
+              s2_same, len(scenes))]
+    for k in ("as traced", "rotation removed"):
+        e = np.asarray(s2[k]["err"], dtype=float)
+        ln = np.asarray(s2[k]["len"], dtype=float)
+        L.append("      %-17s polylines %4d, closed %3d, length median %5.1f px (p90 %5.1f, total %7.0f); "
+                 "local direction vs true tangent: median %.1f deg, p10 %.1f, p90 %.1f, under 22.5: %.2f, over 67.5: %.2f" % (
+                     k, s2[k]["n"], s2[k]["closed"], np.median(ln) if len(ln) else float("nan"),
+                     np.percentile(ln, 90) if len(ln) else float("nan"), float(ln.sum()),
+                     np.median(e), np.percentile(e, 10), np.percentile(e, 90),
+                     np.mean(e < 22.5), np.mean(e > 67.5)))
+    ea = np.asarray(s2["as traced"]["err"], dtype=float)
+    er = np.asarray(s2["rotation removed"]["err"], dtype=float)
+    across = bool(len(ea) and len(er) and np.median(ea) > 67.5 and np.median(er) < 22.5)
+    L.append("      VERDICT (registered: median as traced above 67.5 AND with the rotation removed below 22.5): %s" % (
+        "the stream-2 tracer runs ACROSS edges; the rotation is applied to an index that already is the edge's orientation"
+        if across else "NOT established"))
     text = "\n".join(L) + "\n"
     print(text)
     with open(os.path.join(RESULTS_DIR, a.out + ".txt"), "w") as fh:
         fh.write(text)
     with open(os.path.join(RESULTS_DIR, a.out + ".json"), "w") as fh:
         json.dump({"feature": feat, "feature_alt": feat_alt, "host": host, "attach": att,
+                   "corner": corner, "endstop": endstop,
+                   "stream2": {k: {"n": v["n"], "closed": v["closed"], "len": v["len"],
+                                   "err": v["err"]} for k, v in s2.items()},
                    "counts": dict(counts)}, fh)
     return 0
 

@@ -4,8 +4,10 @@ unambiguous place on an extended boundary?
 Runs `perception.attachment.attach` (the function the binder writer calls) on
 the detections of each image, taken from a trace of the real front end, with
 the position map completed from the lens tier.  No graph is changed; nothing
-is scored.  Two rules side by side: distance alone (the first rule), and
-distance with tangent agreement (Amendment 2.3).
+is scored.  Three rules side by side: distance alone (the first rule);
+distance with tangent agreement (Amendment 2.3); and the rule in force
+(Amendment 3: several named hosts are several facts, and only an orientation
+that renderer truth supports is used).
 
     python diagnostics/phase6_attachment_census.py [--workers 2] [--out NAME]
                                                    [--split eval|heldout]
@@ -29,7 +31,7 @@ from _bootstrap import RESULTS_DIR  # noqa: E402
 import eth80_frontend as fe  # noqa: E402
 import eth80_split as sp  # noqa: E402
 
-OUTCOMES = ("known", "unambiguous", "by_tangent", "ambiguous", "no_host")
+OUTCOMES = ("known", "known_several", "unambiguous", "by_tangent", "ambiguous", "no_host")
 
 
 def detections_with_nodes(tr):
@@ -57,21 +59,44 @@ def one(entry):
     dn = detections_with_nodes(tr)
     hosts, feats = A.hosts_and_features(dn, positions, int(P.ORIENTATION_N_THETA))
     scale = float(tr["extraction_scale"])
-    _old, stats_dist = A.attach(feats, hosts, scale, use_tangent=False)
+    _old, stats_dist = A.attach(feats, hosts, scale, use_tangent=False, every_named=False)
+    _mid, stats_am2 = A.attach(feats, hosts, scale, every_named=False)
     atts, stats = A.attach(feats, hosts, scale)
     frag = [d for d, _n in dn if d.k == "ContourFragment"]
+    n_named = Counter((a.feature.kind, a.feature.key, a.host.kind) for a in atts if a.known)
+    several = defaultdict(list)          # (feature kind, host kind) -> [(k, at the end of all)]
+    by_feat = defaultdict(list)
+    for a in atts:
+        if a.known and n_named[(a.feature.kind, a.feature.key, a.host.kind)] > 1:
+            by_feat[(a.feature.kind, a.feature.key, a.host.kind)].append(a)
+    for (fk, _key, hk), g in sorted(by_feat.items(), key=lambda t: repr(t[0])):
+        ends = sum(1 for a in g if a.arc_end_dist is not None and a.arc_end_dist < 1e-9)
+        angs = sorted(a.tangent_angle for a in g if a.tangent_angle is not None)
+        several["%s|%s" % (fk, hk)].append(
+            (len(g), ends, None if len(angs) < 2 else round(angs[1] - angs[0], 4)))
+
+    def how(a):
+        if a.by_tangent:
+            return "by_tangent"
+        if a.known:
+            return ("known_several"
+                    if n_named[(a.feature.kind, a.feature.key, a.host.kind)] > 1 else "known")
+        return "unambiguous"
+
     row = {"class": cls, "image": os.path.basename(rel), "scale": scale,
            "hosts": dict(Counter(h.kind for h in hosts)),
            "host_closed": dict(Counter(h.kind for h in hosts if h.closed)),
+           "host_vertices": {k: [len(h.pts) for h in hosts if h.kind == k]
+                             for k in sorted({h.kind for h in hosts})},
            "features": dict(Counter(f.kind for f in feats)),
            "features_with_tangent": dict(Counter(f.kind for f in feats if f.tangent is not None)),
            "fragments": len(frag),
            "fragments_carrying_place": sum(1 for d in frag if getattr(d, "_frag_mid", None) is not None),
            "stats": {"%s|%s" % k: v for k, v in stats.items()},
            "stats_distance_only": {"%s|%s" % k: v for k, v in stats_dist.items()},
-           "atts": [(a.feature.kind, a.host.kind,
-                     "known" if a.known and not a.by_tangent else
-                     ("by_tangent" if a.by_tangent else "unambiguous"),
+           "stats_amendment2": {"%s|%s" % k: v for k, v in stats_am2.items()},
+           "several": dict(several),
+           "atts": [(a.feature.kind, a.host.kind, how(a),
                      round(a.arc_pos, 4),
                      None if a.arc_end_dist is None else round(a.arc_end_dist, 4),
                      round(a.perp_dist, 4),
@@ -129,50 +154,88 @@ def main(argv=None) -> int:
     L.append("features with an orientation of their own: " + ", ".join(
         "%s %d/%d" % (k, fwt.get(k, 0), v) for k, v in sorted(ft.items())))
 
-    tot, tot0 = defaultdict(Counter), defaultdict(Counter)
+    hv = defaultdict(list)
+    for r in rows:
+        for k, v in r["host_vertices"].items():
+            hv[k] += v
+    L.append("host vertices: " + ", ".join(
+        "%s median %d (p10 %d, p90 %d; exactly two: %.2f)" % (
+            k, np.median(v), np.percentile(v, 10), np.percentile(v, 90),
+            float(np.mean(np.asarray(v) == 2))) for k, v in sorted(hv.items())))
+
+    tot, tot0, tot2 = defaultdict(Counter), defaultdict(Counter), defaultdict(Counter)
     for r in rows:
         for k, v in r["stats"].items():
             tot[k].update(v)
         for k, v in r["stats_distance_only"].items():
             tot0[k].update(v)
-    L += ["", "A. outcome per feature and host kind (detections; one attempt per feature per host kind)",
-          "   feature          host         features   known  unambig.  by tangent  ambiguous  no host   attached"]
+        for k, v in r["stats_amendment2"].items():
+            tot2[k].update(v)
+    L += ["", "A. outcome per feature and host kind (one attempt per feature detection per host kind), the rule in force",
+          "   feature          host         features   known  several  unambig.  by tangent  ambiguous  no host   attached"]
     S = Counter()
     for key in sorted(tot):
         fk, hk = key.split("|")
         c = tot[key]
         n = sum(c.values())
         S.update(c)
-        att = c["known"] + c["unambiguous"] + c["by_tangent"]
-        L.append("   %-16s %-11s %8d  %6d  %8d  %10d  %9d  %7d   %6.3f" % (
-            fk, hk, n, c["known"], c["unambiguous"], c["by_tangent"], c["ambiguous"],
-            c["no_host"], att / max(n, 1)))
+        att = c["known"] + c["known_several"] + c["unambiguous"] + c["by_tangent"]
+        L.append("   %-16s %-11s %8d  %6d  %7d  %8d  %10d  %9d  %7d   %6.3f" % (
+            fk, hk, n, c["known"], c["known_several"], c["unambiguous"], c["by_tangent"],
+            c["ambiguous"], c["no_host"], att / max(n, 1)))
     n = sum(S.values())
-    L.append("   ALL                          %8d  %6d  %8d  %10d  %9d  %7d   %6.3f" % (
-        n, S["known"], S["unambiguous"], S["by_tangent"], S["ambiguous"], S["no_host"],
-        (S["known"] + S["unambiguous"] + S["by_tangent"]) / max(n, 1)))
+    L.append("   ALL                          %8d  %6d  %7d  %8d  %10d  %9d  %7d   %6.3f" % (
+        n, S["known"], S["known_several"], S["unambiguous"], S["by_tangent"], S["ambiguous"],
+        S["no_host"], (S["known"] + S["known_several"] + S["unambiguous"] + S["by_tangent"]) / max(n, 1)))
 
-    L += ["", "A2. what tangent agreement recovers (ambiguous under distance alone -> by tangent)",
-          "   feature          host         ambiguous before   by tangent   still ambiguous   recovered"]
-    R0 = R1 = 0
+    L += ["", "A2. where the features that distance alone called ambiguous go",
+          "   feature          host         ambiguous      under Amendment 2        under the rule in force (Amendment 3)",
+          "                                 (distance)     by tangent  ambiguous    several named  by tangent  ambiguous"]
+    T0 = Counter()
     for key in sorted(tot):
         fk, hk = key.split("|")
         before = tot0[key]["ambiguous"]
-        got = tot[key]["by_tangent"]
-        R0 += before
-        R1 += got
-        L.append("   %-16s %-11s %10d       %8d      %10d        %.3f" % (
-            fk, hk, before, got, tot[key]["ambiguous"], got / max(before, 1)))
-    L.append("   ALL                          %10d       %8d      %10d        %.3f" % (
-        R0, R1, R0 - R1, R1 / max(R0, 1)))
+        T0["before"] += before
+        T0["am2_tan"] += tot2[key]["by_tangent"]
+        T0["am2_amb"] += tot2[key]["ambiguous"]
+        T0["sev"] += tot[key]["known_several"]
+        T0["tan"] += tot[key]["by_tangent"]
+        T0["amb"] += tot[key]["ambiguous"]
+        L.append("   %-16s %-11s %9d      %10d  %9d    %13d  %10d  %9d" % (
+            fk, hk, before, tot2[key]["by_tangent"], tot2[key]["ambiguous"],
+            tot[key]["known_several"], tot[key]["by_tangent"], tot[key]["ambiguous"]))
+    L.append("   ALL                          %9d      %10d  %9d    %13d  %10d  %9d" % (
+        T0["before"], T0["am2_tan"], T0["am2_amb"], T0["sev"], T0["tan"], T0["amb"]))
     S0 = Counter()
     for c in tot0.values():
         S0.update(c)
+    S2 = Counter()
+    for c in tot2.values():
+        S2.update(c)
     geo0 = S0["unambiguous"] + S0["ambiguous"]
     geo1 = S["unambiguous"] + S["by_tangent"] + S["ambiguous"]
-    L.append("   geometric candidates ambiguous: distance alone %d of %d (%.3f); with tangent agreement %d of %d (%.3f)" % (
-        S0["ambiguous"], geo0, S0["ambiguous"] / max(geo0, 1), S["ambiguous"], geo1,
-        S["ambiguous"] / max(geo1, 1)))
+    L.append("   a GUESS was needed and could not be made: distance alone %d of %d (%.3f, the several-named counted as "
+             "ambiguous); Amendment 2: %d of %d (%.3f); in force: %d of %d (%.3f, the several-named are not guesses)" % (
+                 S0["ambiguous"], geo0, S0["ambiguous"] / max(geo0, 1),
+                 S2["ambiguous"], geo0, S2["ambiguous"] / max(geo0, 1),
+                 S["ambiguous"], geo1, S["ambiguous"] / max(geo1, 1)))
+
+    L += ["", "A3. features that SEVERAL hosts of one kind name (recorded memberships)",
+          "   feature          host         features   hosts naming it: 2 / 3 / 4 / 5+     at the END of every one   of all but one   best two angles under 15 deg apart"]
+    sev = defaultdict(list)
+    for r in rows:
+        for k, v in r["several"].items():
+            sev[k] += [tuple(x) for x in v]
+    for key in sorted(sev):
+        fk, hk = key.split("|")
+        g = sev[key]
+        ks = Counter(min(k, 5) for k, _e, _g in g)
+        gaps = [gp for _k, _e, gp in g if gp is not None]
+        L.append("   %-16s %-11s %8d   %5d / %5d / %5d / %5d            %6d (%.3f)        %6d           %s" % (
+            fk, hk, len(g), ks[2], ks[3], ks[4], ks[5],
+            sum(1 for k, e, _g in g if e == k), sum(1 for k, e, _g in g if e == k) / len(g),
+            sum(1 for k, e, _g in g if e == k - 1),
+            "%.3f (n %d)" % (float(np.mean(np.asarray(gaps) < math.pi / 12)), len(gaps)) if gaps else "-"))
 
     feats, any_att = Counter(), Counter()
     for r in rows:
@@ -247,7 +310,7 @@ def main(argv=None) -> int:
     H = defaultdict(lambda: [0] * 10)
     Z = defaultdict(Counter)
     for t in atts:
-        k = (t[1], "known" if t[2] == "known" else "by geometry")
+        k = (t[1], "known" if t[2] in ("known", "known_several") else "by geometry")
         H[k][min(9, int(t[3] * 10))] += 1
         Z[k]["n"] += 1
         Z[k]["zero"] += int(t[3] == 0.0)

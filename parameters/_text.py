@@ -2759,6 +2759,15 @@ BINDER_COMPLETE_POSITION_MAP = False
 #       ends, each end linked at most once (lenses/v4.py)
 # OFF: none of these is written and the CurveComplex lens is the old one.
 GRAPH_STAGE6_RELATIONS = False
+# [STAGE 6 / R1, pre-registration Amendment 3.1] A feature the data structure
+# names as a member of SEVERAL hosts of one kind (an Orientation cell where
+# the cell graph branches is listed by every Contour that ends on it) is
+# attached to each of them: recorded memberships are facts, not rival guesses.
+# False: the Amendment-2 treatment (tangent agreement picks one, or nothing).
+# Read only under GRAPH_STAGE6_RELATIONS.  It exists so that R6 can report
+# what the gate owes to this rule, which was written after presence counts
+# had been seen.
+ATTACHMENT_EVERY_NAMED_HOST = True
 # [O5] Thread count for the value-preserving field/V1 loops. This is a
 # PERFORMANCE knob only: every task writes a disjoint output slice, so the
 # produced arrays are byte-identical at any value (proven in the O5 harness

@@ -40,6 +40,17 @@ recorded fact.  The membership flag IDENTIFIES the host; the attachment
 supplies the MEASUREMENT (where on it, how far, at what angle).  That is not
 circular: the flag carries no geometry.
 
+SEVERAL NAMED HOSTS ARE SEVERAL FACTS (Amendment 3.1).  An Orientation cell
+where the cell graph branches is listed by every Contour that ends on it
+(three, four, five of them).  That is not an ambiguity: the ambiguity rule is
+about a guess between candidates, and nothing here is guessed.  The feature
+is attached to EACH host that names it and measured on each.
+
+AN ORIENTATION MUST PASS TRUTH (Amendment 3.2).  A feature kind's own
+orientation enters `tangent_angle` and tangent agreement only if renderer
+truth supports it (`TANGENT_KINDS`); for the others the angle is ABSENT and
+only the place is written.
+
 Pure geometry: no graph, no parameters, no state.  The binder writer
 (`Binder._run_boundary_attachment`) and the census
 (`diagnostics/phase6_attachment_census.py`) both call `attach`.
@@ -68,6 +79,8 @@ PARALLEL_MARGIN: float = math.pi / 12.0
 
 #: outcomes of one (feature, host kind) attempt
 KNOWN, UNAMBIGUOUS, AMBIGUOUS, NO_HOST = "known", "unambiguous", "ambiguous", "no_host"
+#: the data names several hosts of the kind; the feature is attached to each
+KNOWN_SEVERAL = "known_several"
 #: the host was near-equidistant with another and was chosen by its tangent
 BY_TANGENT = "by_tangent"
 
@@ -219,15 +232,19 @@ def attach(
     parallel_max: float = PARALLEL_MAX,
     parallel_margin: float = PARALLEL_MARGIN,
     use_tangent: bool = True,
+    every_named: bool = True,
 ) -> Tuple[List[Attachment], Dict[Tuple[str, str], Dict[str, int]]]:
     """Attach every feature to its host of each kind, or to none.
 
     Returns `(attachments, stats)`; `stats[(feature kind, host kind)]` counts
-    the outcomes KNOWN / UNAMBIGUOUS / BY_TANGENT / AMBIGUOUS / NO_HOST.
-    `use_tangent=False` is the distance-only rule (for the before/after
-    report).  Deterministic: hosts and features are processed in the order
-    given (the callers sort canonically) and every tie is broken by that
-    order.
+    the outcomes KNOWN / KNOWN_SEVERAL / UNAMBIGUOUS / BY_TANGENT / AMBIGUOUS /
+    NO_HOST, one per feature and host kind (a KNOWN_SEVERAL feature yields one
+    attachment per host that names it).
+    `use_tangent=False` is the distance-only rule and `every_named=False` the
+    Amendment-2 treatment of several named hosts (tangent agreement or
+    nothing); both exist for the before/after reports.  Deterministic: hosts
+    and features are processed in the order given (the callers sort
+    canonically) and every tie is broken by that order.
     """
     scale = float(scale)
     if not (scale > 0.0):
@@ -251,16 +268,28 @@ def attach(
             if f.only_known and hk not in named:
                 continue
             st = stats.setdefault((f.kind, hk), {
-                KNOWN: 0, UNAMBIGUOUS: 0, BY_TANGENT: 0, AMBIGUOUS: 0, NO_HOST: 0})
-            keys = [k for k in named.get(hk, ()) if (hk, k) in by_key]
+                KNOWN: 0, KNOWN_SEVERAL: 0, UNAMBIGUOUS: 0, BY_TANGENT: 0,
+                AMBIGUOUS: 0, NO_HOST: 0})
+            keys = []
+            for k in named.get(hk, ()):
+                if (hk, k) in by_key and k not in keys:
+                    keys.append(k)
             if len(keys) == 1:
                 h, poly = by_key[(hk, keys[0])]
                 out.append(_measure(f, h, poly, scale, True))
                 st[KNOWN] += 1
                 continue
+            if len(keys) > 1 and every_named:
+                # several recorded memberships are several facts: the
+                # feature is on every one of these hosts, measured on each
+                for k in keys:
+                    h, poly = by_key[(hk, k)]
+                    out.append(_measure(f, h, poly, scale, True))
+                st[KNOWN_SEVERAL] += 1
+                continue
             if len(keys) > 1:
-                # the data names several hosts of one kind: not one fact,
-                # unless the feature parallels exactly one of them
+                # [Amendment 2 behaviour, kept for the before/after report]
+                # one of them, if the feature parallels exactly one
                 got = (_by_tangent(f, [by_key[(hk, k)] for k in keys], scale,
                                    parallel_max, parallel_margin, True)
                        if use_tangent else None)
@@ -372,26 +401,55 @@ def host_of(det: Any, positions: Dict[Any, Any], node: Optional[int],
                 closed=closed, tangent=tangent)
 
 
-def feature_tangent(det: Any, n_theta: int) -> Optional[float]:
-    """The feature's own orientation (axial, radians), or None when it has none.
+#: [Amendment 3.2] the kinds whose own orientation renderer truth supports
+#: (diagnostics/results/phase6_tangent_truth.txt: share of a kind's
+#: detections on smooth synthetic boundary within 15 degrees of truth; the
+#: bar is one half):
+#:   CONTOUR_PEAK 0.97, Orientation 0.99 of the true TANGENT -> used
+#:   EndStopped 0.09.  On a filled shape's boundary the winning channel is
+#:       the locally dominant one in 3 % of the detections and holds a median
+#:       6 % of its energy: the end-stop score is a relative suppression, so
+#:       an off-axis leak wins along a smooth edge.  (On an isolated bar the
+#:       slot IS the bar's orientation.) -> ABSENT
+#:   ContourFragment 0.00, median error 90.0: its chord is the boundary
+#:       NORMAL by construction, because the stream-2 tracer runs across
+#:       edges -> ABSENT (a constant is not a measurement)
+#:   Corner 0.24 of the true (internal) bisector, 33 detections -> ABSENT
+TANGENT_KINDS: Tuple[str, ...] = ("CONTOUR_PEAK", "Orientation")
 
-    Sources (checked against renderer truth, diagnostics/phase6_tangent_truth.py):
+
+def feature_tangent(det: Any, n_theta: int) -> Optional[float]:
+    """The orientation the attachment may use: `raw_orientation` for the kinds
+    truth supports, None (ABSENT) for every other kind."""
+    if det.k not in TANGENT_KINDS:
+        return None
+    return raw_orientation(det, n_theta)
+
+
+def raw_orientation(det: Any, n_theta: int) -> Optional[float]:
+    """What the detection itself says its orientation is (axial, radians), or
+    None when it says nothing.  Read by `feature_tangent` and by the truth
+    diagnostic, which is how a kind gets into `TANGENT_KINDS` or stays out.
+
+    Sources:
       CONTOUR_PEAK     slot 0, the field's theta index over 12 channels: the
                        ridge tangent
       Orientation      slot 0, the orientation bin over `n_theta` (bin
                        centre): the edge tangent
-      EndStopped       slot 0, the bank channel of the terminating bar over
-                       `n_theta` ('round' quantiser): the BAR's orientation.
-                       It is NOT a carrier: on isolated bars the slot sits a
-                       median 7.5 degrees from the bar (0 of 138 detections
-                       beyond 67.5), so no 90-degree turn is applied
+      EndStopped       slot 0, the bank channel whose response ends, over
+                       `n_theta` ('round' quantiser).  It is NOT a carrier: on
+                       isolated bars the slot sits a median 7.5 degrees from
+                       the bar, so no 90-degree turn is applied.  Not in
+                       `TANGENT_KINDS`: on a boundary it is a leak channel
       ContourFragment  the chord direction of the fragment, carried on the
                        detection by the lens (`_frag_tangent`).  The signature
-                       alone leaves two candidates (theta +/- tvr)
+                       alone leaves two candidates (theta +/- tvr).  Not in
+                       `TANGENT_KINDS`: the chord crosses the boundary
       Corner           the BISECTOR: the CORNER class' own `orient` slot (12
                        bins over [0, pi), bin centre).  A junction-class
                        Corner with two arms: ref_theta + gap0 / 2; with any
-                       other arm count it has no single direction
+                       other arm count it has no single direction.  Not in
+                       `TANGENT_KINDS`: not within reach of the true bisector
     """
     q = det.sigma.quantized
     if det.k == "ContourFragment":
@@ -427,6 +485,15 @@ def feature_position(det: Any, positions: Dict[Any, Any]) -> Optional[Tuple[floa
         if mid is not None and len(mid) >= 2:
             return (float(mid[0]), float(mid[1]))
     return _xy(positions, det.alpha)
+
+
+def feature_key(det: Any) -> Any:
+    """Canonical identity of a feature detection.  Its anchor, except for a
+    ContourFragment: every fragment of a contour carries that contour's
+    region as its anchor, so the fragment index is part of the identity."""
+    if det.k == "ContourFragment":
+        return (det.alpha, _role(det, "fragment"))
+    return det.alpha
 
 
 def hosts_and_features(
@@ -482,7 +549,7 @@ def hosts_and_features(
                     pos = vpos          # the corner IS that vertex of its chain
         if pos is None:
             continue
-        feats.append(Feature(kind=det.k, key=det.alpha, node=node, pos=pos,
+        feats.append(Feature(kind=det.k, key=feature_key(det), node=node, pos=pos,
                              tangent=feature_tangent(det, n_theta),
                              known=tuple(known)))
     return hosts, feats

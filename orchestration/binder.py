@@ -1167,7 +1167,9 @@ class Binder:
         hosts, feats = _att.hosts_and_features(
             self._stage6_detections(), self._stage6_positions(),
             int(P.ORIENTATION_N_THETA))
-        atts, stats = _att.attach(feats, hosts, scale)
+        atts, stats = _att.attach(
+            feats, hosts, scale,
+            every_named=bool(getattr(P, "ATTACHMENT_EVERY_NAMED_HOST", True)))
         diag = self.diagnostics["stage6_attachment"]
         for (fk, hk), st in stats.items():
             for outcome, n in st.items():
