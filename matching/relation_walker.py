@@ -282,6 +282,9 @@ class WalkResult:
     order_rejections: int = 0
     gate_rejections: int = 0
     dense: int = 0               # |nodes_q| x |nodes_r|, the old matcher's matrix
+    #: the admissions in order: (query node, reference node, "seed" or the
+    #: relation classes that supported it).  For diagnostics; decides nothing.
+    log: List[Tuple[int, int, Any]] = field(default_factory=list)
 
 
 def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
@@ -316,6 +319,7 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
     rejected: set = set()            # pairs the order constraint has refused
     #: (u, v) -> {admitted pair: slack of its best agreeing relation}
     support: Dict[Tuple[int, int], Dict[Tuple[int, int], int]] = {}
+    via: Dict[Tuple[int, int], List[Tuple]] = {}     # the classes that proposed it
     heap: List[Tuple] = []
 
     def order_ok(u: int, v: int) -> bool:
@@ -375,6 +379,7 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
                         res.gate_rejections += int(not known)
                         continue
                     sup = support.setdefault((hu.far, hv.far), {})
+                    via.setdefault((hu.far, hv.far), []).append(cls)
                     old = sup.get((u, v))
                     if old is None or s < old:
                         sup[(u, v)] = s
@@ -425,6 +430,7 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
             res.order_rejections += 1
             continue
         res.seeds.append((u, v))
+        res.log.append((u, v, "seed"))
         admit(u, v)
 
     # ---- growth: best supported first -------------------------------------
@@ -439,6 +445,7 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
             res.order_rejections += 1
             rejected.add((u, v))
             continue
+        res.log.append((u, v, tuple(sorted(set(via.get((u, v), ()))))))
         admit(u, v)
 
     res.mapping = dict(sorted(map_q.items()))

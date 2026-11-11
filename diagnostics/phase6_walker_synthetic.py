@@ -207,6 +207,11 @@ def main(argv=None) -> int:
         A, B = built[an], built[bn]
         res = W.walk(A["new"][0], B["new"][0], A["new"][1], B["new"][1])
         new = precision_recall(res.mapping, A["new"][3], B["new"][3])
+        ra, rb = A["new"][3], B["new"][3]
+        seed_roles = [None if (u not in ra or v not in rb) else bool(ra[u] == rb[v])
+                      for u, v in res.seeds]
+        lens_a = {n: lt for n, (lt, _s) in A["new"][1].items()}
+        seed_lens = Counter(lens_a[u] for u, _v in res.seeds)
 
         def old_on(key):
             _s, corr = evidence_score(A[key][0], B[key][0], A[key][1], B[key][1])
@@ -221,12 +226,24 @@ def main(argv=None) -> int:
                      "score": res.score, "supported": res.supported, "seeds": len(res.seeds),
                      "examined": res.examined, "budget": res.budget, "dense": res.dense,
                      "order_rejections": res.order_rejections,
+                     "budget_exhausted": bool(res.budget_exhausted),
+                     "seeds_right": sum(1 for x in seed_roles if x is True),
+                     "seeds_wrong": sum(1 for x in seed_roles if x is False),
+                     "seeds_no_role": sum(1 for x in seed_roles if x is None),
+                     "seed_lens": dict(seed_lens),
                      "frame": [res.frame_q, res.frame_r]})
         L.append("   %-45s | %6d  %9d  %.3f  %.3f  %.3f  %-9s | %9d  %.3f  %.3f  %.3f        | %9d  %.3f  %.3f  %.3f" % (
             "%s / %s" % (an, bn), len(res.mapping), new["pairs"], new["p"], new["r"], new["f1"],
             ("%.3f" % res.score) if res.score is not None else "UNSUPP.",
             old["pairs"], old["p"], old["r"], old["f1"],
             old_new["pairs"], old_new["p"], old_new["r"], old_new["f1"]))
+    L += ["", "   the walker's seeds, by renderer truth (same role / another role / no role), and what it mapped",
+          "   pair                                          seeds  right  wrong  no role   mapped / smaller FRAME   order rejections   budget spent"]
+    for r in rows:
+        L.append("   %-45s %5d  %5d  %5d  %7d   %6d / %-6d          %6d             %s" % (
+            "%s / %s" % tuple(r["pair"]), r["seeds"], r["seeds_right"], r["seeds_wrong"],
+            r["seeds_no_role"], r["mapped_new"], min(r["frame"]), r["order_rejections"],
+            "yes" if r["budget_exhausted"] else "no"))
     differ = [r for r in rows if (round(r["new"]["p"], 9), round(r["new"]["r"], 9))
               != (round(r["old"]["p"], 9), round(r["old"]["r"], 9))]
     d = [r["new"]["f1"] - r["old"]["f1"] for r in differ]
@@ -238,6 +255,11 @@ def main(argv=None) -> int:
           "   precision, mean over the %d pairs: new %.3f, old %.3f; recall: new %.3f, old %.3f" % (
               len(rows), np.mean([r["new"]["p"] for r in rows]), np.mean([r["old"]["p"] for r in rows]),
               np.mean([r["new"]["r"] for r in rows]), np.mean([r["old"]["r"] for r in rows])),
+          "   precision alone: new higher on %d pairs, lower on %d; recall alone: new higher on %d, lower on %d" % (
+              sum(1 for r in rows if r["new"]["p"] > r["old"]["p"]),
+              sum(1 for r in rows if r["new"]["p"] < r["old"]["p"]),
+              sum(1 for r in rows if r["new"]["r"] > r["old"]["r"]),
+              sum(1 for r in rows if r["new"]["r"] < r["old"]["r"])),
           "   THE PIN (mean > 0 and higher >= lower): %s" % ("GREEN" if ok else "RED"),
           "", "   cost per pair (walker): signature similarities computed, median %d (budget median %d) against a dense "
               "matrix of median %d; frame pairs mapped, median %d of a smaller frame of median %d" % (
