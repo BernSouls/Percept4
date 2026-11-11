@@ -39,6 +39,7 @@ PIN_BASELINE = {
     "EVIDENCE_NODE_NULL_CALIBRATED": False,            # null calibration
     "EDGE_REVERSE_FLIPS_MIXTURE": True,                # mixture reversal
     "MATCH_ASSIGNMENT_EXACT": True,                    # exact assignment
+    "MATCH_SIGNATURE_MATRIX_BLOCKS": True,             # performance only
 }
 
 #: the tree's own values, read once before any pin touches them

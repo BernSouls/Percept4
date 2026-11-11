@@ -2001,6 +2001,19 @@ EDGE_REVERSE_FLIPS_MIXTURE: bool = True
 # untouched; only WHO is paired changes -- every gate calibrated on scores
 # of the approximate correspondence must be re-read under either value.
 MATCH_ASSIGNMENT_EXACT: bool = True
+# [SIGNATURE MATRIX IN BLOCKS] memory/cores.py _mcs_accumulate (and the dark
+# _global_correspondence): build the node-similarity matrix of the
+# correspondence with matching/signature_matrix.py -- the population branch
+# of TypedSignature.similarity and the bins path of its Gaussian kernel,
+# evaluated for a whole block with numpy, the SAME floating-point
+# operations in the SAME order -- instead of one Python call per pair. The
+# same switch governs the anchor spacing of the redundancy-aware edge mass
+# (memory/cores.py _median_positive_nn): nearest neighbours found with
+# numpy, the distance itself still math.hypot. A performance change ONLY:
+# both must agree with the Python loops bit for bit on every value
+# (pinned), so no weight, correspondence or score moves. Blocks too small
+# to pay for the numpy calls are left to the loops. False = the loops.
+MATCH_SIGNATURE_MATRIX_BLOCKS: bool = True
 
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK

@@ -26,4 +26,6 @@ def test_declared_defaults(declared_defaults):
         "EDGE_REVERSE_FLIPS_MIXTURE": True,
         # exact assignment -- on: the contract of the function's name
         "MATCH_ASSIGNMENT_EXACT": True,
+        # signature matrix in blocks -- on: the same floats, faster
+        "MATCH_SIGNATURE_MATRIX_BLOCKS": True,
     }

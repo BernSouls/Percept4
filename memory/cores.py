@@ -753,6 +753,71 @@ def _global_correspondence(
     )
     return dict(al.mapping)
 
+
+def _normalised_anchors(sg: Any) -> Optional[Dict[int, Tuple[float, float]]]:
+    """Each anchored node's position inside the bounding box of its
+    subgraph's anchors, or None when the subgraph has no usable box.
+
+    The arithmetic of the `_bbox` / `_anchor_similarity` closures of
+    `_mcs_accumulate`, expression for expression, done once per node instead
+    of once per candidate pair. A node without an anchor (or with fewer than
+    two coordinates) is absent from the result.
+    """
+    anchor_map = getattr(sg, "anchor_of_node", None) or {}
+    if not anchor_map:
+        return None
+    xs = [float(p[0]) for p in anchor_map.values() if p and len(p) >= 2]
+    ys = [float(p[1]) for p in anchor_map.values() if p and len(p) >= 2]
+    if len(xs) < 2:
+        return None
+    x0, x1 = min(xs), max(xs)
+    y0, y1 = min(ys), max(ys)
+    w = max(x1 - x0, 1e-9)
+    h = max(y1 - y0, 1e-9)
+    out: Dict[int, Tuple[float, float]] = {}
+    for nid, p in anchor_map.items():
+        if p is None or len(p) < 2:
+            continue
+        out[nid] = ((float(p[0]) - x0) / w, (float(p[1]) - y0) / h)
+    return out
+
+
+def _anchor_weights(
+    sims: Sequence[Sequence[float]],
+    q_ids: Sequence[int],
+    c_ids: Sequence[int],
+    q_norm: Optional[Dict[int, Tuple[float, float]]],
+    c_norm: Optional[Dict[int, Tuple[float, float]]],
+) -> List[List[float]]:
+    """The weight matrix of the correspondence for one block:
+    `sims[i][j] * anchor_similarity(q_ids[i], c_ids[j])`.
+
+    Bit for bit what the per-pair closure of `_mcs_accumulate` produces: the
+    factor is `exp(-2.5 * hypot(dx, dy))` on the normalised positions, and
+    1.0 when either subgraph has no box or either node has no anchor. It is
+    computed for EVERY pair, a similarity of 0 included, exactly as the
+    closure does (math.hypot and math.exp have no bit-identical array form,
+    so this stays one call per pair).
+    """
+    if q_norm is None or c_norm is None:
+        return [[s * 1.0 for s in row] for row in sims]
+    _hypot = math.hypot
+    _exp = math.exp
+    c_pos = [c_norm.get(c) for c in c_ids]
+    weights: List[List[float]] = []
+    for i, q in enumerate(q_ids):
+        row = sims[i]
+        a = q_norm.get(q)
+        if a is None:
+            weights.append([s * 1.0 for s in row])
+            continue
+        ax, ay = a
+        weights.append([
+            (row[j] * 1.0) if b is None
+            else row[j] * _exp(-2.5 * _hypot(ax - b[0], ay - b[1]))
+            for j, b in enumerate(c_pos)])
+    return weights
+
 #: [U32 / Layer 3] Producer classes whose edges are SPATIAL PROXIMITY, not
 #: structural evidence.  They are dense by construction (a contact graph is
 #: O(n^2) in a neighbourhood) and must not outvote JUNCTION / OCCLUSION /
@@ -778,22 +843,114 @@ def _median_positive_nn(points: Any) -> float:
     })
     if len(pts) < 2:
         return 0.0
-    nn: List[float] = []
-    for i, (x, y) in enumerate(pts):
-        best = math.inf
-        for j, (u, v) in enumerate(pts):
-            if i == j:
-                continue
-            d = math.hypot(x - u, y - v)
-            if 1e-12 < d < best:
-                best = d
-        if math.isfinite(best):
-            nn.append(best)
+    # [SIGNATURE MATRIX IN BLOCKS] the same switch governs this kernel: the
+    # nearest neighbours are found with numpy and the distance itself is
+    # still `math.hypot` -- the same floats as the double loop, bit for bit
+    # (pinned). False = the double loop, untouched.
+    if (len(pts) >= _NN_BLOCK_MIN_POINTS
+            and getattr(P, "MATCH_SIGNATURE_MATRIX_BLOCKS", True)):
+        nn = _nearest_positive_distances(pts)
+    else:
+        nn = []
+        for i in range(len(pts)):
+            best = _nearest_positive_distance_of(pts, i)
+            if math.isfinite(best):
+                nn.append(best)
     if not nn:
         return 0.0
     nn.sort()
     mid = len(nn) // 2
     return nn[mid] if len(nn) % 2 else 0.5 * (nn[mid - 1] + nn[mid])
+
+
+#: Below this many points the double loop is cheaper than the numpy calls.
+#: Both return the same floats; the number is a matter of speed only.
+_NN_BLOCK_MIN_POINTS = 24
+#: No square of a coordinate difference can overflow below this magnitude.
+_NN_MAX_ABS = 1e150
+#: A candidate is kept when its squared distance, computed in floating
+#: point, is within this relative margin of the row's smallest. The floats
+#: involved are accurate to a few 1e-16; the margin is a million times that.
+_NN_MARGIN = 1e-9
+
+
+def _nearest_positive_distance_of(pts: List[Tuple[float, float]], i: int) -> float:
+    """The smallest distance above 1e-12 from point `i` to another point of
+    `pts`; `math.inf` when there is none.  The reference loop."""
+    x, y = pts[i]
+    best = math.inf
+    for j, (u, v) in enumerate(pts):
+        if i == j:
+            continue
+        d = math.hypot(x - u, y - v)
+        if 1e-12 < d < best:
+            best = d
+    return best
+
+
+def _nearest_positive_distances(pts: List[Tuple[float, float]]) -> List[float]:
+    """`_nearest_positive_distance_of(pts, i)` for every i where it is
+    finite, in order -- the same floats, without the O(n^2) Python loop.
+
+    For each point numpy finds the CANDIDATES for the minimum: every other
+    point whose squared distance (computed in floating point, so only
+    approximately) is within a relative `_NN_MARGIN` of the row's smallest
+    one that can exceed 1e-12.  The distance of each candidate is then
+    computed by `math.hypot` on the same two differences the loop forms,
+    and the minimum of those is returned.  A minimum does not depend on the
+    points that were dropped as long as a point attaining it is kept, and a
+    point attaining it cannot lie outside the margin: `math.hypot` and the
+    squared distances are each accurate to a few units in the last place.
+    The one case in which that argument needs more than the candidates --
+    a candidate that turns out to be at 1e-12 or closer -- is handed to the
+    reference loop for that point.  So is everything when a coordinate is
+    large enough for a square to overflow.
+    """
+    import numpy as np
+
+    n = len(pts)
+    X = np.array([p[0] for p in pts], dtype=np.float64)
+    Y = np.array([p[1] for p in pts], dtype=np.float64)
+    if not (float(np.abs(X).max()) <= _NN_MAX_ABS
+            and float(np.abs(Y).max()) <= _NN_MAX_ABS):
+        out = []
+        for i in range(n):
+            best = _nearest_positive_distance_of(pts, i)
+            if math.isfinite(best):
+                out.append(best)
+        return out
+    floor = 1e-24 * (1.0 - _NN_MARGIN)       # below it, d <= 1e-12 for sure
+    out: List[float] = []
+    step = max(1, 2_000_000 // n)            # bounds every temporary
+    for start in range(0, n, step):
+        stop = min(n, start + step)
+        DX = X[start:stop, None] - X[None, :]        # x - u, as the loop
+        DY = Y[start:stop, None] - Y[None, :]        # y - v
+        D2 = DX * DX
+        D2 += DY * DY
+        D2[np.arange(stop - start), np.arange(start, stop)] = np.inf   # i == j
+        D2[D2 < floor] = np.inf
+        m = D2.min(axis=1)
+        cand = D2 <= (m * (1.0 + _NN_MARGIN))[:, None]
+        cand &= np.isfinite(D2)
+        rows, cols = np.nonzero(cand)                # grouped by row
+        dist = list(map(math.hypot, DX[rows, cols].tolist(),
+                        DY[rows, cols].tolist()))
+        best_of: Dict[int, float] = {}
+        redo = set()
+        for r, d in zip(rows.tolist(), dist):
+            if not 1e-12 < d:
+                redo.add(r)
+            elif d < best_of.get(r, math.inf):
+                best_of[r] = d
+        for r in range(stop - start):
+            if r in redo or r not in best_of:
+                best = _nearest_positive_distance_of(pts, start + r)
+            else:
+                best = best_of[r]
+            if math.isfinite(best):
+                out.append(best)
+    return out
 
 
 def _effective_edge_weights(sg: Subgraph) -> Dict[Any, float]:
@@ -994,6 +1151,11 @@ def _mcs_accumulate(
     _want_chance = bool(node_chance) and trace is not None
     q_chance: Dict[int, float] = {}
     c_chance: Dict[int, float] = {}
+    # [SIGNATURE MATRIX IN BLOCKS] similarity of every pair the block path
+    # kept, keyed by the query node: the matrix entry IS the value
+    # `_sig_similarity` returns for the pair, so [D1] below reads it instead
+    # of calling again. Empty on the per-pair path and the global path.
+    _block_sims: Dict[int, float] = {}
     if getattr(P, "MATCH_GLOBAL_CONSISTENCY_ENABLED", False):
         node_correspondence = _global_correspondence(Q, C, q_sigs, c_sigs)
         if _want_chance:
@@ -1047,12 +1209,32 @@ def _mcs_accumulate(
             return math.exp(-2.5 * dist)
 
         node_correspondence = {}
+        # [SIGNATURE MATRIX IN BLOCKS] P.MATCH_SIGNATURE_MATRIX_BLOCKS
+        # (default True): the matrix of a lens type is built by
+        # matching/signature_matrix.py and the anchor factor by
+        # `_anchor_weights` -- the same floats as the per-pair expressions
+        # below, bit for bit (pinned), several times faster. False = the
+        # per-pair loop, untouched.
+        _blocks = bool(getattr(P, "MATCH_SIGNATURE_MATRIX_BLOCKS", True))
+        if _blocks:
+            from matching.signature_matrix import signature_similarity_matrix
+            _q_norm = _normalised_anchors(Q)
+            _c_norm = _normalised_anchors(C)
         for lt in common_types:
             q_ids = q_by_type[lt]
             c_ids = c_by_type[lt]
             if not q_ids or not c_ids:
                 continue
-            if _want_chance:
+            if _blocks:
+                _sims = signature_similarity_matrix(
+                    [q_sigs[q][1] for q in q_ids],
+                    [c_sigs[c][1] for c in c_ids], _sig_similarity)
+                weights = _anchor_weights(_sims, q_ids, c_ids,
+                                          _q_norm, _c_norm)
+                if _want_chance:
+                    _chance_credit(q_ids, c_ids, _sims, graded_node_credit,
+                                   q_chance, c_chance)
+            elif _want_chance:
                 # [NULL CALIBRATION] The same matrix, with the signature
                 # factor kept: `weights` holds the identical products.
                 _sims = [
@@ -1077,6 +1259,8 @@ def _mcs_accumulate(
             for qi, ci in assignment:
                 if weights[qi][ci] > 0.0:
                     node_correspondence[q_ids[qi]] = c_ids[ci]
+                    if _blocks:
+                        _block_sims[q_ids[qi]] = _sims[qi][ci]
 
     # [D1] Signature similarity of every credited pair, keyed by the query
     # node. Empty in the binary mode: `.get(q_id, 1.0)` below then multiplies
@@ -1085,9 +1269,12 @@ def _mcs_accumulate(
     pair_sim: Dict[int, float] = {}
     if graded_node_credit:
         for _q_id, _c_id in node_correspondence.items():
-            _iq, _ic = q_sigs.get(_q_id), c_sigs.get(_c_id)
-            _s = (_sig_similarity(_iq[1], _ic[1])
-                  if (_iq is not None and _ic is not None) else 0.0)
+            if _q_id in _block_sims:
+                _s = _block_sims[_q_id]
+            else:
+                _iq, _ic = q_sigs.get(_q_id), c_sigs.get(_c_id)
+                _s = (_sig_similarity(_iq[1], _ic[1])
+                      if (_iq is not None and _ic is not None) else 0.0)
             pair_sim[_q_id] = min(1.0, max(0.0, float(_s)))
 
     q_node_weights = getattr(Q, "node_weights", None) or {}
