@@ -1,0 +1,880 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BernSouls <256335293+BernSouls@users.noreply.github.com>
+Date: Wed, 11 Nov 2026 14:34:02 +0000
+Subject: [P4b] evidence_score: the relational term as presence x physics; a
+ lookup key is not a measured axis
+
+Switches EVIDENCE_RELATION_COUNT_APART (default False) and EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS (default False; acts on the mcs_score edge mass only).
+Pin: tests_matcher/test_p4b_count_apart.py
+
+Co-authored-by: arena-agent <297053741+arena-agent@users.noreply.github.com>
+---
+ core/schema.py                          | 102 ++++++
+ memory/cores.py                         | 105 +++++-
+ parameters/_text.py                     |  26 ++
+ tests_matcher/conftest.py               |   2 +
+ tests_matcher/test_declared_defaults.py |   4 +
+ tests_matcher/test_p4b_count_apart.py   | 452 ++++++++++++++++++++++++
+ 6 files changed, 686 insertions(+), 5 deletions(-)
+ create mode 100644 tests_matcher/test_p4b_count_apart.py
+
+diff --git a/core/schema.py b/core/schema.py
+index b35e346..f8b8f99 100644
+--- a/core/schema.py
++++ b/core/schema.py
+@@ -1675,16 +1675,118 @@ def edge_measured_axes(qp: "EdgeParams", cp: "EdgeParams") -> int:
+         id_slots = set(EDGE_IDENTITY_SLOTS.get(qp.class_, ()))
+     if _is_u30_edge_params(qp):
+         id_slots = set(U30_EDGE_IDENTITY_SLOTS.get(qp.class_, ()))
++    # [P4b] A slot the unit table declares a categorical LOOKUP KEY is not a
++    # graded axis either. EDGE_SCHEMAS (which derives the identity slots
++    # above) agrees with the unit table on 8 of its 12 lookup keys and
++    # declares the other four linear or ungated: the membership flag of
++    # CONTOUR_ORIENTATION / JUNCTION_ORIENTATION / REGION_CONTENT (a literal
++    # containment = 1.0, EDGE_INDEX_ONLY) and OCCLUSION.source. Those four
++    # were counted as a measured axis, so a bare membership flag earned
++    # f(1) = 2 of edge mass. P.EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS
++    # (default False = the historical count) leaves them out.
++    key_slots: FrozenSet[int] = frozenset()
++    if getattr(P, "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS", False):
++        key_slots = _edge_lookup_key_slots(qp) | _edge_lookup_key_slots(cp)
+     n = 0
+     for i, (a, b) in enumerate(zip(qp.quantized, cp.quantized)):
+         if a == UNKNOWN or b == UNKNOWN:
+             continue                      # unmeasured axes never penalize
+         if i in id_slots:
+             continue                      # categorical gates are not graded axes
++        if i in key_slots:
++            continue                      # nor are lookup keys [P4b]
+         n += 1
+     return n
+ 
+ 
++def _edge_lookup_key_slots(ep: Any) -> FrozenSet[int]:
++    """[P4b] Slot indices of `ep` that its unit table declares a categorical
++    LOOKUP KEY (`quantiser == "lookup_key"`): an index, not a graded
++    quantity. The table is chosen as `_is_u30_edge_params` chooses the
++    layout; an arity the table does not describe yields none."""
++    table = U30_EDGE_UNIT_TABLE if _is_u30_edge_params(ep) else EDGE_UNIT_TABLE
++    specs = table.get(ep.class_, ())
++    if len(specs) != len(ep.quantized):
++        return frozenset()
++    return frozenset(
++        i for i, s in enumerate(specs) if s.quantiser == "lookup_key")
++
++
++def _edge_categorical_slots(ep: "EdgeParams") -> FrozenSet[int]:
++    """[P4b] Every slot of `ep` that is categorical: its identity (NAP)
++    slots, resolved as `EdgeParams.similarity` resolves them, and its lookup
++    keys."""
++    if ep.identity_slots is not None:
++        ids = set(ep.identity_slots)
++    else:
++        ids = set(EDGE_IDENTITY_SLOTS.get(ep.class_, ()))
++    if _is_u30_edge_params(ep):
++        ids = set(U30_EDGE_IDENTITY_SLOTS.get(ep.class_, ()))
++    ids.update(_edge_lookup_key_slots(ep))
++    return frozenset(ids)
++
++
++def _graded_axes_plain(a: "EdgeParams", b: "EdgeParams") -> int:
++    if not isinstance(a, EdgeParams) or not isinstance(b, EdgeParams):
++        return 0
++    cat_a = _edge_categorical_slots(a)
++    cat_b = _edge_categorical_slots(b)
++    if a.class_ == b.class_:
++        if len(a.quantized) != len(b.quantized):
++            return 0
++        n = 0
++        for i, (x, y) in enumerate(zip(a.quantized, b.quantized)):
++            if x == UNKNOWN or y == UNKNOWN:
++                continue
++            if i in cat_a or i in cat_b:
++                continue
++            n += 1
++        return n
++    # cross-schema: the shared axes polymorphic_edge_similarity compares
++    if b.class_ not in get_compatible_types(a.class_):
++        return 0
++    n = 0
++    for idx_a, idx_b, _tag in get_shared_subspace(a.class_, b.class_):
++        if idx_a >= len(a.quantized) or idx_b >= len(b.quantized):
++            continue
++        if a.quantized[idx_a] == UNKNOWN or b.quantized[idx_b] == UNKNOWN:
++            continue
++        if idx_a in cat_a or idx_b in cat_b:
++            continue
++        n += 1
++    return n
++
++
++def edge_graded_axes(ep1: Any, ep2: Any) -> int:
++    """[P4b] Number of GRADED axes measured on BOTH sides of an edge pair:
++    the quantities a similarity of the two can be a PHYSICAL reading of.
++
++    A slot counts when neither side holds UNKNOWN in it and it is neither an
++    identity (NAP) slot nor a lookup key of the unit table. Same schema: the
++    slots themselves. Cross-schema (a compatible family): the shared axes
++    `polymorphic_edge_similarity` compares, under the same conditions. A
++    mixture: the best over its prototypes. No parameters on either side: 0.
++
++    0 means the pair has no physics to read: whatever similarity it earned
++    is the TOPOLOGICAL fact that the relation exists on both sides (a
++    membership flag, a parameter-less predicate, a categorical agreement) --
++    a count. `evidence_score` uses this to keep the count apart from the
++    physics (P.EVIDENCE_RELATION_COUNT_APART). Unlike `edge_measured_axes`
++    it does not depend on any switch and it reads cross-schema pairs.
++    """
++    if ep1 is None or ep2 is None:
++        return 0
++    protos1 = ep1.protos if isinstance(ep1, EdgeParamsMixture) else (ep1,)
++    protos2 = ep2.protos if isinstance(ep2, EdgeParamsMixture) else (ep2,)
++    best = 0
++    for a in protos1:
++        for b in protos2:
++            n = _graded_axes_plain(a, b)
++            if n > best:
++                best = n
++    return best
++
++
+ #: [U31 / M2] Endpoint reversal for the U30 categories.  The legacy spec
+ #: table is derived from EDGE_SCHEMAS, which has no U30 entry, so every
+ #: category edge used to come back UNREVERSED on backward traversal.  A slot
+diff --git a/memory/cores.py b/memory/cores.py
+index cc85048..6a2b0e1 100644
+--- a/memory/cores.py
++++ b/memory/cores.py
+@@ -1099,7 +1099,7 @@ def _mcs_accumulate(
+     """
+     from core.schema import (
+         polymorphic_edge_similarity, reverse_edge_params,
+-        edge_measured_axes,
++        edge_measured_axes, edge_graded_axes,
+     )
+     from orchestration.binder import UNDIRECTED_EDGE_TYPES
+ 
+@@ -1510,6 +1510,12 @@ def _mcs_accumulate(
+     q_matched_em_terms: List[float] = []
+     c_matched_em_terms: List[float] = []
+     matched_rel_sim_sum = 0.0
++    # [P4b] trace only: how many verifiable core edges have a counterpart
++    # (best similarity > 0), how many of those pairs have a GRADED axis
++    # measured on both sides, and the similarity sum over the latter.
++    _rel_present = 0
++    _rel_physical = 0
++    _rel_physical_sum = 0.0
+ 
+     for cs, cd, cet in verifiable_core_edges:
+         qs = inv_corr[cs]
+@@ -1541,6 +1547,12 @@ def _mcs_accumulate(
+ 
+         matched_rel_sim_sum += best_sim
+ 
++        if trace is not None and best_sim > 0.0:
++            _rel_present += 1
++            if edge_graded_axes(best_qp, cp) > 0:
++                _rel_physical += 1
++                _rel_physical_sum += best_sim
++
+         if best_sim > 0.0:
+             q_w = float(q_edge_weights.get(best_q_key,
+                                            q_edge_weights.get(_canon(best_q_key), 0.0)))
+@@ -1571,6 +1583,9 @@ def _mcs_accumulate(
+         trace["c_node_total"] = c_node_total
+         trace["verifiable_core_edges_count"] = len(verifiable_core_edges)
+         trace["matched_rel_sim_sum"] = matched_rel_sim_sum
++        trace["rel_present"] = _rel_present
++        trace["rel_physical"] = _rel_physical
++        trace["rel_physical_sim_sum"] = _rel_physical_sum
+         trace["n_core_edges"] = len(C.edges)
+         # [D1] Which credit rule produced q/c_matched_nm, and the binary
+         # mass of the same correspondence (equal to it in binary mode).
+@@ -1676,10 +1691,16 @@ def _edge_side_evidence(
+     A: Subgraph,
+     B: Subgraph,
+     a_to_b: Dict[int, int],
++    detail: Optional[Dict[str, Any]] = None,
+ ) -> Tuple[int, int, float]:
+     """[D3] Edge evidence read from ONE side: the edges of `A` under the node
+     map `a_to_b`, searched in `B`.
+ 
++    [P4b] `detail`, when given, receives `present` (verifiable edges with a
++    counterpart, best similarity > 0), `physical` (those whose best pair has
++    a graded axis measured on both sides, core/schema.py edge_graded_axes)
++    and `physical_sim_sum`. The returned triple is unchanged.
++
+     Returns (n_edges, n_verifiable, sim_sum):
+       n_edges       edges of A
+       n_verifiable  edges of A with BOTH endpoints mapped
+@@ -1694,7 +1715,9 @@ def _edge_side_evidence(
+     round, `(Q, C, correspondence)`, for the query-side terms. Kept as a
+     separate function so the historical loop is not touched.
+     """
+-    from core.schema import polymorphic_edge_similarity, reverse_edge_params
++    from core.schema import (
++        polymorphic_edge_similarity, reverse_edge_params, edge_graded_axes,
++    )
+     from orchestration.binder import UNDIRECTED_EDGE_TYPES
+ 
+     def _canon(e):
+@@ -1721,6 +1744,9 @@ def _edge_side_evidence(
+ 
+     n_verifiable = 0
+     sim_sum = 0.0
++    n_present = 0
++    n_physical = 0
++    physical_sum = 0.0
+     for a_s, a_d, aet in A.edges:
+         if a_s not in a_to_b or a_d not in a_to_b:
+             continue
+@@ -1738,12 +1764,24 @@ def _edge_side_evidence(
+                     cand_list.append((bet_r, bp_r, bk_r))
+ 
+         best_sim = 0.0
++        best_bp = None
+         for bet, bp, _bk in cand_list:
+             sim = polymorphic_edge_similarity(
+                 bp, ap, use_confidence=False, edge_types=(bet, aet))
+             if sim > best_sim:
+                 best_sim = sim
++                best_bp = bp
+         sim_sum += best_sim
++        if detail is not None and best_sim > 0.0:
++            n_present += 1
++            if edge_graded_axes(best_bp, ap) > 0:
++                n_physical += 1
++                physical_sum += best_sim
++    if detail is not None:
++        # [P4b] the same three figures `_mcs_accumulate` traces for its side
++        detail["present"] = n_present
++        detail["physical"] = n_physical
++        detail["physical_sim_sum"] = physical_sum
+     return len(A.edges), n_verifiable, sim_sum
+ 
+ 
+@@ -1889,8 +1927,12 @@ def evidence_score(
+     `node_coverage_raw` the same term before calibration;
+     `node_coverage_binary` its binary twin (same form, every kept pair
+     credited in full, never calibrated); `core_node_coverage` and
+-    `query_node_coverage` the two one-sided graded fractions. On the early
+-    exits (an empty side, no lens type in common) none of them is written.
++    `query_node_coverage` the two one-sided graded fractions;
++    `relation_presence` and `relation_physics` the two factors of the
++    relational term kept apart ([P4b]; the term is their product only under
++    P.EVIDENCE_RELATION_COUNT_APART, see `relation_count_apart`). On the
++    early exits (an empty side, no lens type in common) none of them is
++    written.
+     """
+     internal_trace = trace if trace is not None else {}
+     null_calibrated = bool(getattr(P, "EVIDENCE_NODE_NULL_CALIBRATED", False))
+@@ -1964,10 +2006,11 @@ def evidence_score(
+     n_query_edges = len(Q.edges)
+     q_verifiable = 0
+     q_rel_sim_sum = 0.0
++    _q_detail: Dict[str, Any] = {}
+     _edge_terms = bool(qs_terms & {"relation", "absence"}) and n_core_edges > 0
+     if _edge_terms:
+         n_query_edges, q_verifiable, q_rel_sim_sum = _edge_side_evidence(
+-            Q, C, corr)
++            Q, C, corr, detail=_q_detail)
+ 
+     if n_core_edges == 0:
+         relational_consistency = 1.0  # Edgeless core: relations vacuously satisfied
+@@ -1981,6 +2024,49 @@ def evidence_score(
+     else:
+         relational_consistency = clamp(matched_rel_sim_sum / float(n_verifiable), 0.0, 1.0)
+ 
++    # [P4b] THE COUNT KEPT APART FROM THE PHYSICS. The mean above credits a
++    # matched pair with its similarity whatever that similarity is made of.
++    # A pair with no graded axis measured on both sides (a membership flag,
++    # a parameter-less predicate, a categorical agreement) reads exactly 1.0
++    # there: the fact that the relation EXISTS on both sides, entered as a
++    # perfect MEASUREMENT. Kept apart:
++    #     presence = verifiable edges with a counterpart / verifiable edges
++    #     physics  = mean similarity of the pairs that measured something
++    #                (1.0 when none did: nothing measured, nothing
++    #                contradicted -- matching/fuzzy.py's convention)
++    #     term     = presence * physics
++    # With t count-only pairs READING 1.0 and p physical pairs of mean
++    # similarity m among v verifiable edges the term goes from (t + p*m)/v
++    # to (t + p)*m/v: it can only stay or fall. (A count-only pair reads 1.0
++    # when it is a flag, a parameter-less pair or a categorical agreement.
++    # With the Phase-4 floors restored an all-UNKNOWN pair reads 0.2 and
++    # becomes a full count here, so the term can rise in that setting.)
++    # "Present" is a best similarity > 0, exactly the pairs the mean
++    # credits: nothing is newly credited. The two factors read the side(s)
++    # the term reads
++    # (both under D3 "relation"). Always traced; they replace the mean only
++    # under P.EVIDENCE_RELATION_COUNT_APART (default False), and never in the
++    # EVIDENCE_ONLY_EDGES branch, whose reading RULE B16 fixes.
++    _rel_v = n_verifiable
++    _rel_present = float(internal_trace.get("rel_present", 0))
++    _rel_phys_n = float(internal_trace.get("rel_physical", 0))
++    _rel_phys_sum = float(internal_trace.get("rel_physical_sim_sum", 0.0))
++    if "relation" in qs_terms and n_core_edges > 0:
++        _rel_v = n_verifiable + q_verifiable
++        _rel_present += float(_q_detail.get("present", 0))
++        _rel_phys_n += float(_q_detail.get("physical", 0))
++        _rel_phys_sum += float(_q_detail.get("physical_sim_sum", 0.0))
++    relation_presence = (_rel_present / float(_rel_v)) if _rel_v > 0 else 0.0
++    relation_physics = (
++        (_rel_phys_sum / _rel_phys_n) if _rel_phys_n > 0 else 1.0)
++    count_apart = (
++        bool(getattr(P, "EVIDENCE_RELATION_COUNT_APART", False))
++        and not getattr(P, "EVIDENCE_ONLY_EDGES", False))
++    if count_apart and n_core_edges > 0:
++        relational_consistency = (
++            clamp(relation_presence * relation_physics, 0.0, 1.0)
++            if _rel_v > 0 else 0.0)
++
+     # 3. Conjunctive Relational Multiplier
+     if getattr(P, "EVIDENCE_ONLY_EDGES", False):
+         # [ITEM 3 / BUG-16 -- RULE B16, pre-registered 2026-10-16 before any
+@@ -2077,6 +2163,10 @@ def evidence_score(
+                 (_c_nm_bin / (c_node_total + P.EPSILON))
+                 if c_node_total > 0 else 0.0)
+         trace["relational_consistency"] = relational_consistency
++        # [P4b] the two factors (always), and whether the score used them
++        trace["relation_presence"] = relation_presence
++        trace["relation_physics"] = relation_physics
++        trace["relation_count_apart"] = count_apart
+         trace["relational_multiplier"] = relational_multiplier
+         trace["edge_absence"] = edge_absence
+         trace["total_absence"] = absence
+@@ -2096,6 +2186,11 @@ def evidence_score(
+             trace["n_query_edges"] = n_query_edges
+             trace["q_verifiable_edges_count"] = q_verifiable
+             trace["q_matched_rel_sim_sum"] = q_rel_sim_sum
++            # [P4b] the query side's present / physical pairs
++            trace["q_rel_present"] = _q_detail.get("present", 0)
++            trace["q_rel_physical"] = _q_detail.get("physical", 0)
++            trace["q_rel_physical_sim_sum"] = _q_detail.get(
++                "physical_sim_sum", 0.0)
+ 
+     return float(score), corr
+ 
+diff --git a/parameters/_text.py b/parameters/_text.py
+index 243a318..1e9d28c 100644
+--- a/parameters/_text.py
++++ b/parameters/_text.py
+@@ -2014,6 +2014,32 @@ MATCH_ASSIGNMENT_EXACT: bool = True
+ # (pinned), so no weight, correspondence or score moves. Blocks too small
+ # to pay for the numpy calls are left to the loops. False = the loops.
+ MATCH_SIGNATURE_MATRIX_BLOCKS: bool = True
++# [P4b / THE COUNT KEPT APART FROM THE PHYSICS] evidence_score: the
++# relational term reads PRESENCE x PHYSICS instead of one mean similarity.
++#   presence  verifiable edges that have a counterpart / verifiable edges --
++#             a count; every relation is in it, the membership flags and
++#             the parameter-less relations included
++#   physics   mean similarity over the present pairs that have a GRADED axis
++#             measured on both sides (core/schema.py edge_graded_axes); 1.0
++#             when none has (nothing measured, nothing contradicted)
++# Today a membership flag (CONTOUR_ORIENTATION, REGION_CONTENT,
++# JUNCTION_ORIENTATION: a literal containment = 1.0 the unit table declares
++# an index-only lookup key) and a parameter-less pair enter the mean at
++# exactly 1.0 -- a count read as a perfect measurement. Where every such
++# pair reads 1.0 (always, under EDGE_UNMEASURED_IS_NOT_EVIDENCE) the term
++# can only stay or fall. Under EVIDENCE_QUERY_SIDE_TERMS "relation" both factors are
++# summed over the two sides; the EVIDENCE_ONLY_EDGES branch (RULE B16) is
++# untouched. False = the historical mean.
++EVIDENCE_RELATION_COUNT_APART: bool = False
++# [P4b] core/schema.py edge_measured_axes (the n of the edge-mass
++# facilitation f(n) = 1 + log2(n + 1) in mcs_score / mcs_similarity): a slot
++# the unit table declares a categorical LOOKUP KEY is not a measured axis.
++# Today the three membership flags and OCCLUSION.source count as one,
++# against the function's own contract ("categorical gates are not graded
++# axes"), because EDGE_SCHEMAS declares them linear. False = the historical
++# count. evidence_score does not read this mass: it moves the containment
++# and fusion scores only -- re-read their gates before turning it on.
++EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS: bool = False
+ 
+ # =============================================================================
+ # LOCOMOTION BRIDGE & ANCHOR FALLBACK
+diff --git a/tests_matcher/conftest.py b/tests_matcher/conftest.py
+index c3f4b75..0f8f0bf 100644
+--- a/tests_matcher/conftest.py
++++ b/tests_matcher/conftest.py
+@@ -40,6 +40,8 @@ PIN_BASELINE = {
+     "EDGE_REVERSE_FLIPS_MIXTURE": True,                # mixture reversal
+     "MATCH_ASSIGNMENT_EXACT": True,                    # exact assignment
+     "MATCH_SIGNATURE_MATRIX_BLOCKS": True,             # performance only
++    "EVIDENCE_RELATION_COUNT_APART": False,            # P4b, evidence_score
++    "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS": False,   # P4b, edge mass
+ }
+ 
+ #: the tree's own values, read once before any pin touches them
+diff --git a/tests_matcher/test_declared_defaults.py b/tests_matcher/test_declared_defaults.py
+index f0e0465..80b44b1 100644
+--- a/tests_matcher/test_declared_defaults.py
++++ b/tests_matcher/test_declared_defaults.py
+@@ -28,4 +28,8 @@ def test_declared_defaults(declared_defaults):
+         "MATCH_ASSIGNMENT_EXACT": True,
+         # signature matrix in blocks -- on: the same floats, faster
+         "MATCH_SIGNATURE_MATRIX_BLOCKS": True,
++        # P4b, presence x physics -- in the tree; default by its rule
++        "EVIDENCE_RELATION_COUNT_APART": False,
++        # P4b, the flag in f(n) -- OFF: nothing here can measure it
++        "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS": False,
+     }
+diff --git a/tests_matcher/test_p4b_count_apart.py b/tests_matcher/test_p4b_count_apart.py
+new file mode 100644
+index 0000000..99b26cf
+--- /dev/null
++++ b/tests_matcher/test_p4b_count_apart.py
+@@ -0,0 +1,452 @@
++"""PIN -- [P4b] the count kept apart from the physics.
++
++The spec's second line: "Topological count separated from physical relation;
++the count may not masquerade as physics in the score."
++
++Where it masqueraded.  ``EDGE_UNIT_TABLE`` declares 12 edge slots categorical
++lookup keys.  ``EDGE_SCHEMAS`` -- the table the similarity reads -- agrees on
++eight (identity slots) and declares four linear or ungated: the membership
++flag of CONTOUR_ORIENTATION / JUNCTION_ORIENTATION / REGION_CONTENT (a
++literal ``containment = 1.0``; ``EDGE_INDEX_ONLY``) and OCCLUSION.source.  A
++flag pair therefore read 1.0 as a SIMILARITY in ``evidence_score``'s
++relational mean, and counted as a MEASURED AXIS in the edge mass of
++``mcs_score``.
++
++Pinned here:
++  * the four slots, by name -- if the tables are reconciled this reddens and
++    the switches below become no-ops
++  * ``edge_graded_axes``: 0 for a flag pair, a parameter-less pair, a
++    categorical agreement; the graded slots otherwise; cross-schema pairs
++    and mixtures; symmetric
++  * P.EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS: a flag stops earning f(1) = 2
++    of edge mass; nothing else moves
++  * P.EVIDENCE_RELATION_COUNT_APART: the relational term is
++    presence x physics, by hand; it is unchanged when there is no count-only
++    pair, when the physics is perfect, when nothing physical was matched;
++    both sides under the query-side relation term; RULE B16's branch
++    untouched; off = the historical mean, bit for bit
++  * it never rises WHERE EVERY COUNT-ONLY PAIR READS 1.0 -- flags,
++    parameter-less pairs, categorical agreement; and it does rise with the
++    Phase-4 floors restored, where an all-UNKNOWN pair reads 0.2 as a
++    similarity and is a full count once the count is kept apart
++
++Every pin below states the switches its numbers depend on.
++"""
++from __future__ import annotations
++
++import random
++
++import pytest
++
++from core.schema import (EDGE_IDENTITY_SLOTS, EDGE_INDEX_ONLY,
++                         EDGE_UNIT_TABLE, UNKNOWN, EdgeParams,
++                         EdgeParamsMixture, edge_graded_axes,
++                         edge_measured_axes, polymorphic_edge_similarity)
++from core.types import EdgeType
++from memory.cores import evidence_score, mcs_score
++
++from _graphs import graph, tex
++
++U = UNKNOWN
++RC = EdgeType.REGION_CONTENT
++CO = EdgeType.CONTOUR_ORIENTATION
++JO = EdgeType.JUNCTION_ORIENTATION
++JC = EdgeType.JUNCTION_CONTOUR
++TOPO = EdgeType.TOPOLOGY
++ALL = ("node", "relation", "absence")
++
++
++def flag(cls):
++    return EdgeParams(class_="EDGE_" + cls, quantized=(1.0,))
++
++
++def jc(dist, incidence, topology):
++    return EdgeParams(class_="EDGE_JUNCTION_CONTOUR",
++                      quantized=(dist, incidence, topology))
++
++
++def esim(a, b, et=JC):
++    return polymorphic_edge_similarity(a, b, use_confidence=False,
++                                       edge_types=(et, et))
++
++
++# ------------------------------------------------------------------ tables
++
++def test_the_two_slot_tables_disagree_on_exactly_these_four():
++    not_gated = sorted(
++        (cls, s.name)
++        for cls, specs in EDGE_UNIT_TABLE.items()
++        for i, s in enumerate(specs)
++        if s.quantiser == "lookup_key"
++        and i not in EDGE_IDENTITY_SLOTS.get(cls, ()))
++    assert not_gated == [
++        ("EDGE_CONTOUR_ORIENTATION", "containment"),
++        ("EDGE_JUNCTION_ORIENTATION", "containment"),
++        ("EDGE_OCCLUSION", "source"),
++        ("EDGE_REGION_CONTENT", "containment"),
++    ]
++    assert set(EDGE_INDEX_ONLY) == {
++        "EDGE_CONTOUR_ORIENTATION", "EDGE_JUNCTION_ORIENTATION",
++        "EDGE_REGION_CONTENT"}
++
++
++# ---------------------------------------------------------- graded axes
++
++@pytest.mark.parametrize("cls", ["REGION_CONTENT", "CONTOUR_ORIENTATION",
++                                 "JUNCTION_ORIENTATION"])
++def test_a_membership_flag_is_a_perfect_match_with_nothing_measured(cls):
++    a, b = flag(cls), flag(cls)
++    assert esim(a, b, getattr(EdgeType, cls)) == 1.0
++    assert edge_graded_axes(a, b) == 0
++
++
++def test_graded_axes_of_plain_pairs():
++    assert edge_graded_axes(None, None) == 0
++    assert edge_graded_axes(None, jc(1.0, 2.0, 3.0)) == 0
++    assert edge_graded_axes(jc(1.0, 2.0, 3.0), None) == 0
++    # dist and incidence are graded, topology_class is an identity slot
++    assert edge_graded_axes(jc(1.0, 2.0, 3.0), jc(2.0, 5.0, 3.0)) == 2
++    assert edge_graded_axes(jc(1.0, U, 3.0), jc(2.0, 5.0, 3.0)) == 1
++    assert edge_graded_axes(jc(1.0, U, 3.0), jc(U, 5.0, 3.0)) == 0
++    assert edge_graded_axes(jc(U, U, 3.0), jc(U, U, 3.0)) == 0   # categorical agreement
++    assert edge_graded_axes(jc(1.0, 2.0, 3.0), flag("REGION_CONTENT")) == 0
++
++
++def test_graded_axes_agree_with_measured_axes_where_there_is_no_lookup_key():
++    rng = random.Random(2)
++    for _ in range(200):
++        a = jc(*(rng.choice((U, 0.0, 1.0, 2.0)) for _ in range(3)))
++        b = jc(*(rng.choice((U, 0.0, 1.0, 2.0)) for _ in range(3)))
++        assert edge_graded_axes(a, b) == edge_measured_axes(a, b)
++        assert edge_graded_axes(a, b) == edge_graded_axes(b, a)
++
++
++def test_graded_axes_of_a_cross_schema_pair():
++    oc = EdgeParams(class_="EDGE_ORIENTATION_CONTINUITY",
++                    quantized=(1.0, 1.0, 2.0, 1.0, 2.0, 2.0, 1.0))
++    cc = EdgeParams(class_="EDGE_CONTOUR_CONTINUITY",
++                    quantized=(1.0, 2.0, 0.0))
++    s = polymorphic_edge_similarity(
++        oc, cc, use_confidence=False,
++        edge_types=(EdgeType.ORIENTATION_CONTINUITY,
++                    EdgeType.CONTOUR_CONTINUITY))
++    n = edge_graded_axes(oc, cc)
++    assert n == edge_graded_axes(cc, oc)
++    assert (s > 0.0) == (n > 0)
++    assert n >= 1
++    blank = EdgeParams(class_="EDGE_CONTOUR_CONTINUITY", quantized=(U, U, U))
++    assert edge_graded_axes(oc, blank) == 0
++    # an incompatible family has nothing in common
++    assert edge_graded_axes(oc, jc(1.0, 2.0, 3.0)) == 0
++
++
++def test_graded_axes_of_a_mixture_is_the_best_prototype():
++    mix = EdgeParamsMixture([jc(U, U, 3.0), jc(1.0, 2.0, 3.0)], [1.0, 1.0], 0)
++    assert edge_graded_axes(mix, jc(1.0, 5.0, 3.0)) == 2
++    assert edge_graded_axes(jc(1.0, 5.0, 3.0), mix) == 2
++    flags = EdgeParamsMixture([flag("REGION_CONTENT")], [1.0], 0)
++    assert edge_graded_axes(flags, flag("REGION_CONTENT")) == 0
++
++
++# ------------------------------------------------- the measured-axis count
++
++def test_a_flag_stops_counting_as_a_measured_axis(params):
++    a, b = flag("REGION_CONTENT"), flag("REGION_CONTENT")
++    params(EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False)
++    assert edge_measured_axes(a, b) == 1
++    assert edge_measured_axes(jc(1.0, 2.0, 3.0), jc(2.0, 5.0, 3.0)) == 2
++    params(EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=True)
++    assert edge_measured_axes(a, b) == 0
++    assert edge_measured_axes(jc(1.0, 2.0, 3.0), jc(2.0, 5.0, 3.0)) == 2
++
++
++def test_the_edge_mass_of_a_flag_loses_its_facilitation(params):
++    nodes = {1: ("Tex", tex(1, 1)), 2: ("Tex", tex(8, 8))}
++    Q, qs = graph(nodes, [(1, 2, RC)], {(1, 2, RC): flag("REGION_CONTENT")})
++    C, cs = graph(nodes, [(1, 2, RC)], {(1, 2, RC): flag("REGION_CONTENT")})
++    params(EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False)
++    tr = {}
++    mcs_score(Q, C, qs, cs, trace=tr)
++    assert tr["c_matched_em"] == 2.0            # 1 edge x sim 1.0 x f(1)
++    params(EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=True)
++    tr = {}
++    mcs_score(Q, C, qs, cs, trace=tr)
++    assert tr["c_matched_em"] == 1.0            # f(0): presence, no physics
++
++
++def test_the_measured_axis_switch_does_not_reach_the_evidence_score(params):
++    Q, qs, C, cs = scenario()
++    out = []
++    for v in (False, True):
++        params(EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=v)
++        out.append(evidence_score(Q, C, qs, cs, trace={})[0])
++    assert out[0] == out[1]
++
++
++# -------------------------------------------------- the relational term
++
++#: five nodes; every node has its twin on the other side, so the
++#: correspondence is the identity
++NODES = {i: ("Tex", tex(2 * i, 9 - i)) for i in range(1, 6)}
++J1, J2, J3 = jc(1.0, 2.0, 3.0), jc(4.0, 2.0, 3.0), jc(1.0, 6.0, 3.0)
++Q1, Q2 = jc(2.0, 2.0, 3.0), jc(4.0, 5.0, 3.0)
++
++
++def scenario(flags=True, query_extra=False):
++    """Core: two membership flags, three measured relations.  Query: both
++    flags, two of the measured relations (each one bin off), nothing where
++    the third is."""
++    c_edges = {(1, 2, JC): J1, (2, 3, JC): J2, (3, 4, JC): J3}
++    q_edges = {(1, 2, JC): Q1, (2, 3, JC): Q2}
++    if flags:
++        for e in ((1, 3, RC), (2, 4, RC)):
++            c_edges[e] = flag("REGION_CONTENT")
++            q_edges[e] = flag("REGION_CONTENT")
++    if query_extra:
++        q_edges[(4, 5, JC)] = jc(0.0, 0.0, 3.0)
++        q_edges[(1, 5, RC)] = flag("REGION_CONTENT")
++    Q, qs = graph(NODES, list(q_edges), q_edges)
++    C, cs = graph(NODES, list(c_edges), c_edges)
++    return Q, qs, C, cs
++
++
++S1, S2 = esim(Q1, J1), esim(Q2, J2)
++
++
++def test_the_scenario_is_what_the_arithmetic_below_assumes():
++    assert 0.0 < S1 < 1.0 and 0.0 < S2 < 1.0 and S1 != S2
++    Q, qs, C, cs = scenario()
++    _s, corr = evidence_score(Q, C, qs, cs, trace={})
++    assert corr == {i: i for i in range(1, 6)}
++
++
++def test_presence_times_physics_by_hand(params):
++    Q, qs, C, cs = scenario()
++    params(EVIDENCE_QUERY_SIDE_TERMS=(), EVIDENCE_RELATION_COUNT_APART=False)
++    off = {}
++    evidence_score(Q, C, qs, cs, trace=off)
++    # five verifiable edges: 2 flags at 1.0, two measured, one with no partner
++    assert off["relational_consistency"] == pytest.approx((2 + S1 + S2) / 5)
++    assert off["relation_presence"] == pytest.approx(4 / 5)
++    assert off["relation_physics"] == pytest.approx((S1 + S2) / 2)
++    assert off["relation_count_apart"] is False
++
++    params(EVIDENCE_QUERY_SIDE_TERMS=(), EVIDENCE_RELATION_COUNT_APART=True)
++    on = {}
++    evidence_score(Q, C, qs, cs, trace=on)
++    assert on["relational_consistency"] == pytest.approx(
++        (4 / 5) * (S1 + S2) / 2)
++    assert on["relation_count_apart"] is True
++    assert on["relational_consistency"] < off["relational_consistency"]
++    # (t + p m)/v  ->  (t + p) m / v
++    t, p, v, m = 2, 2, 5, (S1 + S2) / 2
++    assert off["relational_consistency"] == pytest.approx((t + p * m) / v)
++    assert on["relational_consistency"] == pytest.approx((t + p) * m / v)
++    # nothing but the relational term and what is built on it moves
++    for k in ("node_coverage", "edge_absence", "matched_rel_sim_sum",
++              "verifiable_core_edges_count", "rel_present", "rel_physical"):
++        assert on[k] == off[k]
++
++
++def test_unchanged_without_a_count_only_pair(params):
++    Q, qs, C, cs = scenario(flags=False)
++    out = {}
++    for v in (False, True):
++        params(EVIDENCE_RELATION_COUNT_APART=v)
++        tr = {}
++        out[v] = (evidence_score(Q, C, qs, cs, trace=tr)[0],
++                  tr["relational_consistency"])
++    assert out[True][1] == pytest.approx(out[False][1], abs=1e-15)
++    assert out[True][0] == pytest.approx(out[False][0], abs=1e-15)
++
++
++def test_unchanged_when_nothing_physical_was_matched(params):
++    """Flags only: the term is the presence, as it always was."""
++    edges = {(1, 3, RC): flag("REGION_CONTENT"),
++             (2, 4, RC): flag("REGION_CONTENT")}
++    c_edges = dict(edges)
++    c_edges[(1, 5, RC)] = flag("REGION_CONTENT")       # absent in the query
++    Q, qs = graph(NODES, list(edges), edges)
++    C, cs = graph(NODES, list(c_edges), c_edges)
++    for v in (False, True):
++        params(EVIDENCE_QUERY_SIDE_TERMS=(), EVIDENCE_RELATION_COUNT_APART=v)
++        tr = {}
++        evidence_score(Q, C, qs, cs, trace=tr)
++        assert tr["relational_consistency"] == pytest.approx(2 / 3)
++        assert tr["relation_physics"] == 1.0
++
++
++def test_unchanged_when_the_physics_is_perfect(params):
++    edges = {(1, 2, JC): J1, (1, 3, RC): flag("REGION_CONTENT")}
++    c_edges = dict(edges)
++    c_edges[(3, 4, JC)] = J3
++    Q, qs = graph(NODES, list(edges), edges)
++    C, cs = graph(NODES, list(c_edges), c_edges)
++    for v in (False, True):
++        params(EVIDENCE_QUERY_SIDE_TERMS=(), EVIDENCE_RELATION_COUNT_APART=v)
++        tr = {}
++        evidence_score(Q, C, qs, cs, trace=tr)
++        assert tr["relational_consistency"] == pytest.approx(2 / 3)
++
++
++def test_a_parameter_less_pair_is_count_only(params):
++    edges = [(1, 2, TOPO), (2, 3, JC)]
++    Q, qs = graph(NODES, edges, {(2, 3, JC): Q2})
++    C, cs = graph(NODES, edges, {(2, 3, JC): J2})
++    f6 = dict(EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True,
++              EVIDENCE_QUERY_SIDE_TERMS=())
++    params(EVIDENCE_RELATION_COUNT_APART=False, **f6)
++    off = {}
++    evidence_score(Q, C, qs, cs, trace=off)
++    assert off["relational_consistency"] == pytest.approx((1 + S2) / 2)
++    params(EVIDENCE_RELATION_COUNT_APART=True, **f6)
++    on = {}
++    evidence_score(Q, C, qs, cs, trace=on)
++    assert on["relation_presence"] == 1.0
++    assert on["relational_consistency"] == pytest.approx(S2)
++
++
++def test_both_sides_under_the_query_side_relation_term(params):
++    Q, qs, C, cs = scenario(query_extra=True)
++    params(EVIDENCE_QUERY_SIDE_TERMS=ALL, EVIDENCE_RELATION_COUNT_APART=True)
++    tr = {}
++    evidence_score(Q, C, qs, cs, trace=tr)
++    # core side: 5 verifiable, 4 present, 2 physical (S1, S2)
++    # query side: 6 verifiable, 4 present (the two extra edges have no
++    #             counterpart), 2 physical (S1, S2)
++    assert tr["relation_presence"] == pytest.approx(8 / 11)
++    assert tr["relation_physics"] == pytest.approx((S1 + S2) / 2)
++    assert tr["relational_consistency"] == pytest.approx(
++        (8 / 11) * (S1 + S2) / 2)
++    params(EVIDENCE_QUERY_SIDE_TERMS=ALL, EVIDENCE_RELATION_COUNT_APART=False)
++    off = {}
++    evidence_score(Q, C, qs, cs, trace=off)
++    assert off["relational_consistency"] == pytest.approx(
++        (2 * 2 + 2 * (S1 + S2)) / 11)
++
++
++def test_the_only_edges_branch_is_untouched(params):
++    Q, qs, C, cs = scenario()
++    out = {}
++    for v in (False, True):
++        params(EVIDENCE_ONLY_EDGES=True, EVIDENCE_RELATION_COUNT_APART=v)
++        tr = {}
++        score, _ = evidence_score(Q, C, qs, cs, trace=tr)
++        out[v] = (score, tr["relational_consistency"],
++                  tr["relational_multiplier"], tr["relation_count_apart"])
++    assert out[True] == out[False]
++    assert out[True][3] is False
++
++
++def test_an_edgeless_core_stays_vacuous(params):
++    Q, qs, _C, _cs = scenario()
++    C, cs = graph(NODES)
++    for v in (False, True):
++        params(EVIDENCE_RELATION_COUNT_APART=v)
++        tr = {}
++        evidence_score(Q, C, qs, cs, trace=tr)
++        assert tr["relational_consistency"] == 1.0
++
++
++def random_pair(rng):
++    """Twin nodes on both sides (the correspondence is the identity); the
++    query's edges are the core's, some dropped, some one bin off, plus a
++    few of its own."""
++    ids = list(range(1, 9))
++    nodes = {i: ("Tex", tex(i, 9 - i)) for i in ids}
++
++    def one(a, b):
++        k = rng.randrange(4)
++        if k == 0:
++            return (a, b, RC), flag("REGION_CONTENT")
++        if k == 1:
++            return (a, b, TOPO), None
++        return (a, b, JC), jc(float(rng.randrange(4)),
++                              float(rng.randrange(6)), 3.0)
++
++    ce = dict(one(*sorted(rng.sample(ids, 2)))
++              for _ in range(rng.randrange(6, 14)))
++    qe = {}
++    for e, prm in ce.items():
++        if rng.random() < 0.25:
++            continue
++        if prm is not None and e[2] is JC and rng.random() < 0.6:
++            d, inc, topo = prm.quantized
++            prm = jc(d + 1.0, inc, topo)
++        qe[e] = prm
++    for _ in range(rng.randrange(0, 4)):
++        e, prm = one(*sorted(rng.sample(ids, 2)))
++        qe.setdefault(e, prm)
++    Q, qs = graph(nodes, list(qe), {e: x for e, x in qe.items() if x})
++    C, cs = graph(nodes, list(ce), {e: x for e, x in ce.items() if x})
++    return Q, qs, C, cs
++
++
++@pytest.mark.parametrize("terms", [(), ALL])
++def test_the_term_and_the_score_never_rise(params, terms):
++    """Every count-only pair of these graphs reads exactly 1.0 (a flag, a
++    parameter-less pair under F6): (t + p m)/v -> (t + p) m/v, m <= 1."""
++    rng = random.Random(11 + len(terms))
++    moved = 0
++    for _ in range(60):
++        Q, qs, C, cs = random_pair(rng)
++        out = {}
++        for v in (False, True):
++            params(EVIDENCE_QUERY_SIDE_TERMS=terms,
++                   EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True,
++                   EDGE_UNMEASURED_IS_NOT_EVIDENCE=True,
++                   EVIDENCE_RELATION_COUNT_APART=v)
++            tr = {}
++            score, corr = evidence_score(Q, C, qs, cs, trace=tr)
++            out[v] = (score, tr["relational_consistency"], corr,
++                      tr["node_coverage"], tr["edge_absence"])
++        assert out[True][1] <= out[False][1] + 1e-15
++        assert out[True][0] <= out[False][0] + 1e-15
++        assert out[True][2:] == out[False][2:]
++        moved += out[True][1] < out[False][1] - 1e-12
++    assert moved > 10
++
++
++def test_off_is_the_historical_mean_bit_for_bit(params):
++    """With the switch off the score is the expression it always was."""
++    rng = random.Random(5)
++    params(EVIDENCE_QUERY_SIDE_TERMS=(), EVIDENCE_RELATION_COUNT_APART=False)
++    for _ in range(40):
++        Q, qs, C, cs = random_pair(rng)
++        tr = {}
++        evidence_score(Q, C, qs, cs, trace=tr)
++        v = tr["verifiable_core_edges_count"]
++        if len(C.edges) == 0:
++            want = 1.0
++        elif v == 0:
++            want = 0.0
++        else:
++            want = min(1.0, max(0.0, tr["matched_rel_sim_sum"] / float(v)))
++        assert tr["relational_consistency"] == want
++
++
++
++def test_with_the_floors_restored_an_unmeasured_pair_is_a_full_count(params):
++    """The exception to "never rises", found by the pin triage.  With the
++    Phase-4 floors back (EDGE_UNMEASURED_IS_NOT_EVIDENCE = False) an
++    all-UNKNOWN pair reads 0.2 -- a similarity of nothing.  It is a
++    counterpart with nothing measured: once the count is kept apart it is
++    one present relation, and the term rises from 0.2 to 1.0.  Under Phase 4
++    the same pair reads 0.0 and is absent under either reading."""
++    blank = jc(U, U, U)
++    edges = {(1, 2, JC): blank}
++    Q, qs = graph(NODES, list(edges), edges)
++    C, cs = graph(NODES, list(edges), edges)
++    assert edge_graded_axes(blank, blank) == 0
++    got = {}
++    for p4 in (False, True):
++        for apart in (False, True):
++            params(EVIDENCE_QUERY_SIDE_TERMS=(),
++                   EDGE_UNMEASURED_IS_NOT_EVIDENCE=p4,
++                   EVIDENCE_RELATION_COUNT_APART=apart)
++            tr = {}
++            evidence_score(Q, C, qs, cs, trace=tr)
++            got[(p4, apart)] = tr["relational_consistency"]
++    assert got[(False, False)] == pytest.approx(0.2)
++    assert got[(False, True)] == 1.0
++    assert got[(True, False)] == 0.0 and got[(True, True)] == 0.0
+-- 
+2.39.5
+

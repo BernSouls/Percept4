@@ -1,0 +1,400 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BernSouls <256335293+BernSouls@users.noreply.github.com>
+Date: Tue, 10 Nov 2026 22:56:00 +0000
+Subject: [EXACT ASSIGNMENT] _max_weight_bipartite_matching: solve the
+ assignment exactly
+
+Switch MATCH_ASSIGNMENT_EXACT (default True; False = per-row top-8 sparse greedy + 2-opt). scipy.optimize.linear_sum_assignment on the same weights, one orientation whatever the argument order.
+Pin: tests_matcher/test_exact_assignment.py
+
+Co-authored-by: arena-agent <297053741+arena-agent@users.noreply.github.com>
+---
+ matching/structural_similarity.py       |  60 ++++++
+ parameters/_text.py                     |  12 ++
+ tests_matcher/conftest.py               |   1 +
+ tests_matcher/test_declared_defaults.py |   2 +
+ tests_matcher/test_exact_assignment.py  | 248 ++++++++++++++++++++++++
+ 5 files changed, 323 insertions(+)
+ create mode 100644 tests_matcher/test_exact_assignment.py
+
+diff --git a/matching/structural_similarity.py b/matching/structural_similarity.py
+index 78eda48..90a0b9a 100644
+--- a/matching/structural_similarity.py
++++ b/matching/structural_similarity.py
+@@ -615,6 +615,60 @@ GESTALT_LENS_BOOST: Dict[str, float] = {
+ }
+ 
+ 
++def _exact_max_weight_matching(
++    weights: List[List[float]],
++) -> List[Tuple[int, int]]:
++    """[EXACT ASSIGNMENT] Maximum-weight bipartite matching, solved exactly.
++
++    The sparse greedy + 2-opt below was a speed concession made when the
++    exact solver was a pure-Python Hungarian. It prunes the candidates PER
++    ROW (top 8), so
++      * a row whose eight best columns are all taken stays unmatched while a
++        column with a positive weight for it is still free (measured on the
++        ETH-80 EVAL pairs: 7.3 % / 5.4 % of the pairable node slots, in every
++        pair);
++      * matching(W) and matching(W transposed) differ, so the correspondence
++        of (Q, C) is not that of (C, Q);
++      * the total weight is below the maximum.
++    scipy.optimize.linear_sum_assignment (already a dependency of the tree
++    through core/spatial.py) solves the same problem exactly in compiled
++    code: the dense weight matrix is the cost, not the assignment.
++
++    Properties (pinned in tests_matcher/test_exact_assignment.py):
++      * the total weight is the maximum over all matchings;
++      * no row and column that are both unmatched have a positive weight;
++      * only strictly positive, finite weights are ever paired;
++      * the problem is solved in ONE orientation whatever the argument order
++        (the smaller side as rows; for a square matrix, the orientation whose
++        bytes sort first), so matching(W transposed) is matching(W)
++        transposed, ties included;
++      * same input -> same output; pairs are returned sorted by row.
++    Ties between equally good matchings are resolved by the solver.
++    """
++    n = len(weights)
++    m = len(weights[0]) if n else 0
++    if n == 0 or m == 0:
++        return []
++    import numpy as _np
++    from scipy.optimize import linear_sum_assignment
++
++    w = _np.asarray(weights, dtype=float)
++    w = _np.where(_np.isfinite(w) & (w > 0.0), w, 0.0)
++    if not w.any():
++        return []
++    transposed = n > m or (n == m and w.T.tobytes() < w.tobytes())
++    if transposed:
++        w = _np.ascontiguousarray(w.T)
++    rows, cols = linear_sum_assignment(w, maximize=True)
++    pairs = [
++        ((int(c), int(r)) if transposed else (int(r), int(c)))
++        for r, c in zip(rows, cols)
++        if w[r, c] > 0.0
++    ]
++    pairs.sort()
++    return pairs
++
++
+ def _max_weight_bipartite_matching(
+     weights: List[List[float]],
+     top_k: int = 8,
+@@ -646,6 +700,12 @@ def _max_weight_bipartite_matching(
+     if m == 0:
+         return []
+ 
++    # [EXACT ASSIGNMENT] P.MATCH_ASSIGNMENT_EXACT: solve the assignment
++    # exactly instead of approximating it. False = the historical sparse
++    # greedy + 2-opt below (top_k / max_local_opt_passes apply to it only).
++    if getattr(P, "MATCH_ASSIGNMENT_EXACT", True):
++        return _exact_max_weight_matching(weights)
++
+     positive_entries: List[List[Tuple[float, int]]] = []
+     for i in range(n):
+         row_entries = [(w, j) for j, w in enumerate(weights[i]) if w > 0.0]
+diff --git a/parameters/_text.py b/parameters/_text.py
+index 0cf2ec8..2b631a5 100644
+--- a/parameters/_text.py
++++ b/parameters/_text.py
+@@ -1989,6 +1989,18 @@ EVIDENCE_NODE_NULL_CALIBRATED: bool = False
+ # graphs -- re-read THETA_FUSE / mcs_contained / _classify under either
+ # value before relying on it.
+ EDGE_REVERSE_FLIPS_MIXTURE: bool = True
++# [EXACT ASSIGNMENT] matching/structural_similarity.py
++# _max_weight_bipartite_matching (the node correspondence of mcs_score,
++# mcs_similarity and evidence_score; also the consolidator, the structural
++# similarity and the seed of the global alignment): solve the maximum-weight
++# assignment EXACTLY (scipy.optimize.linear_sum_assignment) instead of the
++# per-row top-8 sparse greedy + 2-opt. The approximation left a node
++# unmatched while a partner with a positive weight was still free, returned
++# a different correspondence for (Q, C) than for (C, Q), and did not reach
++# the maximum weight. False = the historical approximation. The weights are
++# untouched; only WHO is paired changes -- every gate calibrated on scores
++# of the approximate correspondence must be re-read under either value.
++MATCH_ASSIGNMENT_EXACT: bool = True
+ 
+ # =============================================================================
+ # LOCOMOTION BRIDGE & ANCHOR FALLBACK
+diff --git a/tests_matcher/conftest.py b/tests_matcher/conftest.py
+index ce8242b..e5aeea6 100644
+--- a/tests_matcher/conftest.py
++++ b/tests_matcher/conftest.py
+@@ -38,6 +38,7 @@ PIN_BASELINE = {
+     "EDGE_UNMEASURED_IS_NOT_EVIDENCE": True,           # Phase 4
+     "EVIDENCE_NODE_NULL_CALIBRATED": False,            # null calibration
+     "EDGE_REVERSE_FLIPS_MIXTURE": True,                # mixture reversal
++    "MATCH_ASSIGNMENT_EXACT": True,                    # exact assignment
+ }
+ 
+ #: the tree's own values, read once before any pin touches them
+diff --git a/tests_matcher/test_declared_defaults.py b/tests_matcher/test_declared_defaults.py
+index b96c224..b6c5bff 100644
+--- a/tests_matcher/test_declared_defaults.py
++++ b/tests_matcher/test_declared_defaults.py
+@@ -24,4 +24,6 @@ def test_declared_defaults(declared_defaults):
+         "EVIDENCE_NODE_NULL_CALIBRATED": False,
+         # mixture reversal -- on: the library's own contract (flipped_copy)
+         "EDGE_REVERSE_FLIPS_MIXTURE": True,
++        # exact assignment -- on: the contract of the function's name
++        "MATCH_ASSIGNMENT_EXACT": True,
+     }
+diff --git a/tests_matcher/test_exact_assignment.py b/tests_matcher/test_exact_assignment.py
+new file mode 100644
+index 0000000..32d4151
+--- /dev/null
++++ b/tests_matcher/test_exact_assignment.py
+@@ -0,0 +1,248 @@
++"""PIN -- [EXACT ASSIGNMENT] the node correspondence is a maximum-weight
++matching, not an approximation of one.
++
++``_max_weight_bipartite_matching`` pruned the candidates per ROW (top 8),
++assigned greedily and polished with 2-opt -- a speed concession from the time
++the exact solver was a pure-Python Hungarian.  Measured on the ETH-80 EVAL
++pairs: 7.3 % / 5.4 % of the pairable node slots left unpaired although a
++partner with a positive weight was free, in every pair; and a different
++correspondence for (Q, C) than for (C, Q) in every probed pair.
++
++Under ``P.MATCH_ASSIGNMENT_EXACT`` (default True) the same weight matrix is
++solved exactly (``scipy.optimize.linear_sum_assignment``).  Pinned here:
++  * the total weight is the brute-force maximum; the approximation is never
++    above it and is sometimes below
++  * nothing is stranded: no unmatched row and unmatched column share a
++    positive weight
++  * matching(W transposed) is matching(W) transposed -- ties included
++  * only strictly positive, finite weights are paired; empty inputs give []
++  * same input, same output; pairs sorted by row
++  * the per-row pruning stranded nodes; the exact solver pairs them
++  * in the matcher: the correspondence of (Q, C) is that of (C, Q), and the
++    balanced score of a pair the approximation scored two ways is one number
++  * the switch restores the approximation, bit for bit
++"""
++from __future__ import annotations
++
++import itertools
++import random
++
++import pytest
++
++from matching.structural_similarity import (_exact_max_weight_matching,
++                                            _max_weight_bipartite_matching)
++from memory.cores import evidence_score
++
++from _graphs import graph, tex
++
++ALL = ("node", "relation", "absence")
++
++
++def total(w, pairs):
++    return sum(w[i][j] for i, j in pairs)
++
++
++def brute_force(w):
++    n, m = len(w), len(w[0])
++    best = 0.0
++    if n <= m:
++        for perm in itertools.permutations(range(m), n):
++            best = max(best, sum(w[i][j] for i, j in enumerate(perm)))
++    else:
++        for perm in itertools.permutations(range(n), m):
++            best = max(best, sum(w[i][j] for j, i in enumerate(perm)))
++    return best
++
++
++def random_matrix(rng, n, m, zeros=True):
++    return [[(0.0 if zeros and rng.random() < 0.3 else rng.random())
++             for _ in range(m)] for _ in range(n)]
++
++
++def transpose(w):
++    return [list(col) for col in zip(*w)]
++
++
++def stranded(w, pairs):
++    """Unmatched (row, column) pairs with a positive weight."""
++    rows = {i for i, _j in pairs}
++    cols = {j for _i, j in pairs}
++    return [(i, j) for i in range(len(w)) for j in range(len(w[0]))
++            if i not in rows and j not in cols and w[i][j] > 0.0]
++
++
++def test_the_total_weight_is_the_maximum(params):
++    rng = random.Random(20261110)
++    below = 0
++    for _ in range(200):
++        w = random_matrix(rng, rng.randrange(1, 7), rng.randrange(1, 7))
++        best = brute_force(w)
++        params(MATCH_ASSIGNMENT_EXACT=True)
++        exact = _max_weight_bipartite_matching(w)
++        assert total(w, exact) == pytest.approx(best, abs=1e-12)
++        assert len(set(i for i, _j in exact)) == len(exact)       # a matching
++        assert len(set(j for _i, j in exact)) == len(exact)
++        params(MATCH_ASSIGNMENT_EXACT=False)
++        approx = _max_weight_bipartite_matching(w)
++        assert total(w, approx) <= best + 1e-12
++        below += int(total(w, approx) < best - 1e-12)
++    assert below > 0          # the approximation does miss the optimum
++
++
++def test_nothing_is_stranded(params):
++    rng = random.Random(4)
++    for _ in range(60):
++        w = random_matrix(rng, rng.randrange(1, 40), rng.randrange(1, 40))
++        params(MATCH_ASSIGNMENT_EXACT=True)
++        assert stranded(w, _max_weight_bipartite_matching(w)) == []
++
++
++def test_the_per_row_pruning_stranded_nodes_and_the_exact_solver_pairs_them(
++        params):
++    # ten rows that all prefer the same eight columns (weights below
++    # THETA_SIM, so the noise-floor union adds nothing); two more columns
++    # every row could still use
++    w = [[0.60 - 0.01 * i - 0.001 * j for j in range(8)] + [0.10, 0.09]
++         for i in range(10)]
++    params(MATCH_ASSIGNMENT_EXACT=False)
++    approx = _max_weight_bipartite_matching(w)
++    assert len(approx) == 8
++    assert len(stranded(w, approx)) == 4       # 2 rows x 2 free columns
++    params(MATCH_ASSIGNMENT_EXACT=True)
++    exact = _max_weight_bipartite_matching(w)
++    assert len(exact) == 10 and stranded(w, exact) == []
++    assert total(w, exact) > total(w, approx) + 0.15
++
++
++def test_the_transposed_problem_has_the_transposed_solution(params):
++    params(MATCH_ASSIGNMENT_EXACT=True)
++    rng = random.Random(9)
++    cases = [random_matrix(rng, rng.randrange(1, 25), rng.randrange(1, 25))
++             for _ in range(60)]
++    # ties: interchangeable rows and columns, square and not
++    cases += [[[0.5] * 4 for _ in range(4)], [[0.5] * 3 for _ in range(5)],
++              [[0.7, 0.7, 0.2], [0.7, 0.7, 0.2], [0.2, 0.2, 0.9]],
++              [[0.3, 0.3], [0.3, 0.3], [0.3, 0.3]]]
++    for w in cases:
++        direct = _max_weight_bipartite_matching(w)
++        swapped = _max_weight_bipartite_matching(transpose(w))
++        assert sorted((j, i) for i, j in swapped) == direct
++    # the approximation is not symmetric
++    params(MATCH_ASSIGNMENT_EXACT=False)
++    differ = sum(
++        sorted((j, i) for i, j in
++               _max_weight_bipartite_matching(transpose(w)))
++        != _max_weight_bipartite_matching(w) for w in cases)
++    assert differ > 0
++
++
++def test_only_positive_finite_weights_are_paired(params):
++    params(MATCH_ASSIGNMENT_EXACT=True)
++    nan, inf = float("nan"), float("inf")
++    assert _max_weight_bipartite_matching([]) == []
++    assert _max_weight_bipartite_matching([[]]) == []
++    assert _max_weight_bipartite_matching([[0.0, 0.0], [0.0, 0.0]]) == []
++    assert _max_weight_bipartite_matching([[-1.0, nan], [inf, -0.5]]) == []
++    w = [[0.9, 0.0, -1.0], [nan, 0.0, 0.0], [0.0, 0.0, 0.4]]
++    assert _max_weight_bipartite_matching(w) == [(0, 0), (2, 2)]
++    # a row with no positive weight stays unmatched; nothing is forced
++    w = [[0.8, 0.2], [0.0, 0.0], [0.7, 0.0]]
++    assert _max_weight_bipartite_matching(w) == [(0, 1), (2, 0)]
++
++
++def test_same_input_same_output_sorted_by_row(params):
++    params(MATCH_ASSIGNMENT_EXACT=True)
++    rng = random.Random(2)
++    w = random_matrix(rng, 30, 45)
++    first = _max_weight_bipartite_matching(w)
++    assert first == sorted(first)
++    assert all(_max_weight_bipartite_matching(w) == first for _ in range(3))
++    assert _exact_max_weight_matching(w) == first
++    # the approximation's own arguments do not reach the exact solver
++    assert _max_weight_bipartite_matching(w, top_k=1,
++                                          max_local_opt_passes=0) == first
++
++
++def test_the_switch_restores_the_approximation(params):
++    params(MATCH_ASSIGNMENT_EXACT=False)
++    # the sparse greedy takes the heaviest pair first and cannot undo it:
++    # rows 0 and 1 both want column 0; greedy gives it to row 0 (0.9), row 1
++    # falls back to column 1 (0.1): 1.0.  The optimum is 0.8 + 0.85 = 1.65
++    # -- which 2-opt does find here, so use a 3-cycle 2-opt cannot fix.
++    w = [[0.90, 0.80, 0.00],
++         [0.85, 0.00, 0.10],
++         [0.00, 0.75, 0.70]]
++    approx = _max_weight_bipartite_matching(w)
++    params(MATCH_ASSIGNMENT_EXACT=True)
++    exact = _max_weight_bipartite_matching(w)
++    assert total(w, exact) == pytest.approx(brute_force(w))
++    assert total(w, approx) <= total(w, exact) + 1e-12
++    # whatever the approximation returns, it is the historical function's
++    # value: greedy order (weight desc, row, col), then 2-opt
++    params(MATCH_ASSIGNMENT_EXACT=False)
++    assert _max_weight_bipartite_matching(w) == approx
++    assert approx == [(0, 0), (1, 2), (2, 1)] or total(w, approx) == \
++        pytest.approx(total(w, exact))
++
++
++# ------------------------------------------------------------- the matcher
++
++def _ev(Q, C):
++    trace: dict = {}
++    score, corr = evidence_score(Q[0], C[0], Q[1], C[1], trace=trace)
++    return score, corr, trace
++
++
++def _pruned_pair():
++    """Ten Texture nodes a side.  Eight are identical on both sides.  The
++    query's last two (q8, q9) resemble those eight more than they resemble
++    the core's last two (c8, c9) -- so c8, c9 are beyond their top 8 -- while
++    for c8, c9 the query's last two are the best partners there are."""
++    q = graph({k: ("Texture", tex(2, 2) if k < 8 else tex(2, 4))
++               for k in range(10)})
++    c = graph({100 + k: ("Texture", tex(2, 2) if k < 8 else tex(2, 7))
++               for k in range(10)})
++    return q, c
++
++
++def test_in_the_matcher_the_two_directions_share_one_correspondence(params):
++    params(EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True,
++           EVIDENCE_GRADED_NODE_CREDIT=True, EVIDENCE_QUERY_SIDE_TERMS=ALL,
++           EVIDENCE_NODE_NULL_CALIBRATED=False)
++    import parameters as P
++
++    a = tex(2, 4).similarity(tex(2, 2))      # q8 with the eight
++    b = tex(2, 4).similarity(tex(2, 7))      # q8 with c8
++    c_ = tex(2, 2).similarity(tex(2, 7))     # the eight with c8
++    assert a > b > c_ > 0.0 and b < P.THETA_SIM   # the scenario is as said
++    q, c = _pruned_pair()
++    params(MATCH_ASSIGNMENT_EXACT=True)
++    s_qc, corr_qc, _t = _ev(q, c)
++    s_cq, corr_cq, _t = _ev(c, q)
++    assert len(corr_qc) == 10                      # every node is placed
++    assert corr_cq == {v: k for k, v in corr_qc.items()}
++    assert s_qc == pytest.approx(s_cq, abs=1e-9)
++    assert {corr_qc[8], corr_qc[9]} == {108, 109}
++    # the approximation: q8, q9 are stranded one way and paired the other
++    params(MATCH_ASSIGNMENT_EXACT=False)
++    a_qc, acorr_qc, _t = _ev(q, c)
++    a_cq, acorr_cq, _t = _ev(c, q)
++    assert len(acorr_qc) == 8 and len(acorr_cq) == 10
++    assert abs(a_qc - a_cq) > 0.01
++    assert a_cq == pytest.approx(s_cq, abs=1e-9)   # the complete one agrees
++
++
++def test_in_the_matcher_no_pairable_node_is_left_out(params):
++    params(EVIDENCE_GRADED_NODE_CREDIT=False, EVIDENCE_QUERY_SIDE_TERMS=(),
++           EVIDENCE_NODE_NULL_CALIBRATED=False)
++    q, c = _pruned_pair()
++    params(MATCH_ASSIGNMENT_EXACT=False)
++    _s, corr_a, tr_a = _ev(q, c)
++    assert len(corr_a) == 8
++    assert tr_a["node_coverage"] == pytest.approx(0.8, abs=1e-6)
++    params(MATCH_ASSIGNMENT_EXACT=True)
++    _s, corr_e, tr_e = _ev(q, c)
++    assert len(corr_e) == 10
++    assert tr_e["node_coverage"] == pytest.approx(1.0, abs=1e-6)
++    # the eight identical nodes are still paired among themselves
++    assert all(corr_e[k] < 108 for k in range(8))
+-- 
+2.39.5
+

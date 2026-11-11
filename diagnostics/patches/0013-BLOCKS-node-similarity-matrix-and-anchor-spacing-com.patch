@@ -1,0 +1,1572 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BernSouls <256335293+BernSouls@users.noreply.github.com>
+Date: Wed, 11 Nov 2026 14:33:56 +0000
+Subject: [BLOCKS] node-similarity matrix and anchor spacing computed with
+ numpy, bit for bit
+
+Switch MATCH_SIGNATURE_MATRIX_BLOCKS (default True; False = the Python loops). Performance only: no weight, correspondence or score moves.
+Pins: tests_matcher/test_signature_matrix.py, tests_matcher/test_spacing_kernel.py
+
+Co-authored-by: arena-agent <297053741+arena-agent@users.noreply.github.com>
+---
+ matching/signature_matrix.py            | 367 ++++++++++++++++
+ memory/cores.py                         | 217 ++++++++-
+ parameters/_text.py                     |  13 +
+ tests_matcher/conftest.py               |   1 +
+ tests_matcher/test_declared_defaults.py |   2 +
+ tests_matcher/test_signature_matrix.py  | 559 ++++++++++++++++++++++++
+ tests_matcher/test_spacing_kernel.py    | 280 ++++++++++++
+ 7 files changed, 1424 insertions(+), 15 deletions(-)
+ create mode 100644 matching/signature_matrix.py
+ create mode 100644 tests_matcher/test_signature_matrix.py
+ create mode 100644 tests_matcher/test_spacing_kernel.py
+
+diff --git a/matching/signature_matrix.py b/matching/signature_matrix.py
+new file mode 100644
+index 0000000..b096099
+--- /dev/null
++++ b/matching/signature_matrix.py
+@@ -0,0 +1,367 @@
++"""matching/signature_matrix.py -- the node-similarity matrix of a lens type,
++computed in blocks.
++
++``signature_similarity_matrix(sigs_a, sigs_b)`` returns
++
++    [[_sig_similarity(a, b) for b in sigs_b] for a in sigs_a]
++
++BIT FOR BIT, and several times faster.  It is a performance change only: no similarity, no weight, no
++correspondence and no score may differ from the per-pair loop by a single
++bit, and ``tests_matcher/test_signature_matrix.py`` pins exactly that.
++
++How.  ``TypedSignature.similarity`` of two CANONICAL signatures of the same
++class and relation that both carry a population of the declared layout is
++``core.population.population_similarity`` (the first branch of both
++similarity implementations the tree ships).  That function is a short chain
++of IEEE-754 double operations; here the SAME operations are applied in the
++SAME order to whole arrays:
++
++    mean            the builtin ``sum`` over the stored tuple, divided by n
++                    (called per vector, so the block follows the scalar on
++                    any interpreter, whatever its ``sum`` does)
++    centred values  x - mean, elementwise
++    num, va, vb     accumulated bin by bin, starting from 0.0
++    cosine          num / sqrt(va * vb), clamped to [-1, 1]
++    axis overlap    the positive part; 0.0 when either variance <= 1e-18
++    result          sum over the axes of weight * overlap, divided by the
++                    sum of the weights
++
++No BLAS product, no ``numpy.sum``, no fused operation: elementwise numpy
++arithmetic on float64 is the same IEEE operation as Python's.
++
++The second block is the BINS path of the Gaussian kernel
++(``core.types._similarity_gaussian`` below its population branches): two
++CANONICAL signatures of the same class, relation and arity, neither of which
++can reach a population branch, no slot ABSENT:
++
++    d               abs(a - b); min(d, n - d) on a circular slot
++    term            (w / W_sum) * (d / sigma) ** 2, added slot by slot
++    result          exp(-total); exactly 1.0 when the two tuples are equal
++
++Subtraction, absolute value, minimum, division, multiplication and addition
++are elementwise numpy.  ``** 2`` and ``exp`` are NOT: numpy's square and
++exponential are not guaranteed to round as the C library's ``pow`` and
++``exp`` that Python calls, so both are applied element by element with the
++interpreter's own ``pow`` and ``math.exp``.  The per-slot constants (sigma,
++w / W_sum, the cycle length) are computed once by the scalar's expressions.
++
++Every pair that is on neither path -- another signature kind, a missing or
++mis-shaped population, an ABSENT slot, a class with its own slot rule
++(``core.slots``), a class without ranges, an unknown similarity
++implementation -- is evaluated by the per-pair function itself.
++"""
++from __future__ import annotations
++
++from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
++
++#: no intermediate of the kernel can overflow below this magnitude
++_MAX_ABS = 1e50
++
++#: Below this many pairs a block costs MORE than the per-pair loop (the fixed
++#: cost of the numpy calls): a small block is left to the per-pair function.
++#: Both paths return the same floats, so these two numbers are a matter of
++#: speed only; the measured break-even is about 36 pairs for the population
++#: block and about 12 for the Gaussian one.
++_MIN_PAIRS_POPULATION = 48
++_MIN_PAIRS_GAUSSIAN = 16
++
++
++def population_similarity_block(pops_a: Sequence[Any], pops_b: Sequence[Any],
++                                axes: Sequence[Any]):
++    """``population_similarity(pops_a[i], pops_b[j], axes)`` for every (i, j),
++    as a float64 array, bit for bit.
++
++    The caller guarantees what ``population_similarity`` would otherwise
++    check: one vector per axis on every population, ``axis.n_bins`` finite
++    values in each.
++    """
++    import numpy as np
++
++    na, nb = len(pops_a), len(pops_b)
++    total = np.zeros((na, nb), dtype=np.float64)
++    wsum = 0.0
++    tmp = np.empty((na, nb), dtype=np.float64)
++    num = np.empty((na, nb), dtype=np.float64)
++    cos = np.empty((na, nb), dtype=np.float64)
++    for k, axis in enumerate(axes):
++        n = axis.n_bins
++        da = np.array([p[k] for p in pops_a], dtype=np.float64).reshape(na, n)
++        db = np.array([p[k] for p in pops_b], dtype=np.float64).reshape(nb, n)
++        # ma = sum(a) / n -- the builtin on the stored tuple, as the scalar
++        da -= np.array([sum(p[k]) / n for p in pops_a],
++                       dtype=np.float64).reshape(na, 1)
++        db -= np.array([sum(p[k]) / n for p in pops_b],
++                       dtype=np.float64).reshape(nb, 1)
++        va = np.zeros(na, dtype=np.float64)
++        vb = np.zeros(nb, dtype=np.float64)
++        num.fill(0.0)
++        for t in range(n):
++            ca = da[:, t]
++            cb = db[:, t]
++            va += ca * ca                      # va += dx * dx
++            vb += cb * cb                      # vb += dy * dy
++            np.multiply(ca[:, None], cb[None, :], out=tmp)
++            np.add(num, tmp, out=num)          # num += dx * dy
++        ok = (va > 1e-18)[:, None] & (vb > 1e-18)[None, :]
++        np.multiply(va[:, None], vb[None, :], out=tmp)
++        np.sqrt(tmp, out=tmp)                  # math.sqrt(va * vb)
++        cos.fill(0.0)
++        np.divide(num, tmp, out=cos, where=ok)
++        np.minimum(cos, 1.0, out=cos)          # max(-1.0, min(1.0, .))
++        np.maximum(cos, -1.0, out=cos)
++        cos[~(cos > 0.0)] = 0.0                # c if c > 0.0 else 0.0
++        np.multiply(cos, axis.weight, out=cos)
++        np.add(total, cos, out=total)          # total += weight * overlap
++        wsum += axis.weight
++    if wsum <= 0.0:
++        total.fill(0.0)
++        return total
++    np.divide(total, wsum, out=total)
++    return total
++
++
++def gaussian_bins_block(qa: Sequence[Any], qb: Sequence[Any],
++                        plan: Sequence[Tuple[float, float, Optional[float]]]):
++    """The bins path of ``_similarity_gaussian`` for every (i, j) of two lists
++    of quantized tuples of one class, relation and arity, as a float64
++    array, bit for bit.
++
++    `plan` is ``_gaussian_plan`` of the class: one (sigma, w / W_sum, cycle
++    length or None) per slot.  The caller guarantees what the scalar would
++    otherwise check: plain finite floats, no ABSENT slot, the declared
++    arity, no population branch reachable.
++    """
++    import math
++    from itertools import repeat
++
++    import numpy as np
++
++    na, nb, k = len(qa), len(qb), len(plan)
++    A = np.array(qa, dtype=np.float64).reshape(na, k)
++    B = np.array(qb, dtype=np.float64).reshape(nb, k)
++    total = np.zeros((na, nb), dtype=np.float64)
++    same = np.ones((na, nb), dtype=bool)
++    d = np.empty((na, nb), dtype=np.float64)
++    for i, (sigma, coef, cycle) in enumerate(plan):
++        a = A[:, i].reshape(na, 1)
++        b = B[:, i].reshape(1, nb)
++        same &= (a == b)                       # self.quantized == other.quantized
++        np.subtract(a, b, out=d)
++        np.abs(d, out=d)                       # d = abs(a - b)
++        if cycle is not None:
++            np.minimum(d, cycle - d, out=d)    # d = min(d, n - d)
++        np.divide(d, sigma, out=d)             # d / sigma
++        # (d / sigma) ** 2 -- the interpreter's own pow, element by element
++        sq = np.array(list(map(pow, d.ravel().tolist(), repeat(2))),
++                      dtype=np.float64).reshape(na, nb)
++        np.multiply(sq, coef, out=sq)          # (w / W_sum) * (...)
++        np.add(total, sq, out=total)           # total_sq += ...
++    np.negative(total, out=total)
++    # math.exp(-total_sq) -- the interpreter's own exp, element by element
++    out = np.array(list(map(math.exp, total.ravel().tolist())),
++                   dtype=np.float64).reshape(na, nb)
++    out[same] = 1.0                            # equal tuples return 1.0 first
++    return out
++
++
++def _gaussian_plan(class_name: str, arity: int):
++    """The per-slot constants of the bins path of ``_similarity_gaussian``
++    for a class -- [(sigma, w / W_sum, cycle length or None), ...] -- each
++    computed by the scalar's own expression; or None when the class is left
++    to the per-pair function: no ranges or another arity, a class-specific
++    slot rule, a weight lookup that raises, a constant outside the range in
++    which no intermediate can overflow."""
++    import core.types as T
++    from core.registries import (CIRCULAR_CYCLE_LENGTHS,
++                                 get_similarity_ranges, get_slot_weights)
++    from core.slots import _CLASS_SLOT_RULES
++
++    if class_name in _CLASS_SLOT_RULES:
++        return None
++    try:
++        ranges = get_similarity_ranges(class_name)
++        if ranges is None or len(ranges) != arity:
++            return None
++        cycle_lengths = CIRCULAR_CYCLE_LENGTHS.get(class_name)
++        weights = get_slot_weights(class_name, len(ranges), context=None)
++        W_sum = float(sum(weights)) if weights else float(arity)
++        if W_sum <= 0.0:
++            W_sum = float(arity) or 1.0
++        plan = []
++        for i in range(arity):
++            if ranges[i] > 0.0:
++                sigma = ranges[i] / 3.0
++            else:
++                sigma = T._SIGMA_FALLBACK_RANGE0
++            w = weights[i] if (weights and i < len(weights)) else 1.0
++            sigma = float(sigma)
++            coef = float(w / W_sum)
++            cycle = None
++            if cycle_lengths and i in cycle_lengths:
++                cycle = float(cycle_lengths[i])
++                if not (-_MAX_ABS <= cycle <= _MAX_ABS):
++                    return None
++            # NaN fails every comparison below
++            if not (1.0 / _MAX_ABS <= sigma <= _MAX_ABS):
++                return None
++            if not (0.0 <= coef <= _MAX_ABS):
++                return None
++            plan.append((sigma, coef, cycle))
++        return plan
++    except Exception:
++        return None
++
++
++def _block_key(sig: Any, axes_of: Callable[[str], Any],
++               populations: bool = True):
++    """The block `sig` belongs to, or None when it is left to the per-pair
++    function.
++
++    ("P", class, relation): on the strict population branch for every
++    partner with the same key.
++    ("G", class, relation, arity): on the bins path for every partner --
++    it carries no population, or its class declares no layout, so neither
++    population branch of the similarity can be taken whatever the partner
++    carries -- with plain finite floats and no ABSENT slot.
++
++    `populations=False`: the matrix is too small for a population block to
++    pay, so a signature that carries one is not examined at all.
++    """
++    import core.types as T
++
++    if type(sig) is not T.TypedSignature or sig.kind != "CANONICAL":
++        return None
++    axes = axes_of(sig.class_)
++    pop = sig.population
++    if pop and axes is not None:
++        if not populations or len(pop) != len(axes):
++            return None
++        for v, ax in zip(pop, axes):
++            if len(v) != ax.n_bins:
++                return None
++            for x in v:
++                # finite and far from overflow; NaN fails both comparisons
++                if not (-_MAX_ABS <= x <= _MAX_ABS):
++                    return None
++        return ("P", sig.class_, sig.relation)
++    q = sig.quantized
++    if not q:
++        return None
++    absent = T.ABSENT
++    for x in q:
++        if (type(x) is not float or x == absent
++                or not (-_MAX_ABS <= x <= _MAX_ABS)):
++            return None
++    return ("G", sig.class_, sig.relation, len(q))
++
++
++def signature_similarity_matrix(
++    sigs_a: Sequence[Any],
++    sigs_b: Sequence[Any],
++    scalar: Callable[[Any, Any], float],
++) -> List[List[float]]:
++    """``[[scalar(a, b) for b in sigs_b] for a in sigs_a]`` with the
++    population branch and the Gaussian bins path evaluated in blocks.
++    `scalar` is the per-pair function (``memory.cores._sig_similarity``); it
++    decides every pair the blocks do not."""
++    na, nb = len(sigs_a), len(sigs_b)
++    if na == 0 or nb == 0:
++        return [[] for _ in range(na)]
++    if na * nb < min(_MIN_PAIRS_POPULATION, _MIN_PAIRS_GAUSSIAN):
++        # too small for any block to pay for itself
++        return [[scalar(a, b) for b in sigs_b] for a in sigs_a]
++
++    import parameters as P
++    import core.types as T
++    from core.registries import get_population_axes
++
++    blocks_ok = (
++        bool(getattr(P, "POPULATION_CODING_ENABLED", False))
++        and T._SIMILARITY_IMPL in (T._similarity_gaussian,
++                                   T._similarity_linear)
++    )
++    if not blocks_ok:
++        return [[scalar(a, b) for b in sigs_b] for a in sigs_a]
++    gaussian = T._SIMILARITY_IMPL is T._similarity_gaussian
++    populations = na * nb >= _MIN_PAIRS_POPULATION
++
++    plans: Dict[Tuple[str, int], Any] = {}
++
++    def _key(sig):
++        k = _block_key(sig, get_population_axes, populations)
++        if k is not None and k[0] == "G":
++            if not gaussian:
++                return None
++            pk = (k[1], k[3])
++            if pk not in plans:
++                plans[pk] = _gaussian_plan(k[1], k[3])
++            if plans[pk] is None:
++                return None
++        return k
++
++    keys_a = [_key(s) for s in sigs_a]
++    keys_b = [_key(s) for s in sigs_b]
++    groups_a: Dict[Any, List[int]] = {}
++    groups_b: Dict[Any, List[int]] = {}
++    for i, k in enumerate(keys_a):
++        if k is not None:
++            groups_a.setdefault(k, []).append(i)
++    for j, k in enumerate(keys_b):
++        if k is not None:
++            groups_b.setdefault(k, []).append(j)
++
++    def _pays(key, n_pairs):
++        return n_pairs >= (_MIN_PAIRS_POPULATION if key[0] == "P"
++                           else _MIN_PAIRS_GAUSSIAN)
++
++    def _block(key, ia, jb):
++        if key[0] == "P":
++            return population_similarity_block(
++                [sigs_a[i].population for i in ia],
++                [sigs_b[j].population for j in jb],
++                get_population_axes(key[1])).tolist()
++        return gaussian_bins_block(
++            [sigs_a[i].quantized for i in ia],
++            [sigs_b[j].quantized for j in jb],
++            plans[(key[1], key[3])]).tolist()
++
++    # the usual case: one block on both sides, every node in it -- the
++    # block IS the matrix
++    if (len(groups_a) == 1 and len(groups_b) == 1
++            and next(iter(groups_a)) == next(iter(groups_b))
++            and len(next(iter(groups_a.values()))) == na
++            and len(next(iter(groups_b.values()))) == nb
++            and _pays(next(iter(groups_a)), na * nb)):
++        return _block(next(iter(groups_a)), range(na), range(nb))
++
++    out: List[List[Optional[float]]] = [[None] * nb for _ in range(na)]
++    for key, ia in groups_a.items():
++        jb = groups_b.get(key)
++        if not jb or not _pays(key, len(ia) * len(jb)):
++            continue                      # left to the per-pair function
++        block = _block(key, ia, jb)
++        for r, i in enumerate(ia):
++            row = out[i]
++            brow = block[r]
++            for c, j in enumerate(jb):
++                row[j] = brow[c]
++    for i in range(na):
++        row = out[i]
++        a = sigs_a[i]
++        ka = keys_a[i]
++        for j in range(nb):
++            if row[j] is None:
++                kb = keys_b[j]
++                if ka is not None and kb is not None and ka != kb and (
++                        ka[1] != kb[1] or ka[2] != kb[2]
++                        or (ka[0] == "G" and kb[0] == "G")):
++                    # two CANONICAL signatures whose class or relation
++                    # differs: 0.0 at the per-pair function's first test.
++                    # Two bins-path signatures of one class and relation
++                    # and different arity: 0.0 at its length test.
++                    # (Equal keys reach this loop only when their block
++                    # was too small to pay: the per-pair function below.)
++                    row[j] = 0.0
++                else:
++                    row[j] = scalar(a, sigs_b[j])
++    return out  # type: ignore[return-value]
+diff --git a/memory/cores.py b/memory/cores.py
+index ef2d815..cc85048 100644
+--- a/memory/cores.py
++++ b/memory/cores.py
+@@ -753,6 +753,71 @@ def _global_correspondence(
+     )
+     return dict(al.mapping)
+ 
++
++def _normalised_anchors(sg: Any) -> Optional[Dict[int, Tuple[float, float]]]:
++    """Each anchored node's position inside the bounding box of its
++    subgraph's anchors, or None when the subgraph has no usable box.
++
++    The arithmetic of the `_bbox` / `_anchor_similarity` closures of
++    `_mcs_accumulate`, expression for expression, done once per node instead
++    of once per candidate pair. A node without an anchor (or with fewer than
++    two coordinates) is absent from the result.
++    """
++    anchor_map = getattr(sg, "anchor_of_node", None) or {}
++    if not anchor_map:
++        return None
++    xs = [float(p[0]) for p in anchor_map.values() if p and len(p) >= 2]
++    ys = [float(p[1]) for p in anchor_map.values() if p and len(p) >= 2]
++    if len(xs) < 2:
++        return None
++    x0, x1 = min(xs), max(xs)
++    y0, y1 = min(ys), max(ys)
++    w = max(x1 - x0, 1e-9)
++    h = max(y1 - y0, 1e-9)
++    out: Dict[int, Tuple[float, float]] = {}
++    for nid, p in anchor_map.items():
++        if p is None or len(p) < 2:
++            continue
++        out[nid] = ((float(p[0]) - x0) / w, (float(p[1]) - y0) / h)
++    return out
++
++
++def _anchor_weights(
++    sims: Sequence[Sequence[float]],
++    q_ids: Sequence[int],
++    c_ids: Sequence[int],
++    q_norm: Optional[Dict[int, Tuple[float, float]]],
++    c_norm: Optional[Dict[int, Tuple[float, float]]],
++) -> List[List[float]]:
++    """The weight matrix of the correspondence for one block:
++    `sims[i][j] * anchor_similarity(q_ids[i], c_ids[j])`.
++
++    Bit for bit what the per-pair closure of `_mcs_accumulate` produces: the
++    factor is `exp(-2.5 * hypot(dx, dy))` on the normalised positions, and
++    1.0 when either subgraph has no box or either node has no anchor. It is
++    computed for EVERY pair, a similarity of 0 included, exactly as the
++    closure does (math.hypot and math.exp have no bit-identical array form,
++    so this stays one call per pair).
++    """
++    if q_norm is None or c_norm is None:
++        return [[s * 1.0 for s in row] for row in sims]
++    _hypot = math.hypot
++    _exp = math.exp
++    c_pos = [c_norm.get(c) for c in c_ids]
++    weights: List[List[float]] = []
++    for i, q in enumerate(q_ids):
++        row = sims[i]
++        a = q_norm.get(q)
++        if a is None:
++            weights.append([s * 1.0 for s in row])
++            continue
++        ax, ay = a
++        weights.append([
++            (row[j] * 1.0) if b is None
++            else row[j] * _exp(-2.5 * _hypot(ax - b[0], ay - b[1]))
++            for j, b in enumerate(c_pos)])
++    return weights
++
+ #: [U32 / Layer 3] Producer classes whose edges are SPATIAL PROXIMITY, not
+ #: structural evidence.  They are dense by construction (a contact graph is
+ #: O(n^2) in a neighbourhood) and must not outvote JUNCTION / OCCLUSION /
+@@ -778,17 +843,19 @@ def _median_positive_nn(points: Any) -> float:
+     })
+     if len(pts) < 2:
+         return 0.0
+-    nn: List[float] = []
+-    for i, (x, y) in enumerate(pts):
+-        best = math.inf
+-        for j, (u, v) in enumerate(pts):
+-            if i == j:
+-                continue
+-            d = math.hypot(x - u, y - v)
+-            if 1e-12 < d < best:
+-                best = d
+-        if math.isfinite(best):
+-            nn.append(best)
++    # [SIGNATURE MATRIX IN BLOCKS] the same switch governs this kernel: the
++    # nearest neighbours are found with numpy and the distance itself is
++    # still `math.hypot` -- the same floats as the double loop, bit for bit
++    # (pinned). False = the double loop, untouched.
++    if (len(pts) >= _NN_BLOCK_MIN_POINTS
++            and getattr(P, "MATCH_SIGNATURE_MATRIX_BLOCKS", True)):
++        nn = _nearest_positive_distances(pts)
++    else:
++        nn = []
++        for i in range(len(pts)):
++            best = _nearest_positive_distance_of(pts, i)
++            if math.isfinite(best):
++                nn.append(best)
+     if not nn:
+         return 0.0
+     nn.sort()
+@@ -796,6 +863,96 @@ def _median_positive_nn(points: Any) -> float:
+     return nn[mid] if len(nn) % 2 else 0.5 * (nn[mid - 1] + nn[mid])
+ 
+ 
++#: Below this many points the double loop is cheaper than the numpy calls.
++#: Both return the same floats; the number is a matter of speed only.
++_NN_BLOCK_MIN_POINTS = 24
++#: No square of a coordinate difference can overflow below this magnitude.
++_NN_MAX_ABS = 1e150
++#: A candidate is kept when its squared distance, computed in floating
++#: point, is within this relative margin of the row's smallest. The floats
++#: involved are accurate to a few 1e-16; the margin is a million times that.
++_NN_MARGIN = 1e-9
++
++
++def _nearest_positive_distance_of(pts: List[Tuple[float, float]], i: int) -> float:
++    """The smallest distance above 1e-12 from point `i` to another point of
++    `pts`; `math.inf` when there is none.  The reference loop."""
++    x, y = pts[i]
++    best = math.inf
++    for j, (u, v) in enumerate(pts):
++        if i == j:
++            continue
++        d = math.hypot(x - u, y - v)
++        if 1e-12 < d < best:
++            best = d
++    return best
++
++
++def _nearest_positive_distances(pts: List[Tuple[float, float]]) -> List[float]:
++    """`_nearest_positive_distance_of(pts, i)` for every i where it is
++    finite, in order -- the same floats, without the O(n^2) Python loop.
++
++    For each point numpy finds the CANDIDATES for the minimum: every other
++    point whose squared distance (computed in floating point, so only
++    approximately) is within a relative `_NN_MARGIN` of the row's smallest
++    one that can exceed 1e-12.  The distance of each candidate is then
++    computed by `math.hypot` on the same two differences the loop forms,
++    and the minimum of those is returned.  A minimum does not depend on the
++    points that were dropped as long as a point attaining it is kept, and a
++    point attaining it cannot lie outside the margin: `math.hypot` and the
++    squared distances are each accurate to a few units in the last place.
++    The one case in which that argument needs more than the candidates --
++    a candidate that turns out to be at 1e-12 or closer -- is handed to the
++    reference loop for that point.  So is everything when a coordinate is
++    large enough for a square to overflow.
++    """
++    import numpy as np
++
++    n = len(pts)
++    X = np.array([p[0] for p in pts], dtype=np.float64)
++    Y = np.array([p[1] for p in pts], dtype=np.float64)
++    if not (float(np.abs(X).max()) <= _NN_MAX_ABS
++            and float(np.abs(Y).max()) <= _NN_MAX_ABS):
++        out = []
++        for i in range(n):
++            best = _nearest_positive_distance_of(pts, i)
++            if math.isfinite(best):
++                out.append(best)
++        return out
++    floor = 1e-24 * (1.0 - _NN_MARGIN)       # below it, d <= 1e-12 for sure
++    out: List[float] = []
++    step = max(1, 2_000_000 // n)            # bounds every temporary
++    for start in range(0, n, step):
++        stop = min(n, start + step)
++        DX = X[start:stop, None] - X[None, :]        # x - u, as the loop
++        DY = Y[start:stop, None] - Y[None, :]        # y - v
++        D2 = DX * DX
++        D2 += DY * DY
++        D2[np.arange(stop - start), np.arange(start, stop)] = np.inf   # i == j
++        D2[D2 < floor] = np.inf
++        m = D2.min(axis=1)
++        cand = D2 <= (m * (1.0 + _NN_MARGIN))[:, None]
++        cand &= np.isfinite(D2)
++        rows, cols = np.nonzero(cand)                # grouped by row
++        dist = list(map(math.hypot, DX[rows, cols].tolist(),
++                        DY[rows, cols].tolist()))
++        best_of: Dict[int, float] = {}
++        redo = set()
++        for r, d in zip(rows.tolist(), dist):
++            if not 1e-12 < d:
++                redo.add(r)
++            elif d < best_of.get(r, math.inf):
++                best_of[r] = d
++        for r in range(stop - start):
++            if r in redo or r not in best_of:
++                best = _nearest_positive_distance_of(pts, start + r)
++            else:
++                best = best_of[r]
++            if math.isfinite(best):
++                out.append(best)
++    return out
++
++
+ def _effective_edge_weights(sg: Subgraph) -> Dict[Any, float]:
+     """[U32 / Layer 3] Redundancy-aware edge mass for one subgraph.
+ 
+@@ -994,6 +1151,11 @@ def _mcs_accumulate(
+     _want_chance = bool(node_chance) and trace is not None
+     q_chance: Dict[int, float] = {}
+     c_chance: Dict[int, float] = {}
++    # [SIGNATURE MATRIX IN BLOCKS] similarity of every pair the block path
++    # kept, keyed by the query node: the matrix entry IS the value
++    # `_sig_similarity` returns for the pair, so [D1] below reads it instead
++    # of calling again. Empty on the per-pair path and the global path.
++    _block_sims: Dict[int, float] = {}
+     if getattr(P, "MATCH_GLOBAL_CONSISTENCY_ENABLED", False):
+         node_correspondence = _global_correspondence(Q, C, q_sigs, c_sigs)
+         if _want_chance:
+@@ -1047,12 +1209,32 @@ def _mcs_accumulate(
+             return math.exp(-2.5 * dist)
+ 
+         node_correspondence = {}
++        # [SIGNATURE MATRIX IN BLOCKS] P.MATCH_SIGNATURE_MATRIX_BLOCKS
++        # (default True): the matrix of a lens type is built by
++        # matching/signature_matrix.py and the anchor factor by
++        # `_anchor_weights` -- the same floats as the per-pair expressions
++        # below, bit for bit (pinned), several times faster. False = the
++        # per-pair loop, untouched.
++        _blocks = bool(getattr(P, "MATCH_SIGNATURE_MATRIX_BLOCKS", True))
++        if _blocks:
++            from matching.signature_matrix import signature_similarity_matrix
++            _q_norm = _normalised_anchors(Q)
++            _c_norm = _normalised_anchors(C)
+         for lt in common_types:
+             q_ids = q_by_type[lt]
+             c_ids = c_by_type[lt]
+             if not q_ids or not c_ids:
+                 continue
+-            if _want_chance:
++            if _blocks:
++                _sims = signature_similarity_matrix(
++                    [q_sigs[q][1] for q in q_ids],
++                    [c_sigs[c][1] for c in c_ids], _sig_similarity)
++                weights = _anchor_weights(_sims, q_ids, c_ids,
++                                          _q_norm, _c_norm)
++                if _want_chance:
++                    _chance_credit(q_ids, c_ids, _sims, graded_node_credit,
++                                   q_chance, c_chance)
++            elif _want_chance:
+                 # [NULL CALIBRATION] The same matrix, with the signature
+                 # factor kept: `weights` holds the identical products.
+                 _sims = [
+@@ -1077,6 +1259,8 @@ def _mcs_accumulate(
+             for qi, ci in assignment:
+                 if weights[qi][ci] > 0.0:
+                     node_correspondence[q_ids[qi]] = c_ids[ci]
++                    if _blocks:
++                        _block_sims[q_ids[qi]] = _sims[qi][ci]
+ 
+     # [D1] Signature similarity of every credited pair, keyed by the query
+     # node. Empty in the binary mode: `.get(q_id, 1.0)` below then multiplies
+@@ -1085,9 +1269,12 @@ def _mcs_accumulate(
+     pair_sim: Dict[int, float] = {}
+     if graded_node_credit:
+         for _q_id, _c_id in node_correspondence.items():
+-            _iq, _ic = q_sigs.get(_q_id), c_sigs.get(_c_id)
+-            _s = (_sig_similarity(_iq[1], _ic[1])
+-                  if (_iq is not None and _ic is not None) else 0.0)
++            if _q_id in _block_sims:
++                _s = _block_sims[_q_id]
++            else:
++                _iq, _ic = q_sigs.get(_q_id), c_sigs.get(_c_id)
++                _s = (_sig_similarity(_iq[1], _ic[1])
++                      if (_iq is not None and _ic is not None) else 0.0)
+             pair_sim[_q_id] = min(1.0, max(0.0, float(_s)))
+ 
+     q_node_weights = getattr(Q, "node_weights", None) or {}
+diff --git a/parameters/_text.py b/parameters/_text.py
+index 2b631a5..243a318 100644
+--- a/parameters/_text.py
++++ b/parameters/_text.py
+@@ -2001,6 +2001,19 @@ EDGE_REVERSE_FLIPS_MIXTURE: bool = True
+ # untouched; only WHO is paired changes -- every gate calibrated on scores
+ # of the approximate correspondence must be re-read under either value.
+ MATCH_ASSIGNMENT_EXACT: bool = True
++# [SIGNATURE MATRIX IN BLOCKS] memory/cores.py _mcs_accumulate (and the dark
++# _global_correspondence): build the node-similarity matrix of the
++# correspondence with matching/signature_matrix.py -- the population branch
++# of TypedSignature.similarity and the bins path of its Gaussian kernel,
++# evaluated for a whole block with numpy, the SAME floating-point
++# operations in the SAME order -- instead of one Python call per pair. The
++# same switch governs the anchor spacing of the redundancy-aware edge mass
++# (memory/cores.py _median_positive_nn): nearest neighbours found with
++# numpy, the distance itself still math.hypot. A performance change ONLY:
++# both must agree with the Python loops bit for bit on every value
++# (pinned), so no weight, correspondence or score moves. Blocks too small
++# to pay for the numpy calls are left to the loops. False = the loops.
++MATCH_SIGNATURE_MATRIX_BLOCKS: bool = True
+ 
+ # =============================================================================
+ # LOCOMOTION BRIDGE & ANCHOR FALLBACK
+diff --git a/tests_matcher/conftest.py b/tests_matcher/conftest.py
+index e5aeea6..c3f4b75 100644
+--- a/tests_matcher/conftest.py
++++ b/tests_matcher/conftest.py
+@@ -39,6 +39,7 @@ PIN_BASELINE = {
+     "EVIDENCE_NODE_NULL_CALIBRATED": False,            # null calibration
+     "EDGE_REVERSE_FLIPS_MIXTURE": True,                # mixture reversal
+     "MATCH_ASSIGNMENT_EXACT": True,                    # exact assignment
++    "MATCH_SIGNATURE_MATRIX_BLOCKS": True,             # performance only
+ }
+ 
+ #: the tree's own values, read once before any pin touches them
+diff --git a/tests_matcher/test_declared_defaults.py b/tests_matcher/test_declared_defaults.py
+index b6c5bff..f0e0465 100644
+--- a/tests_matcher/test_declared_defaults.py
++++ b/tests_matcher/test_declared_defaults.py
+@@ -26,4 +26,6 @@ def test_declared_defaults(declared_defaults):
+         "EDGE_REVERSE_FLIPS_MIXTURE": True,
+         # exact assignment -- on: the contract of the function's name
+         "MATCH_ASSIGNMENT_EXACT": True,
++        # signature matrix in blocks -- on: the same floats, faster
++        "MATCH_SIGNATURE_MATRIX_BLOCKS": True,
+     }
+diff --git a/tests_matcher/test_signature_matrix.py b/tests_matcher/test_signature_matrix.py
+new file mode 100644
+index 0000000..f4c4d4f
+--- /dev/null
++++ b/tests_matcher/test_signature_matrix.py
+@@ -0,0 +1,559 @@
++"""PIN -- [SIGNATURE MATRIX IN BLOCKS] the block computation of the
++node-similarity matrix returns the per-pair values BIT FOR BIT.
++
++``matching/signature_matrix.py`` evaluates the population branch of
++``TypedSignature.similarity``, and the bins path of its Gaussian kernel, for
++a whole lens type with numpy.  It is a performance change only, and the
++contract is equality, not closeness: every ``==`` below is on the floats
++themselves.  Pinned here:
++
++  * the block equals ``population_similarity`` on every pair of random
++    populations of the layouts the tree registers, the degenerate vectors
++    included (no variance, all zero, one hot, a variance at the 1e-18 guard)
++  * the Gaussian block equals ``_similarity_gaussian`` on bins-only
++    signatures of every class the tree registers ranges for: circular
++    slots, zero-range slots, equal tuples, values far outside the range
++  * the matrix equals ``_sig_similarity`` on mixed lists: several classes
++    and relations, bins-only signatures, a population of the wrong layout,
++    ABSENT slots, integer slots, other arities, a class with its own slot
++    rule, a class without ranges, OPAQUE signatures, ``None``
++  * registered slot weights are followed; a weight tuple of the wrong
++    length raises from both paths
++  * it follows the per-pair function when the population path is switched
++    off, under the linear kernel, and when the similarity implementation is
++    not one the tree ships
++  * a block too small to pay for its numpy calls is left to the per-pair
++    function, and the result is the same either way
++  * the anchor weights equal the per-pair expression of the correspondence,
++    missing anchors and missing boxes included
++  * in the matcher, P.MATCH_SIGNATURE_MATRIX_BLOCKS changes nothing: same
++    score, same correspondence, same trace -- under graded and binary
++    credit, the null calibration, the query-side terms and both assignments
++"""
++from __future__ import annotations
++
++import math
++import random
++import zlib
++
++import pytest
++
++import core.registries as R
++import core.types as T
++import matching.signature_matrix as SM
++from core.graph_types import Subgraph
++from core.population import population_similarity
++from core.registries import (CIRCULAR_CYCLE_LENGTHS, CONSTITUTIONAL_RANGES,
++                             POPULATION_AXES, get_population_axes)
++from core.types import EdgeType, TypedSignature
++from matching.signature_matrix import (_gaussian_plan, gaussian_bins_block,
++                                       population_similarity_block,
++                                       signature_similarity_matrix)
++from memory.cores import (_anchor_weights, _normalised_anchors,
++                          _sig_similarity, evidence_score, mcs_score)
++
++CLASSES = sorted(c for c, ax in POPULATION_AXES.items() if ax)[:12]
++
++#: every class whose bins path the Gaussian block evaluates
++GAUSS_CLASSES = sorted(c for c, r in CONSTITUTIONAL_RANGES.items()
++                       if _gaussian_plan(c, len(r)) is not None)
++
++
++def seed_of(name):
++    """A seed that does not depend on PYTHONHASHSEED."""
++    return zlib.crc32(name.encode()) % 100000
++
++
++@pytest.fixture(params=["default sizes", "every block"])
++def block_sizes(request, monkeypatch):
++    """Run a pin twice: with the size thresholds of the tree, and with every
++    block evaluated in numpy however small."""
++    if request.param == "every block":
++        monkeypatch.setattr(SM, "_MIN_PAIRS_POPULATION", 0)
++        monkeypatch.setattr(SM, "_MIN_PAIRS_GAUSSIAN", 0)
++    return request.param
++
++
++def rand_vector(rng, n):
++    kind = rng.randrange(8)
++    if kind == 0:
++        return tuple([1.0 / n] * n)                     # no variance
++    if kind == 1:
++        return tuple([0.0] * n)                         # all zero
++    if kind == 2:
++        v = [0.0] * n
++        v[rng.randrange(n)] = 1.0                       # one hot
++        return tuple(v)
++    if kind == 3:                                       # variance near the guard
++        return tuple(0.25 + 1e-10 * rng.random() for _ in range(n))
++    v = [rng.random() ** rng.choice((1, 3)) for _ in range(n)]
++    s = sum(v)
++    return tuple(x / s for x in v) if kind < 7 else tuple(v)
++
++
++def rand_population(rng, axes):
++    return tuple(rand_vector(rng, ax.n_bins) for ax in axes)
++
++
++def rand_signature(rng, cls=None, relation=None):
++    cls = cls or rng.choice(CLASSES)
++    axes = get_population_axes(cls)
++    return TypedSignature(
++        kind="CANONICAL", class_=cls,
++        relation=rng.choice(("", "", "r")) if relation is None else relation,
++        quantized=tuple(float(rng.randrange(4)) for _ in range(3)),
++        population=rand_population(rng, axes))
++
++
++def odd_signature(rng):
++    """A signature the block must leave to the per-pair function."""
++    kind = rng.randrange(6)
++    cls = rng.choice(CLASSES)
++    axes = get_population_axes(cls)
++    q = tuple(float(rng.randrange(4)) for _ in range(3))
++    if kind == 0:
++        return None
++    if kind == 1:
++        return TypedSignature.opaque("tag%d" % rng.randrange(2), rng.randrange(3))
++    if kind == 2:                                        # bins only
++        return TypedSignature(kind="CANONICAL", class_=cls, quantized=q)
++    if kind == 3:                                        # one axis short
++        return TypedSignature(kind="CANONICAL", class_=cls, quantized=q,
++                              population=rand_population(rng, axes)[:-1])
++    if kind == 4:                                        # a vector too long
++        pop = list(rand_population(rng, axes))
++        pop[0] = pop[0] + (0.5,)
++        return TypedSignature(kind="CANONICAL", class_=cls, quantized=q,
++                              population=tuple(pop))
++    return TypedSignature(kind="CANONICAL", class_="TEXTURE",   # no layout
++                          quantized=(float(rng.randrange(4)),
++                                     float(rng.randrange(4))))
++
++
++def scalar_matrix(A, B):
++    return [[_sig_similarity(a, b) for b in B] for a in A]
++
++
++def assert_same(got, want):
++    assert len(got) == len(want)
++    for rg, rw in zip(got, want):
++        assert len(rg) == len(rw)
++        for x, y in zip(rg, rw):
++            assert type(x) is float
++            assert x == y and math.copysign(1.0, x) == math.copysign(1.0, y)
++
++
++def test_the_tree_registers_population_layouts():
++    assert len(CLASSES) >= 6
++
++
++@pytest.mark.parametrize("cls", CLASSES)
++def test_block_equals_population_similarity(cls):
++    rng = random.Random(seed_of(cls) + 7)
++    axes = get_population_axes(cls)
++    pa = [rand_population(rng, axes) for _ in range(23)]
++    pb = [rand_population(rng, axes) for _ in range(19)]
++    block = population_similarity_block(pa, pb, axes).tolist()
++    assert_same(block, [[float(population_similarity(a, b, axes)) for b in pb]
++                        for a in pa])
++
++
++@pytest.mark.parametrize("seed", range(6))
++def test_matrix_equals_the_per_pair_function_on_mixed_lists(seed, block_sizes):
++    rng = random.Random(seed)
++    A = [rand_signature(rng) if rng.random() < 0.7 else odd_signature(rng)
++         for _ in range(40)]
++    B = [rand_signature(rng) if rng.random() < 0.7 else odd_signature(rng)
++         for _ in range(37)]
++    assert_same(signature_similarity_matrix(A, B, _sig_similarity),
++                scalar_matrix(A, B))
++
++
++def test_one_class_one_relation_is_the_block_itself():
++    rng = random.Random(3)
++    cls = CLASSES[0]
++    A = [rand_signature(rng, cls, "") for _ in range(30)]
++    B = [rand_signature(rng, cls, "") for _ in range(28)]
++    got = signature_similarity_matrix(A, B, _sig_similarity)
++    assert_same(got, scalar_matrix(A, B))
++    assert any(0.0 < x < 1.0 for row in got for x in row)
++
++
++def test_empty_sides():
++    s = rand_signature(random.Random(1))
++    assert signature_similarity_matrix([], [s], _sig_similarity) == []
++    assert signature_similarity_matrix([s], [], _sig_similarity) == [[]]
++
++
++def test_it_follows_the_per_pair_function_when_populations_are_off(params):
++    rng = random.Random(5)
++    A = [rand_signature(rng) for _ in range(12)]
++    B = [rand_signature(rng) for _ in range(12)]
++    params(POPULATION_CODING_ENABLED=False)
++    assert_same(signature_similarity_matrix(A, B, _sig_similarity),
++                scalar_matrix(A, B))
++
++
++def test_an_unknown_similarity_implementation_is_left_alone(monkeypatch):
++    rng = random.Random(6)
++    A = [rand_signature(rng, CLASSES[0], "") for _ in range(8)]
++    B = [rand_signature(rng, CLASSES[0], "") for _ in range(8)]
++
++    def half(self, other, context=None):
++        return 0.5 * T._similarity_gaussian(self, other, context=context)
++
++    monkeypatch.setattr(T, "_SIMILARITY_IMPL", half)
++    want = scalar_matrix(A, B)
++    assert_same(signature_similarity_matrix(A, B, _sig_similarity), want)
++    assert any(x != 0.0 for row in want for x in row)
++
++
++# ------------------------------------------------- the Gaussian bins block
++
++def rand_bins(rng, cls, arity=None):
++    """A quantized tuple for `cls`: bin indices, fractional values, values
++    beyond the range and the cycle, negative values, signed zeros, values
++    near the largest a signature can hold."""
++    ranges = CONSTITUTIONAL_RANGES[cls]
++    cyc = CIRCULAR_CYCLE_LENGTHS.get(cls) or {}
++    out = []
++    for i in range(len(ranges) if arity is None else arity):
++        top = float(cyc.get(i) or (ranges[i] if i < len(ranges) else 0) or 6)
++        k = rng.randrange(8)
++        if k <= 1:
++            x = float(rng.randrange(int(top) + 1))
++        elif k == 2:
++            x = rng.uniform(0.0, top)
++        elif k == 3:
++            x = float(rng.randrange(2))
++        elif k == 4:
++            x = -rng.uniform(0.0, 2.0 * top)
++        elif k == 5:
++            x = rng.uniform(1.0, 3.0) * top
++        elif k == 6:
++            x = float(rng.randrange(int(top) + 1)) + 0.5
++        else:
++            # (a signature cannot hold more: its serialisation is 64-bit)
++            x = rng.choice((0.0, -0.0, 1e-300, 3079196513.0, -9.0e11, 9.0e11))
++        out.append(x)
++    return tuple(out)
++
++
++def bins_signature(rng, cls, relation="", **kw):
++    return TypedSignature(kind="CANONICAL", class_=cls, relation=relation,
++                          quantized=rand_bins(rng, cls), **kw)
++
++
++def bins_list(rng, cls, n):
++    """`n` bins-only signatures of one class; about a third repeat an
++    earlier tuple, so equal pairs occur."""
++    out = []
++    for _ in range(n):
++        if out and rng.random() < 0.35:
++            out.append(TypedSignature(kind="CANONICAL", class_=cls,
++                                      quantized=rng.choice(out).quantized))
++        else:
++            out.append(bins_signature(rng, cls))
++    return out
++
++
++def test_the_tree_registers_ranges_for_the_gaussian_block():
++    assert len(GAUSS_CLASSES) >= 40
++    # the classes the ETH-80 graphs carry without a population
++    for cls in ("POSITION", "ORIENTATION", "BOUNDARY_ANCHORED", "TEXTURE",
++                "COLOR_LEGACY", "ORIENTATION_SEGMENT", "ONSET"):
++        assert cls in GAUSS_CLASSES
++    # a class with its own slot rule is left to the per-pair function
++    assert "REGION_SHAPE" not in GAUSS_CLASSES
++    assert _gaussian_plan("NO_SUCH_CLASS", 3) is None
++    assert _gaussian_plan("POSITION", 4) is None            # another arity
++
++
++@pytest.mark.parametrize("cls", GAUSS_CLASSES)
++def test_gaussian_block_equals_the_scalar_kernel(cls):
++    rng = random.Random(seed_of(cls) + 11)
++    A = bins_list(rng, cls, 13)
++    B = bins_list(rng, cls, 9) + [
++        TypedSignature(kind="CANONICAL", class_=cls, quantized=a.quantized)
++        for a in A[:4]]
++    plan = _gaussian_plan(cls, len(CONSTITUTIONAL_RANGES[cls]))
++    block = gaussian_bins_block([a.quantized for a in A],
++                                [b.quantized for b in B], plan).tolist()
++    want = [[float(T._similarity_gaussian(a, b)) for b in B] for a in A]
++    assert_same(block, want)
++    assert any(x == 1.0 for row in want for x in row)       # equal tuples
++    # and through the matrix, which must choose the block by itself
++    assert_same(signature_similarity_matrix(A, B, _sig_similarity), want)
++
++
++def odd_bins_signature(rng, cls):
++    """A bins-only signature the Gaussian block must leave alone, or a
++    partner that makes the pair one the per-pair function decides."""
++    kind = rng.randrange(12)
++    q = list(rand_bins(rng, cls))
++    if kind == 0:                                       # one slot ABSENT
++        q[rng.randrange(len(q))] = T.ABSENT
++    elif kind == 1:                                     # every slot ABSENT
++        q = [T.ABSENT] * len(q)
++    elif kind == 2:                                     # an integer slot
++        q[rng.randrange(len(q))] = rng.randrange(5)
++    elif kind == 3:                                     # one slot more
++        q = q + [1.0]
++    elif kind == 4:                                     # one slot fewer
++        q = q[:-1]
++    elif kind == 5:                                     # another relation
++        return TypedSignature(kind="CANONICAL", class_=cls, relation="r",
++                              quantized=tuple(q))
++    elif kind == 6:                                     # a class with a rule
++        return bins_signature(rng, "REGION_SHAPE")
++    elif kind == 7:                                     # no ranges at all
++        return TypedSignature(kind="CANONICAL", class_="NO_SUCH_CLASS",
++                              quantized=tuple(q))
++    elif kind == 8:                                     # a boolean slot
++        q[rng.randrange(len(q))] = True
++    elif kind == 9:
++        return rng.choice((None, TypedSignature.opaque("t", rng.randrange(2))))
++    elif kind == 10:
++        # a population one axis short of the layout (PEAK_CHAIN on ETH-80):
++        # with a populated partner the similarity is the ALIGNED overlap,
++        # not the bins
++        axes = get_population_axes(cls)
++        pop = (rand_population(rng, axes)[:-1] if axes is not None
++               else ((0.25, 0.75),))
++        return TypedSignature(kind="CANONICAL", class_=cls,
++                              quantized=tuple(q), population=pop)
++    else:                                               # a population
++        axes = get_population_axes(cls)
++        pop = (rand_population(rng, axes) if axes is not None
++               else ((0.25, 0.75), (0.5, 0.5)))
++        return TypedSignature(kind="CANONICAL", class_=cls,
++                              quantized=tuple(q), population=pop)
++    return TypedSignature(kind="CANONICAL", class_=cls, quantized=tuple(q))
++
++
++@pytest.mark.parametrize("seed", range(8))
++def test_matrix_equals_the_per_pair_function_on_bins_only_lists(seed,
++                                                                block_sizes):
++    rng = random.Random(100 + seed)
++    # two classes without a population layout, two with one
++    classes = ("POSITION", "ORIENTATION", "CORNER", "CONTOUR_PEAK")
++    assert get_population_axes("POSITION") is None
++    assert get_population_axes("CORNER") is not None
++
++    def one():
++        cls = rng.choice(classes)
++        if rng.random() < 0.7:
++            return bins_signature(rng, cls, rng.choice(("", "", "r")))
++        return odd_bins_signature(rng, cls)
++
++    A = [one() for _ in range(45)]
++    B = [one() for _ in range(41)] + [a for a in A[:6]]
++    assert_same(signature_similarity_matrix(A, B, _sig_similarity),
++                scalar_matrix(A, B))
++
++
++@pytest.mark.parametrize("weights", [(0.5, 2.0, 1.0), (3, 1, 1),
++                                     (0.0, 0.0, 0.0), (0.0, 1.0, 0.0),
++                                     (-1.0, 1.0, 1.0), (1e60, 1.0, 1.0)])
++def test_registered_slot_weights_are_followed(monkeypatch, weights):
++    rng = random.Random(21)
++    A = bins_list(rng, "POSITION", 12)
++    B = bins_list(rng, "POSITION", 11)
++    uniform = scalar_matrix(A, B)
++    monkeypatch.setitem(R.SLOT_WEIGHT_PRIORS, "POSITION", weights)
++    if weights[0] < 0.0:
++        # a negative weight makes the per-pair kernel itself overflow on a
++        # distant pair; the matrix leaves such a class to it and raises the
++        # same error
++        with pytest.raises(OverflowError):
++            scalar_matrix(A, B)
++        with pytest.raises(OverflowError):
++            signature_similarity_matrix(A, B, _sig_similarity)
++        assert _gaussian_plan("POSITION", 3) is None
++        return
++    want = scalar_matrix(A, B)
++    assert_same(signature_similarity_matrix(A, B, _sig_similarity), want)
++    if weights == (0.5, 2.0, 1.0):
++        assert want != uniform, "the weights were not read"
++        assert _gaussian_plan("POSITION", 3) is not None
++    if weights == (1e60, 1.0, 1.0):
++        assert _gaussian_plan("POSITION", 3) is not None   # w / W_sum <= 1
++
++
++def test_a_weight_tuple_of_the_wrong_length_raises_from_both_paths(monkeypatch):
++    rng = random.Random(22)
++    A = bins_list(rng, "POSITION", 8)
++    B = [bins_signature(rng, "POSITION") for _ in range(8)]
++    monkeypatch.setitem(R.SLOT_WEIGHT_PRIORS, "POSITION", (1.0, 1.0))
++    with pytest.raises(ValueError):
++        scalar_matrix(A, B)
++    with pytest.raises(ValueError):
++        signature_similarity_matrix(A, B, _sig_similarity)
++
++
++def test_the_linear_kernel_is_left_to_the_per_pair_function(monkeypatch):
++    rng = random.Random(23)
++    A = bins_list(rng, "POSITION", 10) + [rand_signature(rng, CLASSES[0], "")
++                                          for _ in range(8)]
++    B = bins_list(rng, "POSITION", 10) + [rand_signature(rng, CLASSES[0], "")
++                                          for _ in range(8)]
++    gaussian = scalar_matrix(A, B)
++    monkeypatch.setattr(T, "_SIMILARITY_IMPL", T._similarity_linear)
++    monkeypatch.setattr(SM, "gaussian_bins_block", None)   # must not be called
++    want = scalar_matrix(A, B)
++    assert want != gaussian
++    assert_same(signature_similarity_matrix(A, B, _sig_similarity), want)
++
++
++def test_a_small_block_is_left_to_the_per_pair_function(monkeypatch):
++    """Speed only: under the thresholds no numpy block is built; from them
++    on it is.  The values are the same either way (pinned above)."""
++    calls = []
++    real_g, real_p = SM.gaussian_bins_block, SM.population_similarity_block
++    monkeypatch.setattr(SM, "gaussian_bins_block",
++                        lambda *a: calls.append("G") or real_g(*a))
++    monkeypatch.setattr(SM, "population_similarity_block",
++                        lambda *a: calls.append("P") or real_p(*a))
++    rng = random.Random(24)
++    g = bins_list(rng, "POSITION", 8)
++    p = [rand_signature(rng, CLASSES[0], "") for _ in range(8)]
++
++    def run(A, B):
++        del calls[:]
++        assert_same(signature_similarity_matrix(A, B, _sig_similarity),
++                    scalar_matrix(A, B))
++        return list(calls)
++
++    assert SM._MIN_PAIRS_GAUSSIAN == 16 and SM._MIN_PAIRS_POPULATION == 48
++    assert run(g[:3], g[:5]) == []                # 15 pairs
++    assert run(g[:4], g[:4]) == ["G"]             # 16 pairs
++    assert run(p[:6], p[:7]) == []                # 42 pairs
++    assert run(p[:6], p[:8]) == ["P"]             # 48 pairs
++    # a mixed list: each group is judged by its own size
++    assert run(g[:4] + p[:6], g[:4] + p[:7]) == ["G"]
++    assert run(g[:4] + p[:6], g[:4] + p[:8]) == ["G", "P"]
++    assert run(g[:3] + p[:6], g[:5] + p[:8]) == ["P"]
++
++
++# ------------------------------------------------------------------ anchors
++
++def closure_weights(sims, q_ids, c_ids, Q, C):
++    """The per-pair expression of `_mcs_accumulate`, written out."""
++    qa = getattr(Q, "anchor_of_node", None) or {}
++    ca = getattr(C, "anchor_of_node", None) or {}
++
++    def bbox(m):
++        if not m:
++            return None
++        xs = [float(p[0]) for p in m.values() if p and len(p) >= 2]
++        ys = [float(p[1]) for p in m.values() if p and len(p) >= 2]
++        if len(xs) < 2:
++            return None
++        x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
++        return (x0, y0, max(x1 - x0, 1e-9), max(y1 - y0, 1e-9))
++
++    qb, cb = bbox(qa), bbox(ca)
++
++    def anchor(q, c):
++        if qb is None or cb is None:
++            return 1.0
++        pa, pb = qa.get(q), ca.get(c)
++        if pa is None or pb is None or len(pa) < 2 or len(pb) < 2:
++            return 1.0
++        qx = (float(pa[0]) - qb[0]) / qb[2]
++        qy = (float(pa[1]) - qb[1]) / qb[3]
++        cx = (float(pb[0]) - cb[0]) / cb[2]
++        cy = (float(pb[1]) - cb[1]) / cb[3]
++        return math.exp(-2.5 * math.hypot(qx - cx, qy - cy))
++
++    return [[sims[i][j] * anchor(q, c) for j, c in enumerate(c_ids)]
++            for i, q in enumerate(q_ids)]
++
++
++def anchored(rng, ids, mode):
++    sg = Subgraph(nodes=frozenset(ids))
++    if mode == "none":
++        return sg
++    anchors = {}
++    for n in ids:
++        r = rng.random()
++        if mode == "holes" and r < 0.2:
++            continue
++        if mode == "holes" and r < 0.3:
++            anchors[n] = (rng.uniform(0, 200),)          # too short
++        elif mode == "one":
++            anchors[n] = (5.0, 5.0)
++        else:
++            anchors[n] = (rng.uniform(0, 200), rng.uniform(0, 150))
++    if mode == "one":
++        anchors = {ids[0]: (5.0, 5.0)}
++    sg.anchor_of_node = anchors
++    return sg
++
++
++@pytest.mark.parametrize("qmode,cmode", [
++    ("full", "full"), ("holes", "full"), ("full", "holes"),
++    ("none", "full"), ("full", "one"), ("holes", "holes")])
++def test_anchor_weights_equal_the_per_pair_expression(qmode, cmode):
++    rng = random.Random(len(qmode) * 7 + len(cmode))
++    q_ids = list(range(10, 31))
++    c_ids = list(range(100, 118))
++    Q, C = anchored(rng, q_ids, qmode), anchored(rng, c_ids, cmode)
++    sims = [[rng.choice((0.0, rng.random())) for _ in c_ids] for _ in q_ids]
++    got = _anchor_weights(sims, q_ids, c_ids,
++                          _normalised_anchors(Q), _normalised_anchors(C))
++    assert_same(got, closure_weights(sims, q_ids, c_ids, Q, C))
++
++
++# -------------------------------------------------------------- the matcher
++
++LENSES = ("L0", "L1", "L2")
++ET = (EdgeType.TOPOLOGY, EdgeType.CONTACT)
++
++
++def random_graph(rng, n, base):
++    ids = [base + i for i in range(n)]
++    sigs = {}
++    for k, nid in enumerate(ids):
++        lens = LENSES[k % len(LENSES)]
++        cls = CLASSES[LENSES.index(lens)]
++        sig = (rand_signature(rng, cls, "") if rng.random() < 0.85
++               else odd_signature(rng) or rand_signature(rng, cls, ""))
++        sigs[nid] = (lens, sig)
++    edges = set()
++    for _ in range(2 * n):
++        a, b = rng.sample(ids, 2)
++        edges.add((min(a, b), max(a, b), rng.choice(ET)))
++    sg = Subgraph(nodes=frozenset(ids), edges=frozenset(edges))
++    sg.anchor_of_node = {nid: (rng.uniform(0, 100), rng.uniform(0, 100))
++                         for nid in ids if rng.random() < 0.9}
++    return sg, sigs
++
++
++SETTINGS = [
++    dict(),
++    dict(EVIDENCE_GRADED_NODE_CREDIT=False),
++    dict(EVIDENCE_NODE_NULL_CALIBRATED=True),
++    dict(EVIDENCE_QUERY_SIDE_TERMS=("node", "relation", "absence")),
++    dict(EVIDENCE_QUERY_SIDE_TERMS=("node",), EVIDENCE_NODE_NULL_CALIBRATED=True),
++    dict(MATCH_ASSIGNMENT_EXACT=False),
++]
++
++
++@pytest.mark.parametrize("setting", range(len(SETTINGS)))
++def test_the_switch_changes_nothing_in_the_matcher(params, setting,
++                                                   block_sizes):
++    rng = random.Random(40 + setting)
++    for _ in range(6):
++        Q, qs = random_graph(rng, rng.randrange(9, 22), 0)
++        C, cs = random_graph(rng, rng.randrange(9, 22), 1000)
++        out = {}
++        for blocks in (True, False):
++            params(MATCH_SIGNATURE_MATRIX_BLOCKS=blocks, **SETTINGS[setting])
++            tr = {}
++            score, corr = evidence_score(Q, C, qs, cs, trace=tr)
++            m_tr = {}
++            m_score, m_corr = mcs_score(Q, C, qs, cs, trace=m_tr)
++            out[blocks] = (score, corr, tr, m_score, m_corr, m_tr)
++        assert out[True] == out[False]
++        assert out[True][1], "the scenario matched nothing"
+diff --git a/tests_matcher/test_spacing_kernel.py b/tests_matcher/test_spacing_kernel.py
+new file mode 100644
+index 0000000..6e0c62a
+--- /dev/null
++++ b/tests_matcher/test_spacing_kernel.py
+@@ -0,0 +1,280 @@
++"""PIN -- [SIGNATURE MATRIX IN BLOCKS] the anchor spacing of a subgraph
++(``memory.cores._median_positive_nn``, the bucket size of the redundancy-
++aware edge mass) is the same float whether its nearest neighbours are found
++by the double loop or with numpy.
++
++The kernel is governed by the same switch as the signature matrix,
++``P.MATCH_SIGNATURE_MATRIX_BLOCKS``; it is a performance change only and the
++contract is equality on the floats.  The reference below is the function as
++it stood before the change, copied verbatim.  Pinned here:
++
++  * the spacing equals the reference on random points, on integer grids
++    (many exact ties), with repeated and co-located points, with entries
++    that are ``None``, too short or not finite, below and above the size at
++    which numpy is used, and across more than one chunk of rows
++  * the kernel equals the reference loop point by point when points lie
++    closer than the 1e-12 guard, at it, and just above it
++  * coordinates too large for a square are left to the loop
++  * the redundancy-aware edge weights of a subgraph are the same dict under
++    both values of the switch
++"""
++from __future__ import annotations
++
++import math
++import random
++
++import pytest
++
++import memory.cores as MC
++from core.graph_types import Subgraph
++from core.types import EdgeType
++from memory.cores import (_effective_edge_weights, _median_positive_nn,
++                          _nearest_positive_distance_of,
++                          _nearest_positive_distances)
++
++
++def reference_spacing(points):
++    """`_median_positive_nn` as it stood before the kernel, verbatim."""
++    pts = sorted({
++        (round(float(p[0]), 6), round(float(p[1]), 6))
++        for p in points
++        if p is not None and len(p) >= 2
++        and math.isfinite(float(p[0])) and math.isfinite(float(p[1]))
++    })
++    if len(pts) < 2:
++        return 0.0
++    nn = []
++    for i, (x, y) in enumerate(pts):
++        best = math.inf
++        for j, (u, v) in enumerate(pts):
++            if i == j:
++                continue
++            d = math.hypot(x - u, y - v)
++            if 1e-12 < d < best:
++                best = d
++        if math.isfinite(best):
++            nn.append(best)
++    if not nn:
++        return 0.0
++    nn.sort()
++    mid = len(nn) // 2
++    return nn[mid] if len(nn) % 2 else 0.5 * (nn[mid - 1] + nn[mid])
++
++
++def reference_distances(pts):
++    out = []
++    for i, (x, y) in enumerate(pts):
++        best = math.inf
++        for j, (u, v) in enumerate(pts):
++            if i == j:
++                continue
++            d = math.hypot(x - u, y - v)
++            if 1e-12 < d < best:
++                best = d
++        if math.isfinite(best):
++            out.append(best)
++    return out
++
++
++def same(x, y):
++    return (type(x) is float and x == y
++            and math.copysign(1.0, x) == math.copysign(1.0, y))
++
++
++def points(rng, n, kind):
++    if kind == "uniform":
++        return [(rng.uniform(0, 300), rng.uniform(0, 200)) for _ in range(n)]
++    if kind == "grid":                      # pixel centres: exact ties
++        return [(float(rng.randrange(40)), float(rng.randrange(30)))
++                for _ in range(n)]
++    if kind == "half-grid":
++        return [(rng.randrange(60) * 0.5, rng.randrange(60) * 0.5)
++                for _ in range(n)]
++    if kind == "clustered":                 # co-located and nearly so
++        base = [(rng.uniform(0, 50), rng.uniform(0, 50)) for _ in range(6)]
++        out = []
++        for _ in range(n):
++            bx, by = rng.choice(base)
++            k = rng.randrange(4)
++            if k == 0:
++                out.append((bx, by))
++            elif k == 1:
++                out.append((bx + 1e-7, by))             # rounds onto the base
++            elif k == 2:
++                out.append((bx + 2e-6, by - 3e-6))      # a micro-step away
++            else:
++                out.append((bx + rng.uniform(-2, 2), by + rng.uniform(-2, 2)))
++        return out
++    if kind == "line":                      # one coordinate constant
++        return [(float(rng.randrange(500)), 7.0) for _ in range(n)]
++    if kind == "wide":                      # very different scales
++        return [(rng.choice((1e-3, 1.0, 1e3, 1e6)) * rng.uniform(-1, 1),
++                 rng.choice((1e-3, 1.0, 1e3, 1e6)) * rng.uniform(-1, 1))
++                for _ in range(n)]
++    raise AssertionError(kind)
++
++
++KINDS = ("uniform", "grid", "half-grid", "clustered", "line", "wide")
++
++
++@pytest.mark.parametrize("kind", KINDS)
++@pytest.mark.parametrize("n", [2, 3, 23, 24, 25, 60, 257])
++def test_spacing_equals_the_reference(params, kind, n):
++    rng = random.Random(1000 * KINDS.index(kind) + n)
++    for _ in range(4):
++        pts = points(rng, n, kind)
++        want = reference_spacing(pts)
++        params(MATCH_SIGNATURE_MATRIX_BLOCKS=True)
++        assert same(_median_positive_nn(pts), want)
++        params(MATCH_SIGNATURE_MATRIX_BLOCKS=False)
++        assert same(_median_positive_nn(pts), want)
++
++
++@pytest.mark.parametrize("kind", KINDS)
++def test_every_nearest_distance_equals_the_loop(kind):
++    """Not only the median: the distance of every point, float for float."""
++    rng = random.Random(77 + KINDS.index(kind))
++    for n in (30, 200):
++        pts = sorted({(round(x, 6), round(y, 6))
++                      for x, y in points(rng, n, kind)})
++        got = _nearest_positive_distances(pts)
++        want = reference_distances(pts)
++        assert len(got) == len(want)
++        assert all(same(a, b) for a, b in zip(got, want))
++
++
++def test_the_kernel_is_used_from_the_threshold_on(params, monkeypatch):
++    calls = []
++    real = MC._nearest_positive_distances
++    monkeypatch.setattr(MC, "_nearest_positive_distances",
++                        lambda pts: calls.append(len(pts)) or real(pts))
++    small = [(float(i), float(i * i % 7)) for i in range(23)]
++    large = small + [(100.0, 100.0)]
++    assert MC._NN_BLOCK_MIN_POINTS == 24
++    params(MATCH_SIGNATURE_MATRIX_BLOCKS=True)
++    _median_positive_nn(small)
++    assert calls == []
++    _median_positive_nn(large)
++    assert calls == [24]
++    params(MATCH_SIGNATURE_MATRIX_BLOCKS=False)
++    _median_positive_nn(large)
++    assert calls == [24]
++
++
++def test_entries_that_are_not_points_are_skipped_as_before(params):
++    rng = random.Random(6)
++    pts = points(rng, 80, "uniform")
++    pts[3] = None
++    pts[10] = (5.0,)
++    pts[20] = (math.nan, 1.0)
++    pts[30] = (1.0, math.inf)
++    pts[40] = (2.0, 3.0, 9.0)                # a third coordinate is ignored
++    pts[50] = [4.0, 5.0]
++    want = reference_spacing(pts)
++    for blocks in (True, False):
++        params(MATCH_SIGNATURE_MATRIX_BLOCKS=blocks)
++        assert same(_median_positive_nn(pts), want)
++        assert _median_positive_nn([]) == 0.0
++        assert _median_positive_nn([(1.0, 1.0)] * 40) == 0.0
++
++
++def test_more_than_one_chunk_of_rows(params):
++    rng = random.Random(7)
++    pts = points(rng, 1500, "uniform") + points(rng, 300, "grid")
++    params(MATCH_SIGNATURE_MATRIX_BLOCKS=True)
++    assert 2_000_000 // len({(round(x, 6), round(y, 6)) for x, y in pts}) \
++        < len(pts), "the scenario fits one chunk"
++    assert same(_median_positive_nn(pts), reference_spacing(pts))
++
++
++@pytest.mark.parametrize("gap", [0.0, 1e-13, 9.99e-13, 1e-12, 1.0000001e-12,
++                                 2e-12, 1e-9])
++def test_points_at_the_guard(gap):
++    """The kernel itself, on points the rounding of the caller would have
++    merged: a neighbour at 1e-12 or closer is not a neighbour, and the
++    nearest admissible one must still be found."""
++    rng = random.Random(8)
++    pts = [(float(rng.randrange(50)), float(rng.randrange(50)))
++           for _ in range(40)]
++    pts = sorted(set(pts))
++    twins = [(x + gap, y) for x, y in pts[:10]] + \
++            [(x, y - gap) for x, y in pts[10:20]]
++    pts = sorted(set(pts + twins))
++    got = _nearest_positive_distances(pts)
++    want = reference_distances(pts)
++    assert len(got) == len(want)
++    assert all(same(a, b) for a, b in zip(got, want))
++    for i in range(len(pts)):
++        ref = reference_distances_of(pts, i)
++        assert _nearest_positive_distance_of(pts, i) == ref
++
++
++def reference_distances_of(pts, i):
++    x, y = pts[i]
++    best = math.inf
++    for j, (u, v) in enumerate(pts):
++        if i != j:
++            d = math.hypot(x - u, y - v)
++            if 1e-12 < d < best:
++                best = d
++    return best
++
++
++def test_a_neighbour_exactly_at_the_guard_is_not_a_neighbour():
++    """`1e-12 < d` is strict.  From the origin the twin sits at exactly
++    1e-12 -- inside the kernel's candidate margin, and not admissible -- so
++    the nearest neighbour is the next point, as in the loop."""
++    pts = sorted([(0.0, 0.0), (1e-12, 0.0), (0.0, 3.0), (5.0, 0.0),
++                  (7.0, 7.0), (7.0, 7.0 + 1e-12), (7.0, 9.5),
++                  (20.0, 1.0), (20.0 + 2e-12, 1.0)])
++    assert math.hypot(1e-12, 0.0) == 1e-12
++    got = _nearest_positive_distances(pts)
++    want = reference_distances(pts)
++    assert got == want
++    by_point = dict(zip(pts, want))
++    assert by_point[(0.0, 0.0)] == 3.0
++    assert by_point[(1e-12, 0.0)] == 3.0
++    # 2e-12 is above the guard: that twin IS the nearest neighbour
++    assert by_point[(20.0, 1.0)] < 1e-11
++
++
++def test_every_point_closer_than_the_guard_gives_no_distance():
++    pts = sorted((1.0 + k * 1e-14, 2.0) for k in range(30))
++    assert reference_distances(pts) == []
++    assert _nearest_positive_distances(pts) == []
++
++
++@pytest.mark.parametrize("scale", [1e149, 1e151, 1e200, 1e300])
++def test_coordinates_too_large_for_a_square(scale):
++    rng = random.Random(9)
++    pts = sorted({(scale * rng.uniform(-1, 1), scale * rng.uniform(-1, 1))
++                  for _ in range(40)})
++    got = _nearest_positive_distances(pts)
++    want = reference_distances(pts)
++    assert len(got) == len(want)
++    assert all(same(a, b) for a, b in zip(got, want))
++
++
++ET = (EdgeType.CONTACT, EdgeType.CO_LOCATED, EdgeType.TOPOLOGY)
++
++
++@pytest.mark.parametrize("seed", range(5))
++def test_effective_edge_weights_do_not_depend_on_the_switch(params, seed):
++    rng = random.Random(50 + seed)
++    n = rng.randrange(30, 120)
++    ids = list(range(n))
++    edges = set()
++    for _ in range(4 * n):
++        a, b = rng.sample(ids, 2)
++        edges.add((min(a, b), max(a, b), rng.choice(ET)))
++    sg = Subgraph(nodes=frozenset(ids), edges=frozenset(edges))
++    sg.anchor_of_node = {i: (float(rng.randrange(25)), float(rng.randrange(25)))
++                         for i in ids if rng.random() < 0.95}
++    out = {}
++    for blocks in (True, False):
++        params(MATCH_SIGNATURE_MATRIX_BLOCKS=blocks)
++        out[blocks] = _effective_edge_weights(sg)
++    assert out[True] == out[False]
++    assert list(out[True].items()) == list(out[False].items())
++    assert any(w != 1.0 for w in out[True].values()), \
++        "no edge was discounted: the spacing was not used"
+-- 
+2.39.5
+

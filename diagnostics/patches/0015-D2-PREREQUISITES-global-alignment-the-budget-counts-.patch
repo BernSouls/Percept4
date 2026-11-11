@@ -1,0 +1,447 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BernSouls <256335293+BernSouls@users.noreply.github.com>
+Date: Wed, 11 Nov 2026 14:34:07 +0000
+Subject: [D2 PREREQUISITES] global alignment: the budget counts the refinement
+ only; block matrix; optional anchor prior
+
+Switches MATCH_ALIGN_BUDGET_REFINEMENT_ONLY (default True; False = the historical accounting) and MATCH_GLOBAL_ANCHOR_PRIOR (default False). Dark path only: MATCH_GLOBAL_CONSISTENCY_ENABLED stays False.
+Pin: tests_matcher/test_alignment_budget.py
+
+Co-authored-by: arena-agent <297053741+arena-agent@users.noreply.github.com>
+---
+ matching/alignment.py                   |  37 +++-
+ matching/fuzzy.py                       |   2 +
+ memory/cores.py                         |  25 +++
+ parameters/_text.py                     |  17 ++
+ tests_matcher/conftest.py               |   2 +
+ tests_matcher/test_alignment_budget.py  | 233 ++++++++++++++++++++++++
+ tests_matcher/test_declared_defaults.py |   3 +
+ 7 files changed, 317 insertions(+), 2 deletions(-)
+ create mode 100644 tests_matcher/test_alignment_budget.py
+
+diff --git a/matching/alignment.py b/matching/alignment.py
+index a4a71a8..800e595 100644
+--- a/matching/alignment.py
++++ b/matching/alignment.py
+@@ -222,11 +222,24 @@ def _assign(sim: List[List[float]],
+             nodes_a: List[int],
+             nodes_b: List[int],
+             rel_weight: Optional[Callable[[int, int], float]] = None,
+-            beta: float = 0.0) -> Dict[int, int]:
++            beta: float = 0.0,
++            skip_zero: bool = False) -> Dict[int, int]:
+     """One bipartite assignment. When rel_weight is given, the matrix is
+-    ``sim * (1 - beta + beta * rel)`` (relational modulation)."""
++    ``sim * (1 - beta + beta * rel)`` (relational modulation).
++
++    `skip_zero`: a candidate of similarity 0 keeps the weight 0.0 without
++    its relational agreement being evaluated -- the product is 0.0 whatever
++    the agreement is, so the matrix is the same and the evaluation is
++    saved."""
+     if rel_weight is None:
+         w = sim
++    elif skip_zero:
++        w = [
++            [(sim[i][j] * (1.0 - beta + beta * rel_weight(i, j)))
++             if sim[i][j] != 0.0 else 0.0
++             for j in range(len(nodes_b))]
++            for i in range(len(nodes_a))
++        ]
+     else:
+         w = [
+             [sim[i][j] * (1.0 - beta + beta * rel_weight(i, j))
+@@ -253,9 +266,24 @@ def global_consistency_alignment(
+     rounds: int = 6,
+     max_pair_evals: Optional[int] = None,
+     sim: Optional[Sequence[Sequence[float]]] = None,
++    budget_refinement_only: bool = False,
++    seed_evals_charged: int = 0,
+ ) -> Alignment:
+     """Global-consistency alignment seeded from the approximate Hungarian.
+ 
++    [D2 PREREQUISITES] `max_pair_evals` is the budget of the REFINEMENT
++    (P.MATCH_ALIGN_MAX_PAIR_EVALS: "pair-evaluation budget for the
++    refinement"). Historically the seed's similarity matrix was charged to
++    it when this function built the matrix (`sim_fn`) and not when the
++    caller supplied one (`sim`), so the same inputs gave two answers by
++    entry point, and on any pair with more candidates than the budget the
++    `sim_fn` route returned the unrefined seed. With
++    `budget_refinement_only=True` the seed is never charged, and a candidate
++    of similarity 0 is neither evaluated nor charged (its weight is 0.0
++    whatever its agreement). False (default) is the historical accounting;
++    `seed_evals_charged` lets a caller that supplies `sim` reproduce the
++    `sim_fn` charge exactly.
++
+     Steps:
+       1. Build the node-similarity matrix (or use a supplied `sim`, indexed
+          ``[i][j]`` over the SORTED node lists); prune pairs below
+@@ -286,6 +314,10 @@ def global_consistency_alignment(
+             for j, v in enumerate(nodes_b):
+                 sim[i][j] = float(sim_fn(u, v))
+                 pair_evals += 1
++    else:
++        pair_evals = int(seed_evals_charged)
++    if budget_refinement_only:
++        pair_evals = 0
+     matrix: List[List[float]] = [
+         [(0.0 if float(sim[i][j]) < unmatched_cost else float(sim[i][j]))
+          for j in range(len(nodes_b))]
+@@ -324,6 +356,7 @@ def global_consistency_alignment(
+             new_mapping = _assign(
+                 matrix, nodes_a, nodes_b, rel_weight,
+                 beta=float(systematicity_weight),
++                skip_zero=bool(budget_refinement_only),
+             )
+             rounds_used += 1
+             if new_mapping == mapping:
+diff --git a/matching/fuzzy.py b/matching/fuzzy.py
+index 3df0b9d..9171ca0 100644
+--- a/matching/fuzzy.py
++++ b/matching/fuzzy.py
+@@ -156,6 +156,8 @@ def fuzzy_match(
+         rounds=rounds,
+         max_pair_evals=max_pair_evals,
+         sim=matrix,
++        budget_refinement_only=bool(
++            getattr(P, "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY", True)),
+     )
+ 
+     ntot = len(nodes_a) + len(nodes_b)
+diff --git a/memory/cores.py b/memory/cores.py
+index 6a2b0e1..c7a2081 100644
+--- a/memory/cores.py
++++ b/memory/cores.py
+@@ -740,6 +740,26 @@ def _global_correspondence(
+     nodes_c = sorted(n for n in C.nodes if n in c_sigs)
+     if not nodes_q or not nodes_c:
+         return {}
++    # [D2 PREREQUISITES] The candidate matrix. In blocks
++    # (P.MATCH_SIGNATURE_MATRIX_BLOCKS) it holds the values `_sim` returns,
++    # bit for bit, and is handed over as `sim=`; the evaluations the
++    # historical accounting charged for building it are passed along so that
++    # accounting is reproduced exactly. P.MATCH_GLOBAL_ANCHOR_PRIOR (default
++    # False = as built) multiplies in the anchor-position factor of the live
++    # correspondence, so the seed is the live weight matrix.
++    sim_matrix = None
++    anchor_prior = bool(getattr(P, "MATCH_GLOBAL_ANCHOR_PRIOR", False))
++    if getattr(P, "MATCH_SIGNATURE_MATRIX_BLOCKS", True):
++        from matching.signature_matrix import signature_similarity_matrix
++        sim_matrix = signature_similarity_matrix(
++            [q_sigs[u][1] for u in nodes_q],
++            [c_sigs[v][1] for v in nodes_c], _sig_similarity)
++    elif anchor_prior:
++        sim_matrix = [[_sim(u, v) for v in nodes_c] for u in nodes_q]
++    if anchor_prior:
++        sim_matrix = _anchor_weights(
++            sim_matrix, nodes_q, nodes_c,
++            _normalised_anchors(Q), _normalised_anchors(C))
+     al = global_consistency_alignment(
+         nodes_q,
+         nodes_c,
+@@ -750,6 +770,11 @@ def _global_correspondence(
+         systematicity_weight=float(getattr(P, "MATCH_SYSTEMATICITY_WEIGHT", 0.5)),
+         rounds=int(getattr(P, "MATCH_ALIGN_ROUNDS", 4)),
+         max_pair_evals=getattr(P, "MATCH_ALIGN_MAX_PAIR_EVALS", 200000),
++        sim=sim_matrix,
++        budget_refinement_only=bool(
++            getattr(P, "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY", True)),
++        seed_evals_charged=(
++            len(nodes_q) * len(nodes_c) if sim_matrix is not None else 0),
+     )
+     return dict(al.mapping)
+ 
+diff --git a/parameters/_text.py b/parameters/_text.py
+index 1e9d28c..ba71e73 100644
+--- a/parameters/_text.py
++++ b/parameters/_text.py
+@@ -2040,6 +2040,23 @@ EVIDENCE_RELATION_COUNT_APART: bool = False
+ # count. evidence_score does not read this mass: it moves the containment
+ # and fusion scores only -- re-read their gates before turning it on.
+ EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS: bool = False
++# [D2 PREREQUISITES] matching/alignment.py global_consistency_alignment:
++# MATCH_ALIGN_MAX_PAIR_EVALS is the budget "for the refinement". The seed's
++# similarity matrix was charged to it when the function built the matrix and
++# not when the caller supplied it, so the route the matcher uses returned
++# the UNREFINED seed on any pair with more candidate pairs than the budget.
++# True: the seed is never charged, and a candidate of similarity 0 (whose
++# weight is 0 whatever its relational agreement) is neither evaluated nor
++# charged. False = the historical accounting. Dark path only
++# (MATCH_GLOBAL_CONSISTENCY_ENABLED).
++MATCH_ALIGN_BUDGET_REFINEMENT_ONLY: bool = True
++# [D2 PREREQUISITES] memory/cores.py _global_correspondence: weigh the
++# candidates of the global alignment by signature similarity x the
++# anchor-position factor -- the weight of the live per-lens-type
++# correspondence -- instead of signature similarity alone. False = as built.
++# Dark path only; exists so that turning the global alignment on can change
++# ONE thing (the relational refinement) instead of two.
++MATCH_GLOBAL_ANCHOR_PRIOR: bool = False
+ 
+ # =============================================================================
+ # LOCOMOTION BRIDGE & ANCHOR FALLBACK
+diff --git a/tests_matcher/conftest.py b/tests_matcher/conftest.py
+index 0f8f0bf..fa04e22 100644
+--- a/tests_matcher/conftest.py
++++ b/tests_matcher/conftest.py
+@@ -42,6 +42,8 @@ PIN_BASELINE = {
+     "MATCH_SIGNATURE_MATRIX_BLOCKS": True,             # performance only
+     "EVIDENCE_RELATION_COUNT_APART": False,            # P4b, evidence_score
+     "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS": False,   # P4b, edge mass
++    "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY": True,        # D2 prerequisites
++    "MATCH_GLOBAL_ANCHOR_PRIOR": False,                # D2 prerequisites
+ }
+ 
+ #: the tree's own values, read once before any pin touches them
+diff --git a/tests_matcher/test_alignment_budget.py b/tests_matcher/test_alignment_budget.py
+new file mode 100644
+index 0000000..419960f
+--- /dev/null
++++ b/tests_matcher/test_alignment_budget.py
+@@ -0,0 +1,233 @@
++"""PIN -- [D2 PREREQUISITES] the dark global alignment does what its
++parameters say.
++
++``MATCH_ALIGN_MAX_PAIR_EVALS`` is "the pair-evaluation budget for the
++refinement".  ``global_consistency_alignment`` charged the seed's similarity
++matrix to it when it built the matrix itself (``sim_fn``) and not when the
++caller supplied one (``sim``).  The same inputs gave two answers by entry
++point, and the route the matcher uses (``_global_correspondence``) returned
++the UNREFINED seed on any pair with more candidates than the budget -- every
++ETH-80 pair.
++
++Pinned here:
++  * the defect, reproduced under the historical accounting: with
++    |A| x |B| >= budget the ``sim_fn`` route refines nothing while the
++    ``sim`` route refines
++  * ``budget_refinement_only``: the two routes return the same alignment,
++    and the refinement runs
++  * a candidate of similarity 0 is never evaluated, never charged and never
++    matched; the weights are what they were
++  * ``seed_evals_charged`` reproduces the historical ``sim_fn`` charge for a
++    caller that supplies the matrix
++  * ``_global_correspondence``: blocks or pairs, the same answer; with the
++    anchor prior and a single round it IS the live correspondence when
++    the lens types carry different signature classes; when two lens types
++    share a class it pairs across them ("cross-type", its design)
++  * the default path does not go through any of this
++"""
++from __future__ import annotations
++
++import random
++
++import pytest
++
++import matching.alignment as AL
++from core.graph_types import Subgraph
++from core.types import EdgeType, TypedSignature
++from matching.alignment import global_consistency_alignment
++from memory.cores import _global_correspondence, _mcs_accumulate
++
++from _graphs import tex
++
++TOPO = EdgeType.TOPOLOGY
++
++
++def scene(rng, n_a=7, n_b=8, zero=0.35):
++    """Two small graphs, a sparse similarity matrix and typed edges."""
++    A = list(range(n_a))
++    B = list(range(100, 100 + n_b))
++    sim = [[(0.0 if rng.random() < zero else round(rng.uniform(0.2, 1.0), 3))
++            for _ in B] for _ in A]
++    ea = sorted({tuple(sorted(rng.sample(A, 2))) + (TOPO,)
++                 for _ in range(2 * n_a)})
++    eb = sorted({tuple(sorted(rng.sample(B, 2))) + (TOPO,)
++                 for _ in range(2 * n_b)})
++    return A, B, sim, ea, eb
++
++
++def fn_of(A, B, sim):
++    ia = {u: i for i, u in enumerate(A)}
++    ib = {v: j for j, v in enumerate(B)}
++    return lambda u, v: sim[ia[u]][ib[v]]
++
++
++def key(al):
++    return (al.mapping, al.quality, al.rounds_used, al.budget_exhausted,
++            al.systematicity, al.node_coverage)
++
++
++def test_the_defect_under_the_historical_accounting():
++    rng = random.Random(1)
++    A, B, sim, ea, eb = scene(rng)
++    budget = len(A) * len(B)                # the seed alone spends it
++    by_fn = global_consistency_alignment(
++        A, B, fn_of(A, B, sim), ea, eb, rounds=4, max_pair_evals=budget)
++    by_matrix = global_consistency_alignment(
++        A, B, None, ea, eb, rounds=4, max_pair_evals=budget, sim=sim)
++    assert by_fn.budget_exhausted and by_fn.rounds_used == 0
++    assert by_matrix.rounds_used >= 1
++    # ... and a supplied matrix can be told to reproduce the sim_fn charge
++    charged = global_consistency_alignment(
++        A, B, None, ea, eb, rounds=4, max_pair_evals=budget, sim=sim,
++        seed_evals_charged=budget)
++    assert key(charged) == key(by_fn)
++
++
++@pytest.mark.parametrize("seed", range(8))
++def test_refinement_only_the_two_routes_agree_and_refine(seed):
++    rng = random.Random(10 + seed)
++    A, B, sim, ea, eb = scene(rng)
++    budget = len(A) * len(B)
++    by_fn = global_consistency_alignment(
++        A, B, fn_of(A, B, sim), ea, eb, rounds=4, max_pair_evals=budget,
++        budget_refinement_only=True)
++    by_matrix = global_consistency_alignment(
++        A, B, None, ea, eb, rounds=4, max_pair_evals=budget, sim=sim,
++        budget_refinement_only=True)
++    assert key(by_fn) == key(by_matrix)
++    assert by_fn.rounds_used >= 1
++    for u, v in by_fn.mapping.items():
++        assert sim[A.index(u)][B.index(v)] > 0.0
++
++
++def test_a_zero_similarity_candidate_is_never_evaluated(monkeypatch):
++    rng = random.Random(3)
++    A, B, sim, ea, eb = scene(rng)
++    seen = []
++    real = AL._relational_agreement
++
++    def counting(u, v, *a, **k):
++        seen.append((u, v))
++        return real(u, v, *a, **k)
++
++    monkeypatch.setattr(AL, "_relational_agreement", counting)
++    al = global_consistency_alignment(
++        A, B, None, ea, eb, rounds=2, sim=sim, budget_refinement_only=True)
++    assert al.rounds_used == 1
++    nonzero = sum(1 for row in sim for s in row if s != 0.0)
++    assert all(sim[A.index(u)][B.index(v)] != 0.0 for u, v in seen)
++    # one sweep over the positive candidates, then one call per kept pair
++    assert len(seen) == nonzero + len(al.mapping)
++
++    seen.clear()
++    old = global_consistency_alignment(
++        A, B, None, ea, eb, rounds=2, sim=sim, budget_refinement_only=False)
++    assert len(seen) == len(A) * len(B) + len(old.mapping)
++    # the weights are the same, so the alignment is
++    assert key(old)[:2] == key(al)[:2]
++
++
++def test_refinement_only_charges_the_positive_candidates_only():
++    rng = random.Random(4)
++    A, B, sim, ea, eb = scene(rng, zero=0.6)
++    nonzero = sum(1 for row in sim for s in row if s != 0.0)
++    # a budget one sweep of the positive candidates fits in, a dense sweep
++    # does not: the second round is allowed only under the new accounting
++    budget = nonzero + 1
++    assert budget < len(A) * len(B)
++    new = global_consistency_alignment(
++        A, B, None, ea, eb, rounds=6, max_pair_evals=budget, sim=sim,
++        budget_refinement_only=True)
++    unbounded = global_consistency_alignment(
++        A, B, None, ea, eb, rounds=3, max_pair_evals=None, sim=sim,
++        budget_refinement_only=True)
++    assert new.rounds_used <= 2
++    assert key(new)[:2] == key(unbounded)[:2] or new.budget_exhausted
++
++
++# ---------------------------------------------------------- the matcher
++
++def ori(a, b, c) -> TypedSignature:
++    """A bins-only ORIENTATION signature (another class than TEXTURE)."""
++    return TypedSignature(kind="CANONICAL", class_="ORIENTATION",
++                          quantized=(float(a), float(b), float(c)))
++
++
++def matcher_pair(rng, n=9, one_class=False):
++    """Two lens types on both sides, random signatures, anchors, edges.
++    The two lens types carry different signature classes unless
++    `one_class`."""
++    def sig(k):
++        if one_class or k % 2 == 0:
++            return tex(rng.randrange(10), rng.randrange(10))
++        return ori(rng.randrange(8), rng.randrange(8), rng.randrange(8))
++
++    def side(base):
++        ids = [base + i for i in range(n)]
++        sigs = {nid: ("L%d" % (k % 2), sig(k)) for k, nid in enumerate(ids)}
++        edges = {tuple(sorted(rng.sample(ids, 2))) + (TOPO,)
++                 for _ in range(2 * n)}
++        sg = Subgraph(nodes=frozenset(ids), edges=frozenset(edges))
++        sg.anchor_of_node = {nid: (rng.uniform(0, 100), rng.uniform(0, 100))
++                             for nid in ids}
++        return sg, sigs
++    (Q, qs), (C, cs) = side(0), side(1000)
++    return Q, qs, C, cs
++
++
++@pytest.mark.parametrize("refinement_only", [True, False])
++@pytest.mark.parametrize("anchor", [True, False])
++def test_global_correspondence_blocks_or_pairs(params, refinement_only,
++                                               anchor):
++    rng = random.Random(21)
++    for _ in range(6):
++        Q, qs, C, cs = matcher_pair(rng)
++        out = []
++        for blocks in (True, False):
++            params(MATCH_SIGNATURE_MATRIX_BLOCKS=blocks,
++                   MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=refinement_only,
++                   MATCH_GLOBAL_ANCHOR_PRIOR=anchor)
++            out.append(_global_correspondence(Q, C, qs, cs))
++        assert out[0] == out[1]
++        assert out[0]
++
++
++def test_one_round_with_the_anchor_prior_is_the_live_correspondence(params):
++    rng = random.Random(22)
++    same = 0
++    for _ in range(12):
++        Q, qs, C, cs = matcher_pair(rng)
++        params(MATCH_GLOBAL_CONSISTENCY_ENABLED=False)
++        live = _mcs_accumulate(Q, C, qs, cs)[6]
++        params(MATCH_GLOBAL_ANCHOR_PRIOR=True, MATCH_ALIGN_ROUNDS=1)
++        dark = _global_correspondence(Q, C, qs, cs)
++        assert dark == live
++        params(MATCH_GLOBAL_ANCHOR_PRIOR=False)
++        same += _global_correspondence(Q, C, qs, cs) == live
++    assert same < 12, "the anchor prior made no difference in any scenario"
++
++
++def test_the_dark_path_pairs_across_lens_types_of_one_class(params):
++    """"Cross-type" is its design: the candidates are every pair of positive
++    signature similarity, whatever the lens type.  The live correspondence
++    never pairs across lens types.  A difference to know, not a defect."""
++    rng = random.Random(24)
++    crossed = 0
++    for _ in range(12):
++        Q, qs, C, cs = matcher_pair(rng, one_class=True)
++        params(MATCH_GLOBAL_CONSISTENCY_ENABLED=False)
++        live = _mcs_accumulate(Q, C, qs, cs)[6]
++        assert all(qs[u][0] == cs[v][0] for u, v in live.items())
++        params(MATCH_GLOBAL_ANCHOR_PRIOR=True, MATCH_ALIGN_ROUNDS=1)
++        dark = _global_correspondence(Q, C, qs, cs)
++        crossed += any(qs[u][0] != cs[v][0] for u, v in dark.items())
++    assert crossed > 0
++
++
++def test_the_default_path_does_not_use_the_alignment(params, monkeypatch):
++    def boom(*a, **k):
++        raise AssertionError("the global alignment ran on the default path")
++
++    monkeypatch.setattr(AL, "global_consistency_alignment", boom)
++    Q, qs, C, cs = matcher_pair(random.Random(23))
++    assert _mcs_accumulate(Q, C, qs, cs)[6]
+diff --git a/tests_matcher/test_declared_defaults.py b/tests_matcher/test_declared_defaults.py
+index 80b44b1..fa6aab6 100644
+--- a/tests_matcher/test_declared_defaults.py
++++ b/tests_matcher/test_declared_defaults.py
+@@ -32,4 +32,7 @@ def test_declared_defaults(declared_defaults):
+         "EVIDENCE_RELATION_COUNT_APART": False,
+         # P4b, the flag in f(n) -- OFF: nothing here can measure it
+         "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS": False,
++        # D2 prerequisites -- dark path only
++        "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY": True,
++        "MATCH_GLOBAL_ANCHOR_PRIOR": False,
+     }
+-- 
+2.39.5
+

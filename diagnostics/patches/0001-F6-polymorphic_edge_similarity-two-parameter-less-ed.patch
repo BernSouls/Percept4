@@ -1,0 +1,307 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BernSouls <256335293+BernSouls@users.noreply.github.com>
+Date: Tue, 10 Nov 2026 22:55:31 +0000
+Subject: [F6] polymorphic_edge_similarity: two parameter-less edges of one
+ predicate are a structural match
+
+Switch EDGE_UNPARAMETERISED_STRUCTURAL_MATCH (default True; False = the historical strict 0.0).
+Pin: tests_matcher/test_f6_unparameterised_edge_match.py
+
+Co-authored-by: arena-agent <297053741+arena-agent@users.noreply.github.com>
+---
+ core/schema.py                                |  25 +++-
+ parameters/_text.py                           |  17 +++
+ tests_matcher/_graphs.py                      |  27 ++++
+ tests_matcher/conftest.py                     |  40 ++++++
+ .../test_f6_unparameterised_edge_match.py     | 134 ++++++++++++++++++
+ 5 files changed, 241 insertions(+), 2 deletions(-)
+ create mode 100644 tests_matcher/_graphs.py
+ create mode 100644 tests_matcher/conftest.py
+ create mode 100644 tests_matcher/test_f6_unparameterised_edge_match.py
+
+diff --git a/core/schema.py b/core/schema.py
+index 94af60a..cb02caa 100644
+--- a/core/schema.py
++++ b/core/schema.py
+@@ -1834,8 +1834,29 @@ def polymorphic_edge_similarity(
+         # EdgeTypes are topology-only and never receive params, so this is
+         # the common case rather than an edge case. Missing the edge-type
+         # pair (default) keeps the old strict-0.0 behaviour.
+-        if edge_types is not None and edge_types[0] == edge_types[1]:
+-            return 0.0
++        #
++        # [F6 / PHASE 1] The branch below used to `return 0.0` as well, so
++        # the fix described above was inert: a topology-only core edge could
++        # never be matched, whatever the query held. It now returns 1.0 when
++        #   * the caller supplied the predicate pair and the two are EQUAL, and
++        #   * BOTH sides carry no params (the "carry no EdgeParams" case).
++        # A pair with params on ONE side only stays 0.0: a missing
++        # measurement must not read as a perfect one, and it keeps
++        # EdgeParams.similarity(None) == 0.0 true from either direction.
++        # The result is a structural (topological) match with zero measured
++        # axes -- edge_measured_axes(None, None) == 0 -- so it earns no
++        # coverage facilitation in the matcher's edge mass.
++        # P.EDGE_UNPARAMETERISED_STRUCTURAL_MATCH = False restores the
++        # historical strict 0.0.
++        if (
++            ep1 is None
++            and ep2 is None
++            and edge_types is not None
++            and edge_types[0] is not None
++            and edge_types[0] == edge_types[1]
++            and getattr(P, "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH", True)
++        ):
++            return 1.0
+         return 0.0
+ 
+     # 1. Same schema: full multi-slot Gaussian fidelity
+diff --git a/parameters/_text.py b/parameters/_text.py
+index 26a27d7..91161a7 100644
+--- a/parameters/_text.py
++++ b/parameters/_text.py
+@@ -1915,6 +1915,23 @@ MATCH_MIN_CONSENSUS_SUPPORT = 0.5
+ MATCH_SEARCH_MAX_EXPANSIONS = 4096
+ MATCH_SEARCH_MAX_OPS = 200000
+ 
++# -----------------------------------------------------------------------------
++# GAP-CLOSURE matcher evidence switches (handoff 2026-11; see
++# diagnostics/REPORT.md). Each one is a general matcher behaviour -- none
++# names or reads a benchmark. They exist so every change can be A/B-measured
++# in one tree and so a reddened pin is answered by one line, not a file revert.
++# -----------------------------------------------------------------------------
++# [F6 / PHASE 1] polymorphic_edge_similarity: two corresponding edges of the
++# SAME relational predicate that BOTH carry no EdgeParams (topology-only edge
++# types, e.g. TOPOLOGY / DEGREE) are a structural match and read 1.0. The
++# function's own BLACK-HOLE comment asked for this; the code returned 0.0 on
++# both branches, so a topology-only core edge could never be matched. False =
++# the historical strict 0.0. A pair with params on ONE side only stays 0.0
++# under either setting (a missing measurement is not a perfect one). Only
++# callers that pass `edge_types` (the live matcher, memory/cores.py) are
++# affected.
++EDGE_UNPARAMETERISED_STRUCTURAL_MATCH: bool = True
++
+ # =============================================================================
+ # LOCOMOTION BRIDGE & ANCHOR FALLBACK
+ # =============================================================================
+diff --git a/tests_matcher/_graphs.py b/tests_matcher/_graphs.py
+new file mode 100644
+index 0000000..bd0bd07
+--- /dev/null
++++ b/tests_matcher/_graphs.py
+@@ -0,0 +1,27 @@
++"""Tiny hand-built graphs for the matcher pins (no image, no front end)."""
++from __future__ import annotations
++
++from typing import Dict, Iterable, Optional, Tuple
++
++from core.graph_types import Subgraph
++from core.types import EdgeType, TypedSignature
++
++Sigs = Dict[int, Tuple[str, TypedSignature]]
++
++
++def tex(a: float, b: float) -> TypedSignature:
++    """A bins-only TEXTURE signature (two graded slots, range 10 each)."""
++    return TypedSignature(kind="CANONICAL", class_="TEXTURE",
++                          quantized=(float(a), float(b)))
++
++
++def graph(nodes: Dict[int, Tuple[str, TypedSignature]],
++          edges: Iterable[Tuple[int, int, EdgeType]] = (),
++          edge_params: Optional[dict] = None,
++          node_weights: Optional[Dict[int, float]] = None,
++          ) -> Tuple[Subgraph, Sigs]:
++    """(Subgraph, sigs) from ``{node_id: (lens_type, signature)}``."""
++    sg = Subgraph(nodes=frozenset(nodes), edges=frozenset(edges),
++                  edge_params=dict(edge_params or {}),
++                  node_weights=dict(node_weights or {}))
++    return sg, dict(nodes)
+diff --git a/tests_matcher/conftest.py b/tests_matcher/conftest.py
+new file mode 100644
+index 0000000..c270593
+--- /dev/null
++++ b/tests_matcher/conftest.py
+@@ -0,0 +1,40 @@
++"""Path set-up for the matcher pins.
++
++Run from the tree root:
++
++    python -m pytest tests_matcher -q
++
++The repository root (the original ``src/``) goes to the front of ``sys.path``.
++In the EXPORT checkout three top-level modules are absent (see
++``diagnostics/_export_shims/README.md``); the shim directory is appended to
++the END of the path, so a full working tree never sees it.
++"""
++from __future__ import annotations
++
++import os
++import sys
++
++import pytest
++
++HERE = os.path.dirname(os.path.abspath(__file__))
++ROOT = os.path.dirname(HERE)
++SHIMS = os.path.join(ROOT, "diagnostics", "_export_shims")
++
++if ROOT not in sys.path:
++    sys.path.insert(0, ROOT)
++if os.path.isdir(SHIMS) and SHIMS not in sys.path:
++    sys.path.append(SHIMS)
++
++
++@pytest.fixture
++def params(monkeypatch):
++    """Set ``parameters.NAME`` for one test; restored afterwards."""
++    import parameters as P
++
++    def _set(**kw):
++        for k, v in kw.items():
++            assert hasattr(P, k), "unknown parameter %r" % k
++            monkeypatch.setattr(P, k, v)
++        return P
++
++    return _set
+diff --git a/tests_matcher/test_f6_unparameterised_edge_match.py b/tests_matcher/test_f6_unparameterised_edge_match.py
+new file mode 100644
+index 0000000..7d0bb1c
+--- /dev/null
++++ b/tests_matcher/test_f6_unparameterised_edge_match.py
+@@ -0,0 +1,134 @@
++"""PIN -- [F6 / PHASE 1] a topology-only edge can be matched.
++
++``polymorphic_edge_similarity`` documented, in its own BLACK-HOLE comment,
++that two corresponding edges of the same relational predicate that carry no
++``EdgeParams`` are a structural match -- and then returned 0.0 on both
++branches.  A core edge of a type that never receives params (TOPOLOGY, DEGREE)
++could therefore never be matched, whatever the query held.
++
++Pinned here:
++  * same predicate, no params on EITHER side  -> 1.0
++  * different predicates                      -> 0.0
++  * predicate pair not supplied               -> 0.0 (the strict default that
++                                                 every other caller relies on)
++  * params on ONE side only                   -> 0.0 (a missing measurement is
++                                                 not a perfect one)
++  * parameterised pairs                       -> untouched
++  * the structural match carries zero measured axes (no coverage facilitation)
++  * P.EDGE_UNPARAMETERISED_STRUCTURAL_MATCH = False restores the strict 0.0
++"""
++from __future__ import annotations
++
++import pytest
++
++from core.schema import (EdgeParams, edge_measured_axes,
++                         polymorphic_edge_similarity)
++from core.types import EdgeType
++
++from _graphs import graph, tex
++
++T, D, CO = EdgeType.TOPOLOGY, EdgeType.DEGREE, EdgeType.CO_LOCATED
++
++
++def _co(scale: float, salience: float) -> EdgeParams:
++    return EdgeParams(class_="EDGE_CO_LOCATED", quantized=(scale, salience))
++
++
++# ---------------------------------------------------------------- function
++
++def test_same_predicate_without_params_is_a_structural_match():
++    assert polymorphic_edge_similarity(None, None, edge_types=(T, T)) == 1.0
++    assert polymorphic_edge_similarity(None, None, edge_types=(D, D)) == 1.0
++
++
++def test_different_predicates_without_params_do_not_match():
++    assert polymorphic_edge_similarity(None, None, edge_types=(T, D)) == 0.0
++    assert polymorphic_edge_similarity(None, None, edge_types=(D, T)) == 0.0
++
++
++def test_without_the_predicate_pair_the_strict_zero_is_kept():
++    # matching/structural_similarity.py calls without `edge_types`
++    assert polymorphic_edge_similarity(None, None) == 0.0
++    assert polymorphic_edge_similarity(None, None, edge_types=None) == 0.0
++    assert polymorphic_edge_similarity(None, None,
++                                       edge_types=(None, None)) == 0.0
++
++
++def test_params_on_one_side_only_stay_zero_in_both_directions():
++    ep = _co(-1.0, 5.0)
++    assert polymorphic_edge_similarity(ep, None, edge_types=(CO, CO)) == 0.0
++    assert polymorphic_edge_similarity(None, ep, edge_types=(CO, CO)) == 0.0
++    assert ep.similarity(None) == 0.0          # the convention it mirrors
++
++
++def test_parameterised_pairs_are_untouched_by_the_switch(params):
++    pairs = [(_co(-1.0, 5.0), _co(-1.0, 5.0)),
++             (_co(-1.0, 5.0), _co(-1.0, 6.0)),
++             (_co(-1.0, 0.0), _co(-1.0, 7.0)),
++             (_co(-1.0, -1.0), _co(-1.0, -1.0))]
++    on = [polymorphic_edge_similarity(a, b, edge_types=(CO, CO))
++          for a, b in pairs]
++    params(EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=False)
++    off = [polymorphic_edge_similarity(a, b, edge_types=(CO, CO))
++           for a, b in pairs]
++    assert on == off
++    assert on[0] == 1.0                        # equal measured bins
++
++
++def test_the_switch_restores_the_historical_strict_zero(params):
++    params(EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=False)
++    assert polymorphic_edge_similarity(None, None, edge_types=(T, T)) == 0.0
++
++
++def test_a_structural_match_measures_no_axis():
++    # edge mass = weight * similarity * (1 + log2(axes + 1)); zero axes means
++    # the structural match earns no coverage facilitation
++    assert edge_measured_axes(None, None) == 0
++
++
++# ----------------------------------------------------------------- matcher
++
++def _pair(q_edges, c_edges):
++    nodes = {1: ("Texture", tex(1, 1)), 2: ("Texture", tex(8, 8))}
++    return graph(nodes, q_edges), graph(nodes, c_edges)
++
++
++def _evidence(q_edges, c_edges):
++    from memory.cores import evidence_score
++
++    (Q, qs), (C, cs) = _pair(q_edges, c_edges)
++    trace: dict = {}
++    score, corr = evidence_score(Q, C, qs, cs, trace=trace)
++    assert corr == {1: 1, 2: 2}
++    return score, trace
++
++
++def test_matcher_credits_a_topology_edge_present_on_both_sides():
++    score, tr = _evidence([(1, 2, T)], [(1, 2, T)])
++    assert tr["verifiable_core_edges_count"] == 1
++    assert tr["matched_rel_sim_sum"] == 1.0
++    assert tr["relational_consistency"] == 1.0
++    assert tr["coverage_axes"] == [0]
++    assert score == pytest.approx(1.0, abs=1e-6)
++
++
++def test_matcher_gave_that_edge_nothing_before_the_fix(params):
++    params(EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=False)
++    score, tr = _evidence([(1, 2, T)], [(1, 2, T)])
++    assert tr["verifiable_core_edges_count"] == 1
++    assert tr["matched_rel_sim_sum"] == 0.0
++    assert tr["relational_consistency"] == 0.0
++    assert score == 0.0
++
++
++def test_matcher_does_not_credit_a_topology_edge_the_query_lacks():
++    score, tr = _evidence([], [(1, 2, T)])
++    assert tr["verifiable_core_edges_count"] == 1
++    assert tr["matched_rel_sim_sum"] == 0.0
++    assert score == 0.0
++
++
++def test_matcher_does_not_match_it_to_another_predicate_on_the_same_nodes():
++    score, tr = _evidence([(1, 2, D)], [(1, 2, T)])
++    assert tr["matched_rel_sim_sum"] == 0.0
++    assert score == 0.0
+-- 
+2.39.5
+
