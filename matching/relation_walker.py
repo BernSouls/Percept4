@@ -86,9 +86,23 @@ MIN_SUPPORT_PAIRS: int = 8
 MIN_SUPPORT_FRACTION: float = 0.10
 
 
+#: below this many pairs the whole matrix is cheaper than any fraction of it
+SMALL_FRAME_PRODUCT: int = 1000
+
+
 def budget(frame_q: int, frame_r: int) -> int:
-    """How many pairs one walk may examine."""
+    """How many pairs one walk may examine.
+
+    Amendment 7.13: a SMALL frame (product <= 1000, i.e. fewer than ~32 nodes
+    a side) may examine the whole matrix -- the dense matrix there is cheaper
+    than the bookkeeping, and 5 % of it is less than one look per node, which
+    left the frontier starving (measured: a 13 x 13 pin graph, 104 looks,
+    growth stopped at 9 of 13 nodes).  Above it the pre-registered rule
+    stands: 5 % of the product, floored at 8 looks per node of the smaller
+    frame, never more than the product."""
     product = frame_q * frame_r
+    if product <= SMALL_FRAME_PRODUCT:
+        return product
     return min(product, max(int(BUDGET_FRACTION * product),
                             BUDGET_FLOOR_PER_NODE * min(frame_q, frame_r)))
 
@@ -262,6 +276,17 @@ class _Index:
         for n in self.frame:
             for cls in self.half[n]:
                 self.half[n][cls].sort(key=lambda h: (self.key[h.far], h.bins, h.far))
+        # [Amendment 7 / D1] THE TOPOLOGICAL TOKEN of every relation as seen
+        # from this node: no bins, no similarity.
+        self.tok: Dict[int, Dict[Tuple, List[_Half]]] = {n: {} for n in self.frame}
+        for n in self.frame:
+            for cls in self.half[n]:
+                for h in self.half[n][cls]:
+                    kind, direction, far_lens = cls
+                    t = (self.lens[n], kind, direction, far_lens,
+                         len(self.half.get(h.far, {})), self.closed(h.far))
+                    self.tok[n].setdefault(t, []).append(h)
+        self.degree = {n: sum(len(v) for v in self.half[n].values()) for n in self.frame}
         for n in self.attrs:
             for lt in self.attrs[n]:
                 self.attrs[n][lt] = sorted(set(self.attrs[n][lt]),
@@ -337,49 +362,156 @@ class WalkResult:
     budget_exhausted: bool = False
     order_rejections: int = 0
     gate_rejections: int = 0
+    contradicts: int = 0
+    #: the terms of the Amendment-7 objective of this mapping
+    terms: Dict[str, Any] = field(default_factory=dict)
+    #: the hypotheses of the beam: seed count, mapped, Q
+    beam: List[Dict[str, Any]] = field(default_factory=list)
     dense: int = 0               # |nodes_q| x |nodes_r|, the old matcher's matrix
     #: the admissions in order: (query node, reference node, "seed" or the
     #: relation classes that supported it).  For diagnostics; decides nothing.
     log: List[Tuple[int, int, Any]] = field(default_factory=list)
 
 
-def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
-         r_sigs: Dict[int, Tuple[str, Any]]) -> WalkResult:
-    """Grow one correspondence between the frames of two graphs."""
-    from matching.structural_similarity import _sig_sim
+def _serve_key(how: Any, n_support: int, slack: float, sim: float,
+               key_q: Tuple, key_r: Tuple, u: int, v: int) -> Tuple:
+    """The order proposals are served in (Amendment 4.1 + 7.18).
 
-    gq, gr = _Index(Q, q_sigs), _Index(R, r_sigs)
-    res = WalkResult(frame_q=len(gq.frame), frame_r=len(gr.frame),
-                     dense=len(q_sigs) * len(r_sigs))
-    res.budget = budget(len(gq.frame), len(gr.frame))
-    sim_cache: Dict[Tuple[int, int], float] = {}
+    TIER first: an order proposal is weaker evidence than a measured relation
+    and is served only when no measured proposal is pending -- otherwise a
+    proposal with no slack of its own would outrank every measurement.
+    Then, within a tier, the 4.1 rank: more supporting pairs first; less total
+    slack first; the more similar signature; the canonical keys (which are
+    arbitrary with respect to the measurement); the node ids last of all.
+    """
+    tier = 1 if (isinstance(how, tuple) and how and how[0] == "order") else 0
+    return (tier, -n_support, slack, -sim, key_q, key_r, u, v)
 
-    def similarity(u: int, v: int) -> Optional[float]:
-        """Graded signature similarity, or None once the budget is spent."""
-        got = sim_cache.get((u, v))
+
+def _choose(hypotheses: List["WalkResult"]) -> "WalkResult":
+    """[D5 / 7.11] which hypothesis is the walk's answer.
+
+    Q alone prefers a small mapping that is very similar to a large one that
+    is slightly less similar (it is a mean, not a sum).  Among hypotheses that
+    both pass the support floor the larger mapping wins; Q decides between
+    hypotheses that do not both pass it.  Ties go to the earlier seed set.
+    """
+    supported = [h for h in hypotheses if len(h.mapping) >= MIN_SUPPORT_PAIRS
+                 and len(h.mapping) >= MIN_SUPPORT_FRACTION * min(h.frame_q, h.frame_r)]
+    pool = supported or hypotheses
+    best = pool[0]
+    for h in pool[1:]:
+        if supported:
+            if (len(h.mapping), h.terms["q"]) > (len(best.mapping), best.terms["q"] + 1e-12):
+                best = h
+        elif h.terms["q"] > best.terms["q"] + 1e-12:
+            best = h
+    return best
+
+
+class _Sim:
+    """Graded signature similarity with ONE budget for the whole walk."""
+
+    def __init__(self, gq: "_Index", gr: "_Index", res: WalkResult) -> None:
+        from matching.structural_similarity import _sig_sim
+        self._f = _sig_sim
+        self.gq, self.gr, self.res = gq, gr, res
+        self.cache: Dict[Tuple[int, int], float] = {}
+
+    def __call__(self, u: int, v: int) -> Optional[float]:
+        got = self.cache.get((u, v))
         if got is not None:
             return got
-        if gq.lens[u] != gr.lens[v]:
-            sim_cache[(u, v)] = 0.0
+        if self.gq.lens[u] != self.gr.lens[v]:
+            self.cache[(u, v)] = 0.0
             return 0.0
-        if res.examined >= res.budget:
-            res.budget_exhausted = True
+        if self.res.examined >= self.res.budget:
+            self.res.budget_exhausted = True
             return None
-        res.examined += 1
-        got = float(_sig_sim(gq.sig[u], gr.sig[v]))
-        sim_cache[(u, v)] = got
+        self.res.examined += 1
+        got = float(self._f(self.gq.sig[u], self.gr.sig[v]))
+        self.cache[(u, v)] = got
         return got
 
+
+def _node_gate(sim: Optional[float], best: float) -> bool:
+    """[D3] relative node gate: above the floor and within a margin of the
+    node's best similarity in the other graph."""
+    return sim is not None and sim > NODE_FLOOR and sim >= best - NODE_MARGIN
+
+
+def _seeds(gq: "_Index", gr: "_Index", sim: _Sim,
+           res: WalkResult) -> List[Tuple[int, int]]:
+    """[D1] SEEDS from TOPOLOGICAL tokens only, ranked by node similarity.
+
+    A token is (lens type, edge type, direction, far lens type, the far node's
+    degree in the growth graph, whether the far node is closed): no bins, no
+    similarity.  A rare token is carried by at most RARE_TOKEN_MAX_NODES
+    nodes in each graph; a pair shares at least SEED_MIN_SHARED_TOKENS of
+    them.  Seeds are one-to-one, ranked by (rare tokens shared, tokens
+    shared, node similarity, canonical keys) -- Amendment 7.9."""
+    def carriers(g: "_Index") -> Dict[Tuple, List[int]]:
+        out: Dict[Tuple, List[int]] = {}
+        for n in g.frame:
+            for t in g.tok[n]:
+                out.setdefault(t, []).append(n)
+        return out
+
+    cq, cr = carriers(gq), carriers(gr)
+    shared: Dict[Tuple[int, int], int] = {}
+    rare: Dict[Tuple[int, int], int] = {}
+    for t in sorted(cq):
+        if t not in cr:
+            continue
+        is_rare = (len(cq[t]) <= RARE_TOKEN_MAX_NODES and len(cr[t]) <= RARE_TOKEN_MAX_NODES)
+        for u in cq[t]:
+            for v in cr[t]:
+                shared[(u, v)] = shared.get((u, v), 0) + 1
+                if is_rare:
+                    rare[(u, v)] = rare.get((u, v), 0) + 1
+    cands = []
+    for (u, v), n in sorted(shared.items()):
+        if n < SEED_MIN_SHARED_TOKENS:
+            continue
+        s = sim(u, v)
+        if s is None or s <= NODE_FLOOR:
+            continue
+        cands.append((-rare.get((u, v), 0), -n, -s, gq.key[u], gr.key[v], u, v))
+    cands.sort()
+    out: List[Tuple[int, int]] = []
+    used_q, used_r = set(), set()
+    for _nr, _n, _s, _ku, _kv, u, v in cands:
+        if len(out) >= N_SEEDS:
+            break
+        if u in used_q or v in used_r:
+            continue
+        out.append((u, v))
+        used_q.add(u)
+        used_r.add(v)
+    return out
+
+
+def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
+          seeds: List[Tuple[int, int]]) -> WalkResult:
+    """One hypothesis: one-to-one growth from `seeds` (D0-D4).
+
+    Admission is proposed by a relation (D2) or by the order of an admitted
+    boundary pair (D4); a proposal is admitted when the node gate (D3) passes
+    and no shared axis contradicts (D2).  Order still holds on every admitted
+    boundary pair (D4's own test, 4.7)."""
+    out = WalkResult(frame_q=res.frame_q, frame_r=res.frame_r, dense=res.dense,
+                     budget=res.budget, seeds=list(seeds))
     map_q: Dict[int, int] = {}
     map_r: Dict[int, int] = {}
-    rejected: set = set()            # pairs the order constraint has refused
-    #: (u, v) -> {admitted pair: slack of its best agreeing relation}
-    support: Dict[Tuple[int, int], Dict[Tuple[int, int], int]] = {}
-    via: Dict[Tuple[int, int], List[Tuple]] = {}     # the classes that proposed it
-    heap: List[Tuple] = []
+    rejected: set = set()
+    #: the best similarity the reference frame offers each query node
+    best: Dict[int, float] = {}
+
+    def note(u: int, v: int, s: float) -> None:
+        if s > best.get(u, -1.0):
+            best[u] = s
 
     def order_ok(u: int, v: int) -> bool:
-        # (a) the new pair as a FEATURE on already admitted boundaries
         for hq, aq in sorted(gq.on_host.get(u, {}).items()):
             hr = map_q.get(hq)
             if hr is None:
@@ -397,7 +529,6 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
                     pts.append((af, ag))
             if not _order_consistent(pts, gq.closed(hq) and gr.closed(hr)):
                 return False
-        # (b) the new pair as a BOUNDARY under already admitted features
         pts = []
         for f, af in gq.hosts.get(u, {}).items():
             g = map_q.get(f)
@@ -408,9 +539,77 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
                 pts.append((af, ag))
         return _order_consistent(pts, gq.closed(u) and gr.closed(v))
 
-    def admit(u: int, v: int) -> None:
+    support: Dict[Tuple[int, int], Dict[Tuple[int, int], float]] = {}
+    via: Dict[Tuple[int, int], List[Tuple]] = {}
+    heap: List[Tuple] = []
+
+    def propose(u: int, v: int, sup: Tuple[int, int], slack: float, how: Tuple) -> None:
+        if u in map_q or v in map_r or (u, v) in rejected:
+            return
+        s = sim(u, v)
+        if s is None:
+            return
+        note(u, v, s)
+        sup_d = support.setdefault((u, v), {})
+        prev = sup_d.get(sup)
+        if prev is None or slack < prev:
+            sup_d[sup] = slack
+        via.setdefault((u, v), []).append(how)
+        heapq.heappush(heap, _serve_key(how, len(sup_d), sum(sup_d.values()), s,
+                                        gq.key[u], gr.key[v], u, v))
+
+    def order_propose(hq: int, hr: int) -> None:
+        """[D4] two admitted boundaries with enough admitted features in order
+        propose the features attached to both."""
+        fa, fb = gq.hosts.get(hq, {}), gr.hosts.get(hr, {})
+        if not fa or not fb:
+            return
+        pts = [(af, fb[map_q[f]]) for f, af in fa.items()
+               if f in map_q and map_q[f] in fb]
+        if len(pts) < ORDER_PROPOSAL_MIN:
+            return
+        for f, af in sorted(fa.items()):
+            if f in map_q:
+                continue
+            for g, ag in sorted(fb.items(), key=lambda kv: (gr.key[kv[0]], kv[0])):
+                if g in map_r:
+                    continue
+                if not _order_consistent(pts + [(af, ag)],
+                                         gq.closed(hq) and gr.closed(hr)):
+                    continue
+                propose(f, g, (hq, hr), 0.0, ("order", hq, hr))
+
+    def contradicted(u: int, v: int) -> bool:
+        """[D2 / 7.16-7.17] the veto is on the PAIR, not on the one relation
+        that proposed it: a node whose attachment axis is seven bins away is
+        not admitted because its successor gap happens to agree.
+
+        Two ways to contradict, and no others:
+          * a relation whose FAR END is already mapped to the other relation's
+            far end contradicts (the correspondence there is established);
+          * a class the two nodes share in which EVERY pair of relations
+            contradicts (no reading of the class agrees at all)."""
+        for cls in sorted(gq.half[u]):
+            theirs = gr.half[v].get(cls)
+            if not theirs:
+                continue
+            any_agrees = False
+            for hu in gq.half[u][cls]:
+                for hv in theirs:
+                    bad = _contradicts(hu, hv)
+                    if map_q.get(hu.far) == hv.far and bad:
+                        return True
+                    if not bad:
+                        any_agrees = True
+            if not any_agrees:
+                return True
+        return False
+
+    def admit(u: int, v: int, how: Any) -> None:
         map_q[u] = v
         map_r[v] = u
+        out.mapping = dict(sorted(map_q.items()))
+        out.log.append((u, v, how))
         for cls in sorted(gq.half[u]):
             theirs = gr.half[v].get(cls)
             if not theirs:
@@ -419,94 +618,109 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
                 if hu.far in map_q:
                     continue
                 for hv in theirs:
-                    if hv.far in map_r:
+                    if hv.far in map_r or (hu.far, hv.far) in rejected:
                         continue
-                    if (hu.far, hv.far) in rejected:
-                        continue
-                    res.edge_checks += 1
-                    s = _slack(hu, hv)
+                    s = sim(hu.far, hv.far)
                     if s is None:
                         continue
-                    known = (hu.far, hv.far) in sim_cache
-                    sim = similarity(hu.far, hv.far)
-                    if sim is None:
-                        continue                 # the budget is spent
-                    if sim < SIGNATURE_GATE:
-                        res.gate_rejections += int(not known)
+                    note(hu.far, hv.far, s)
+                    if s <= NODE_FLOOR:
+                        out.gate_rejections += 1
                         continue
-                    sup = support.setdefault((hu.far, hv.far), {})
-                    via.setdefault((hu.far, hv.far), []).append(cls)
-                    old = sup.get((u, v))
-                    if old is None or s < old:
-                        sup[(u, v)] = s
-                    heapq.heappush(heap, (
-                        -len(sup), sum(sup.values()), -sim,
-                        gq.key[hu.far], gr.key[hv.far], hu.far, hv.far))
+                    out.edge_checks += 1
+                    agree = _agreement(hu, hv) or 0.0
+                    propose(hu.far, hv.far, (u, v), 1.0 - agree, cls)
+        # [D4] the boundary the new pair may have completed
+        for hq in (u,):
+            hr = map_q.get(hq)
+            if hr is not None:
+                order_propose(hq, hr)
+        for fq, hq in gq.hosts.get(u, {}).items():
+            hr = map_q.get(hq)
+            if hr is not None and fq in map_q:
+                order_propose(hq, hr)
 
-    # ---- seeds: pairs that share rare relation tokens --------------------
-    def carriers(g: _Index) -> Dict[Tuple, List[int]]:
-        out: Dict[Tuple, List[int]] = {}
-        for n in g.frame:
-            seen = set()
-            for cls in g.half[n]:
-                for h in g.half[n][cls]:
-                    t = h.token()
-                    if t not in seen:
-                        seen.add(t)
-                        out.setdefault(t, []).append(n)
-        return out
-
-    cq, cr = carriers(gq), carriers(gr)
-    shared: Dict[Tuple[int, int], int] = {}
-    for t in cq:
-        if t not in cr:
-            continue
-        if len(cq[t]) > RARE_TOKEN_MAX_NODES or len(cr[t]) > RARE_TOKEN_MAX_NODES:
-            continue
-        for u in cq[t]:
-            for v in cr[t]:
-                shared[(u, v)] = shared.get((u, v), 0) + 1
-    cands = []
-    for (u, v), n in sorted(shared.items(), key=lambda kv: (
-            -kv[1], gq.key[kv[0][0]], gr.key[kv[0][1]], kv[0])):
-        if n < SEED_MIN_SHARED_TOKENS:
-            continue
-        sim = similarity(u, v)
-        if sim is None:
-            break
-        if sim >= SIGNATURE_GATE:
-            cands.append((-n, -sim, gq.key[u], gr.key[v], u, v))
-    cands.sort()
-    for _n, _s, _ku, _kv, u, v in cands:
-        if len(res.seeds) >= N_SEEDS:
-            break
-        if u in map_q or v in map_r:
-            continue
-        if not order_ok(u, v):
-            res.order_rejections += 1
-            continue
-        res.seeds.append((u, v))
-        res.log.append((u, v, "seed"))
-        admit(u, v)
-
-    # ---- growth: best supported first -------------------------------------
-    while heap:
-        neg, slack, _nsim, _ku, _kv, u, v = heapq.heappop(heap)
-        if u in map_q or v in map_r:
-            continue
-        sup = support.get((u, v))
-        if not sup or -neg != len(sup) or slack != sum(sup.values()):
-            continue                         # stale: a fresher entry exists
-        if not order_ok(u, v):
-            res.order_rejections += 1
+    for u, v in seeds:
+        if contradicted(u, v):
+            out.contradicts += 1
             rejected.add((u, v))
             continue
-        res.log.append((u, v, tuple(sorted(set(via.get((u, v), ()))))))
-        admit(u, v)
+        if not order_ok(u, v):
+            out.order_rejections += 1
+            rejected.add((u, v))
+            continue
+        admit(u, v, "seed")
 
-    res.mapping = dict(sorted(map_q.items()))
-    _score(res, gq, gr, similarity)
-    return res
+    while heap:
+        _tier, _neg, _slack_sum, _nsim, _ku, _kv, u, v = heapq.heappop(heap)
+        if u in map_q or v in map_r or (u, v) in rejected:
+            continue
+        sup_d = support.get((u, v))
+        if not sup_d or _neg != -len(sup_d) or _slack_sum != sum(sup_d.values()):
+            continue
+        s = sim(u, v)
+        if not _node_gate(s, best.get(u, 0.0)):
+            out.gate_rejections += 1
+            continue
+        if contradicted(u, v):
+            out.contradicts += 1
+            rejected.add((u, v))
+            continue
+        if not order_ok(u, v):
+            out.order_rejections += 1
+            rejected.add((u, v))
+            continue
+        admit(u, v, tuple(sorted(set(x if not isinstance(x, tuple) else x[0]
+                                     for x in via.get((u, v), ())))))
+    out.mapping = dict(sorted(map_q.items()))
+    return out
+
+
+def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
+         r_sigs: Dict[int, Tuple[str, Any]]) -> WalkResult:
+    """[Amendment 7] One walk: seeds (D1), a beam of hypotheses over seed
+    prefixes (D5), the objective (D0) choosing among them."""
+    gq, gr = _Index(Q, q_sigs), _Index(R, r_sigs)
+    res = WalkResult(frame_q=len(gq.frame), frame_r=len(gr.frame),
+                     dense=len(q_sigs) * len(r_sigs))
+    res.budget = budget(len(gq.frame), len(gr.frame))
+    sim = _Sim(gq, gr, res)
+    seeds = _seeds(gq, gr, sim, res)
+    hypotheses: List[WalkResult] = []
+    seen_prefix = set()
+    # [Amendment 7.10] the beam's four seed sets: the first seed, two
+    # intermediate prefixes and the whole seed list (fewer when fewer seeds).
+    # They are grown LARGEST FIRST: the budget is shared by the beam, and the
+    # hypothesis the seed list was built for must not be starved by its own
+    # alternatives.
+    n_seed = len(seeds)
+    ks = sorted({1, max(1, n_seed // 3), max(1, (2 * n_seed) // 3), n_seed},
+                reverse=True) if n_seed else [0]
+    for k in ks[:BEAM_WIDTH]:
+        prefix = tuple(seeds[:k])
+        if prefix in seen_prefix:
+            continue
+        seen_prefix.add(prefix)
+        h = _grow(gq, gr, sim, res, list(prefix))
+        h.terms = objective(h.mapping, gq, gr, lambda u, v: sim.cache.get((u, v), 0.0))
+        hypotheses.append(h)
+    if not hypotheses:
+        hypotheses = [_grow(gq, gr, sim, res, [])]
+        hypotheses[0].terms = objective({}, gq, gr, lambda u, v: 0.0)
+    # [Amendment 7.11] the choice among the beam's hypotheses
+    best = _choose(hypotheses)
+    # the reported walk is the best hypothesis, with the shared cost counts
+    out = WalkResult(frame_q=best.frame_q, frame_r=best.frame_r, dense=best.dense,
+                     budget=res.budget, seeds=best.seeds, mapping=best.mapping,
+                     log=best.log, examined=res.examined, edge_checks=res.edge_checks,
+                     budget_exhausted=res.budget_exhausted,
+                     order_rejections=best.order_rejections,
+                     gate_rejections=best.gate_rejections,
+                     contradicts=best.contradicts, terms=best.terms)
+    _score(out, gq, gr, lambda u, v: sim.cache.get((u, v), 0.0))
+    out.beam = [{"seeds": len(h.seeds), "mapped": len(h.mapping), "q": h.terms["q"],
+                 "order_rejections": h.order_rejections} for h in hypotheses]
+    return out
 
 
 def objective(mapping: Dict[int, int], gq: "_Index", gr: "_Index",
@@ -535,12 +749,15 @@ def objective(mapping: Dict[int, int], gq: "_Index", gr: "_Index",
 
     p_mass = 0.0
     p_candidates = 0
-    relation_ids_q = set()
-    relation_ids_r = set()
+    # Amendment 7.14: the two graphs' node ids are DIFFERENT spaces, so the
+    # union of 7.0 cannot be a set union of edge keys.  It is counted: (edges
+    # with at least one end in M) + (edges with at least one end in the image
+    # of M) - (edges with both ends mapped, the P candidates).
+    n_q_any = n_r_any = 0
     for s_, d_, name in gq.edges:
         if s_ in m and d_ in m:
             p_candidates += 1
-            relation_ids_q.add(edge_id(gq, s_, d_, name))
+            n_q_any += 1
             hr = gr.pair.get((m[s_], m[d_], name))
             if hr is None:
                 continue
@@ -548,13 +765,13 @@ def objective(mapping: Dict[int, int], gq: "_Index", gr: "_Index",
             if g is not None:
                 p_mass += g
         elif s_ in m or d_ in m:
-            relation_ids_q.add(edge_id(gq, s_, d_, name))
+            n_q_any += 1
     for s_, d_, name in gr.edges:
         if s_ in inv and d_ in inv:
-            relation_ids_r.add(edge_id(gr, s_, d_, name))
+            n_r_any += 1
         elif s_ in inv or d_ in inv:
-            relation_ids_r.add(edge_id(gr, s_, d_, name))
-    r_union = len(relation_ids_q | relation_ids_r)
+            n_r_any += 1
+    r_union = n_q_any + n_r_any - p_candidates
 
     a_mass = 0.0
     a_units = 0
@@ -583,8 +800,7 @@ def objective(mapping: Dict[int, int], gq: "_Index", gr: "_Index",
     # (mapped pair, lens type) units the attribute mass is summed over, so the
     # objective stays in [0, 1].
     den = W_NODE * len(m) + W_RELATION * (r_union + a_units)
-    jac = (p_mass / (len(relation_ids_q) + len(relation_ids_r) - len(relation_ids_q & relation_ids_r))
-           if (relation_ids_q or relation_ids_r) else 0.0)
+    jac = (p_mass / r_union) if r_union else 0.0
     return {"q": (num / den) if den > 0 else 0.0, "mapped": len(m),
             "S": s_node, "P": p_mass, "A": a_mass, "R": r_union,
             "A_units": a_units, "p_candidates": p_candidates, "jaccard": jac}

@@ -855,3 +855,127 @@ ATTRIBUTE UNITS: `W_R * (R + G)`, where `G` is the number of (mapped pair,
 attribute lens type) units `A` is summed over.  Then `A <= G`, `P <= R` and
 `S <= |M|`, and Q is in [0, 1].  T2 is re-run with this denominator; both
 runs are reported, the first one labelled as written under 7.0.
+
+### 7.9 SEED RANKING, made exact while building (before any synthetic run of D1)
+
+7.1 said "the 8 one-to-one pairs with the most shared tokens, ranked by (shared
+tokens, descending; node similarity, descending; canonical keys)".  A token
+count that includes COMMON tokens ranks a shallow node (one relation, carried
+by many nodes) above a deep one, which is the opposite of the intent.  The
+rank is therefore (RARE tokens shared, descending; tokens shared, descending;
+node similarity, descending; canonical keys); the RARE-threshold rule of 7.1
+is unchanged.  7.1's own sentence ("the seed precision of both rules is
+reported") is kept: the topological rule and the Amendment-4 rule are both
+measured against truth in the M3-6 run.
+
+### 7.10 THE BEAM'S SEED SETS, made exact while building
+
+7.5 said "from the seed set (a prefix of the seed list: the top 1, then the
+top 2, ... up to 8 seeds), up to four hypotheses".  Read literally that is one
+hypothesis per prefix length, i.e. up to eight, not four.  The four are: the
+first seed, the prefix at one third, the prefix at two thirds, and the whole
+seed list (fewer when there are fewer seeds).  The whole seed list is always
+among them, so a bigger seed set is never thrown away unexamined.
+
+### 7.11 HOW THE BEAM CHOOSES, made exact while building
+
+7.5 said "the hypothesis with the best Q(M) is the walk's answer".  Q is a
+ratio (a mean per unit), so it prefers a SMALL mapping that is very similar to
+a LARGE one that is slightly less similar (measured on the first hand-built
+graph while building: a 10-pair hypothesis at Q 0.412 beat a 6-pair one at
+Q 0.433, so Q alone would have picked the 6).  The choice is therefore: among
+the hypotheses that pass the support floor, the larger mapping; Q breaks a tie
+in size, and decides alone when no hypothesis passes the floor.  Ties go to
+the earlier seed set.
+
+### 7.12 THE BEAM'S ORDER, a second fix made while building (7.10 corrected)
+
+The budget (7.6, unchanged) is SHARED by the beam.  Grown smallest seed set
+first, the alternatives spent it before the hypothesis the seed list was built
+for ran: measured on the first hand-built graph, the 13-frame graph matched
+against itself under shuffled ids mapped 6 nodes in the first three hypotheses
+and could not finish the fourth (104 looks of budget for 13 x 13).  The seed
+sets are therefore grown LARGEST FIRST, and the whole seed list is always the
+first hypothesis.  The alternatives are what the remainder of the budget can
+still afford; their cost is reported.
+
+### 7.13 THE BUDGET ON A SMALL FRAME (D2: the frontier must not starve)
+
+7.6 keeps the budget unchanged: 5 % of |FRAME_q| x |FRAME_r|, floored at 8
+looks per node of the smaller frame.  On the hand-built pins (13 x 13) that is
+104 looks, and with D0-D5's growth the whole seed list needs 123: the walk
+stopped at 9 of 13 nodes, i.e. the frontier starved exactly as the user warned
+it would.  A SMALL frame therefore (product <= 1000 pairs, fewer than ~32 nodes
+a side) may examine the whole matrix: the dense matrix there costs less than
+the bookkeeping and the 5 % rule was written for graphs of hundreds of nodes,
+where it still stands unchanged (frames of 111 to 402 nodes: 5 % binds and is
+used at 0.1-8 % of the matrix).  Report the frontier (examined / budget) per
+pair either way.
+
+### 7.14 R(M) COUNTED, not a set union of keys (bug found while building)
+
+7.0 writes R as a union of relation sets.  Keys of relation sets are (min id,
+max id, class), and the query graph and the reference graph number their nodes
+in DIFFERENT spaces (in the pins, the reference is the same graph relabelled
+1000+).  Unioning the two key sets therefore counts every relation twice as
+soon as the numbering differs -- measured: a graph matched against itself
+under shuffled ids scored Q 0.643 instead of 1.0, with R = 40 where 7.0's
+formula gives 20.  R is computed with the counts 7.0 describes: edges with at
+least one end in M, plus edges with at least one end in the image of M, minus
+the edges with both ends mapped.  No constant changes; the identity pin is
+what found it.
+
+### 7.15 THE VETO APPLIES TO SEEDS TOO (D2 read literally)
+
+7.2's admission rule is written for "a proposal reaching an unassigned node";
+a seed is such a proposal (its own class of it, 7.1).  7.1 did not exempt
+seeds from the contradiction veto and 7.2 says "only a pre-registered
+contradiction margin vetoes", so the veto is applied to the seed list as well:
+a seed pair that shares a measured relation whose axis differs by more than
+CONTRADICTION_MARGIN is skipped and the next ranked seed is taken.  Without
+this, D1's topological tokens (which carry no bins) can seed two nodes that
+the measurement itself says are far apart -- measured on the M3-3 pin: all
+eight seeds were the identity (arc 0.06 against arc 0.45, 7 bins), and the
+place-swapped feature was never found.
+
+### 7.16 THE VETO IS ON THE PAIR, not on the proposing relation (7.15 completed)
+
+7.15 applied the contradiction veto to seeds; applying it to seeds only left
+ordinary admissions vetoed per PROPOSING relation, so a node whose attachment
+axis is seven bins away (a contradiction) was admitted because the successor
+gap that proposed it agreed.  Measured on the pin graph built for 7.2: the
+feature at 1.57 rad against 0.0 rad was admitted through its successor edge
+and the contradiction counted but did not refuse.  The veto is therefore one
+rule for the pair: before admission, every relation class the two nodes share
+is compared, and ONE shared axis beyond CONTRADICTION_MARGIN refuses the
+pair.  Slack still ranks; the veto only vetoes.
+
+### 7.17 WHICH RELATIONS THE VETO MAY COMPARE (7.16 corrected)
+
+7.16 compared every relation of one class across the two nodes, which is too
+wide: on the identity pin the two boundary hosts share six attachments at
+arc bins 0, 7, 2, 6, 4 and 4, so "the host against itself" was refused because
+one of its own features sits seven bins from another (measured: the identity
+pin mapped 11 of 13 nodes, 100 and 200 refused).  A relation may only be
+compared with a relation whose far end is its image, or -- when the far ends
+are unknown, as at seed time -- the class must have NO agreeing reading at
+all: the veto holds when every pair of relations in a shared class
+contradicts, and also when a pair whose far ends ARE mapped to each other
+contradicts.  A pair that agrees anywhere in a class is not vetoed by the
+measurement; it is ranked by slack, as 7.2 says.  Both the M3-3 seed pin
+(arc 0.06 against 0.45: refused) and the identity pin (accepted in full) are
+what this rule is measured on.
+
+### 7.18 ORDER PROPOSES AFTER MEASUREMENT, not ahead of it (D4, made exact)
+
+7.4 gives the order a proposing role; the serving rank (Amendment 4.1) is
+(supporting pairs; total slack; signature similarity; canonical key).  An
+order proposal has no slack of its own, so recorded as slack 0 it outranked
+every measured proposal: measured on the two-candidate pin, the feature whose
+arc position was one bin off on the measured axis was admitted ahead of the
+candidate in the same bin, because the order proposed it first.  Order is
+weaker evidence than a measurement, so it is a TIER: proposals with a
+measured relation behind them are served first, and an order proposal is
+served when no measured proposal is pending.  Within a tier the 4.1 rank is
+unchanged.  (D4's purpose -- reaching what no measured relation reaches -- is
+what a tier keeps; what it loses is the power to overrule a measurement.)
