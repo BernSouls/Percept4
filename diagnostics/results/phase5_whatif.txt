@@ -1,0 +1,23 @@
+PHASE 5 / B, AFTER THE VERDICT -- what-if, 79 EVAL graphs, front-end digest 1484aec90b48
+DESCRIPTIVE AND POST HOC: computed after the stop rule fired; decides nothing.
+
+largest component over (measured or pretended-measured) structural edges, as a share of FRAME
+  registered definition                          median 0.163   p10 0.104   graphs at 0.25 or more: 11 of 79
+  W1 Orientation flags measured                  median 0.287   p10 0.171   graphs at 0.25 or more: 49 of 79
+  W2 chain-peak flag measured                    median 0.163   p10 0.104   graphs at 0.25 or more: 11 of 79
+  W3 every structural edge measured (ceiling)    median 0.302   p10 0.188   graphs at 0.25 or more: 52 of 79
+
+the largest STRUCTURAL component, by lens type (all graphs): nodes in it / FRAME nodes of the type
+  CONTOUR_PEAK            0 /   8169
+  Orientation          3976 /   4172
+  EndStopped              0 /   2718
+  Contour              1505 /   1509
+  PEAK_CHAIN              0 /   1442
+  ContourFragment        45 /   1324
+  CurveComplex         1088 /   1090
+  RegionShape             0 /   1045
+  Corner                146 /    988
+  IllusoryContour         0 /    125
+  Junction               98 /     98
+  T                      31 /     31
+  Y                       3 /      3

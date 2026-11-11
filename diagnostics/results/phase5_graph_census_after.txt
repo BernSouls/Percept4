@@ -1,5 +1,5 @@
 PHASE 5 step 0 -- graph census, 79 EVAL graphs (read-only)
-front-end digest f2461c926fd2
+front-end digest 1484aec90b48
 
 nodes per graph: median 713 (min 454, max 916);  edges per graph: median 801 (min 444, max 1703)
 

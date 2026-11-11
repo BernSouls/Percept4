@@ -1,0 +1,228 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BernSouls <256335293+BernSouls@users.noreply.github.com>
+Date: Wed, 11 Nov 2026 17:51:31 +0000
+Subject: [STAGE5 A+] three more writers that stated a number nobody measured
+
+No switch.  orchestration/binder.py:
+
+  RADIALITY.alignment   the hub is defined as the intersection of the two
+                        elements' own orientation lines, so "how well each
+                        points at the hub" is 0 by construction.  ABSENT.
+  SPIRALITY.expansion   the hub is defined as the pair's midpoint, so the
+                        two radii are equal and their log ratio is 0 by
+                        construction.  ABSENT.
+  CURVATURE.chord_len,  a segment's anchor is (entity, segment index),
+  CURVATURE.curv_rate   which has no position in the step; the writer fell
+                        back to chord 0.0 and rate 0.0.  ABSENT when a
+                        segment has no position of its own -- on today's
+                        front end that is every CURVATURE edge.
+
+Pins: four more tests in tests_matcher/test_stage5_writer_truth.py.
+---
+ orchestration/binder.py                   |  55 ++++++++---
+ tests_matcher/test_stage5_writer_truth.py | 112 ++++++++++++++++++++++
+ 2 files changed, 154 insertions(+), 13 deletions(-)
+
+diff --git a/orchestration/binder.py b/orchestration/binder.py
+index 25e7694..c5a92e0 100644
+--- a/orchestration/binder.py
++++ b/orchestration/binder.py
+@@ -3702,7 +3702,12 @@ class Binder:
+                 ep = _edge_params(
+                     "EDGE_SPIRALITY",
+                     {"pitch": mean_pitch, "consistency": consistency,
+-                     "chirality": chirality_bin, "expansion": expansion},
++                     # [STAGE 5] A QUANTITY COMPARED WITH ITSELF IS NOT A
++                     # MEASUREMENT.  The hub is DEFINED above as the
++                     # midpoint of the pair, so r_a == r_b and the log
++                     # radius ratio is 0 for every pair of every image.  The
++                     # expansion is ABSENT.
++                     "chirality": chirality_bin, "expansion": None},
+                     sign=1,
+                     confidence=float(clamp(signal, 0.0, 1.0)),
+                 )
+@@ -3827,7 +3832,15 @@ class Binder:
+                 # spoke separation (axial, it folds) in RADIANS.
+                 ep = _edge_params(
+                     "EDGE_RADIALITY",
+-                    {"hub_bearing": hub_bearing, "alignment": mean_dev,
++                    # [STAGE 5] A QUANTITY COMPARED WITH ITSELF IS NOT A
++                    # MEASUREMENT.  The hub is DEFINED above as the
++                    # intersection of the two elements' own orientation
++                    # lines, so each element points at the hub exactly:
++                    # dev_a = dev_b = 0 to rounding (measured: |mean_dev| <=
++                    # 1.4e-14 on every RADIALITY candidate).  Written as a
++                    # measurement it was one more axis on which every
++                    # RADIALITY edge agreed with every other.  It is ABSENT.
++                    {"hub_bearing": hub_bearing, "alignment": None,
+                      "hub_ratio": hub_ratio, "spoke_separation": spoke_angle},
+                     sign=1,
+                     confidence=float(clamp(signal, 0.0, 1.0)),
+@@ -6216,17 +6229,33 @@ class Binder:
+                 # difference over a fixed constant, i.e. not a rate at all.
+                 # Both are measured now: the chord between the two segments'
+                 # own positions, and the turn per unit chord.
+-                chord_px = 0.0
+-                if anchor_positions:
+-                    pi_a = _mean_position(
+-                        _extract_member_anchors(d_i), anchor_positions)
+-                    pi_b = _mean_position(
+-                        _extract_member_anchors(d_j), anchor_positions)
+-                    if pi_a is not None and pi_b is not None:
+-                        chord_px = _pos_dist(pi_a, pi_b)
+-                scale = max(self._step_extraction_scale, 1e-6)
+-                chord_w = chord_px / scale
+-                curv_rate = (abs(turn) / chord_w) if chord_w > 1e-6 else 0.0
++                # [STAGE 5] ...and they were NOT measured, and STILL ARE
++                # NOT.  The positions were looked up through the segments'
++                # MEMBER anchors; a segment has no member roles, so the
++                # lookup found nothing and the chord fell back to 0.0, with
++                # a curvature rate of 0.0 derived from it: every CURVATURE
++                # edge of the 79 ETH-80 graphs carried (chord 0, rate 0),
++                # two measurements nobody made.
++                #
++                # THE STEP HOLDS NO POSITION FOR A SEGMENT.  A segment's
++                # anchor is the pair (entity, segment index), which is not
++                # a key of the position table; the entity's own position is
++                # shared by all of its segments, so it cannot measure a
++                # chord between two of them (one ruler read twice).  The
++                # chord is therefore ABSENT on every CURVATURE edge today,
++                # and the rate -- a turn per unit chord -- with it.  What
++                # changed is that the edge no longer claims a chord of 0.
++                # The branch below measures both once a lens gives a
++                # segment a positioned anchor or positioned members.
++                chord_w: Optional[float] = None
++                curv_rate: Optional[float] = None
++                pi_a, _ext_a = self._footprint(d_i, anchor_positions)
++                pi_b, _ext_b = self._footprint(d_j, anchor_positions)
++                if pi_a is not None and pi_b is not None:
++                    scale = max(self._step_extraction_scale, 1e-6)
++                    chord_w = _pos_dist(pi_a, pi_b) / scale
++                    if chord_w > 1e-6:
++                        curv_rate = abs(turn) / chord_w
+                 ep = _edge_params(
+                     "EDGE_CURVATURE",
+                     {"signed_turn": turn, "chord_len": chord_w,
+diff --git a/tests_matcher/test_stage5_writer_truth.py b/tests_matcher/test_stage5_writer_truth.py
+index 349f653..cb9e4a2 100644
+--- a/tests_matcher/test_stage5_writer_truth.py
++++ b/tests_matcher/test_stage5_writer_truth.py
+@@ -450,3 +450,115 @@ def test_a_closed_and_an_open_chain_do_not_overlap_on_the_closure_axis():
+     assert axis_similarity(open_, open_) == 1.0
+     assert axis_similarity(closed, closed) == 1.0
+     assert axis_similarity(open_, closed) == 0.0
++
++
++# --------------------------------------------------------------------------
++# the same two rules, in three more writers (scope extended: see REPORT.md)
++# --------------------------------------------------------------------------
++
++def _oriented(tag, anchor, theta_bin):
++    """A Contour whose mean orientation is bin `theta_bin` of 24 over pi."""
++    return Detection(
++        k="Contour", source_layer=2, scale=0,
++        sigma=TypedSignature(kind="CANONICAL", class_="TEST", relation="T",
++                             quantized=(float(tag), float(theta_bin)),
++                             population=()),
++        alpha=anchor, z=1.0, t=0, rho=())
++
++
++def _slots(ep):
++    names = [s.name for s in S.EDGE_UNIT_TABLE[ep.class_]]
++    return dict(zip(names, ep.quantized))
++
++
++def test_radiality_alignment_is_absent_because_the_hub_is_defined_by_it():
++    """RULE: a quantity compared with itself is not a measurement.
++
++    The RADIALITY writer defines the hub as the intersection of the two
++    elements' own orientation lines and then asks how well each element
++    points at the hub.  It points at it exactly, by construction: the
++    deviation was 0 (to 1e-14) on every one of the 1,691 RADIALITY edges of
++    the 79 graphs.  The slot is ABSENT; the hub's bearing, its distance
++    ratio and the spoke separation are real measurements and stay.
++    """
++    a = _oriented(1, "p", 5)       # 41.25 deg, through (0, 0)
++    b = _oriented(2, "q", 17)      # 131.25 deg, through (20, 0)
++    pos = {"p": (0.0, 0.0, 0.0), "q": (20.0, 0.0, 0.0)}
++    bd = _Capture()
++    bd._run_radiality((a, b), {a: 1, b: 2}, pos)
++    (cand,) = bd.seen[EdgeType.RADIALITY]
++    got = _slots(cand[4])
++    assert got["alignment"] == UNKNOWN
++    assert all(v != UNKNOWN for k, v in got.items() if k != "alignment")
++
++
++def test_spirality_expansion_is_absent_because_the_hub_is_the_midpoint():
++    """RULE: a quantity compared with itself is not a measurement.
++
++    The SPIRALITY writer puts the hub at the MIDPOINT of the pair, so the
++    two radii are equal and the log radius ratio -- the expansion -- is 0
++    for every pair of every image (939 of 939 edges).  ABSENT.
++    """
++    a = _oriented(1, "p", 5)
++    b = _oriented(2, "q", 5)
++    pos = {"p": (0.0, 0.0, 0.0), "q": (20.0, 0.0, 0.0)}
++    bd = _Capture()
++    bd._run_spirality((a, b), {a: 1, b: 2}, pos)
++    (cand,) = bd.seen[EdgeType.SPIRALITY]
++    got = _slots(cand[4])
++    assert got["expansion"] == UNKNOWN
++    assert all(v != UNKNOWN for k, v in got.items() if k != "expansion")
++
++
++def _segment(tag, anchor, theta_bin, idx, n=2):
++    return Detection(
++        k="Orientation", source_layer=0, scale=0,
++        sigma=TypedSignature(kind="CANONICAL", class_="ORIENTATION_SEGMENT",
++                             relation="SEGMENT",
++                             # slot 2 is the chain bin the writer buckets on
++                             quantized=(float(theta_bin), 1.0, 0.0, float(tag)),
++                             population=()),
++        alpha=anchor, z=1.0, t=0,
++        rho=(("entity", "E", 0, "+"), ("segment", idx, 0, "+"),  # as the lens writes it
++             ("num_segments", n, 0, "+"), ("closed", False, 0, "+")))
++
++
++def test_curvature_chord_is_absent_when_a_segment_has_no_position_of_its_own():
++    """RULE: absence is never a neutral number.
++
++    THE REAL CASE.  A boundary segment's anchor is the pair (entity, segment
++    index), which is not a key of the position table, and a segment has no
++    member roles.  The writer looked the positions up through the members,
++    found nothing, and fell back to chord 0.0 and rate 0.0 -- on all 87
++    CURVATURE edges of the 79 graphs.  Both are now ABSENT on all 87: this
++    removes a fabricated zero, it does not produce a measurement.
++
++    The entity's own position must not be used instead: it is the same for
++    every segment of the entity, so the chord between two of them would be 0
++    again (one ruler read twice).
++    """
++    a = _segment(1, ("E", 0), 2, 0)
++    b = _segment(2, ("E", 1), 10, 1)
++    pos = {"E": (50.0, 50.0, 0.0)}                # the entity is positioned
++    bd = _Capture()
++    bd._run_curvature((a, b), {a: 1, b: 2}, pos)
++    (cand,) = bd.seen[EdgeType.CURVATURE]
++    got = _slots(cand[4])
++    assert got["chord_len"] == UNKNOWN and got["curv_rate"] == UNKNOWN
++    assert got["signed_turn"] != UNKNOWN          # the turn needs no position
++
++
++def test_curvature_chord_is_measured_once_a_segment_has_a_position():
++    """NOT THE CASE ON ANY REAL EDGE TODAY: the branch a future lens would
++    reach by giving a segment a positioned anchor.  Two segments 30 apart
++    (3 wavelengths at R = 10) have a chord of 3 and a rate of |turn| / 3.
++    """
++    a, b = _segment(1, "s0", 2, 0), _segment(2, "s1", 10, 1)
++    pos = {"s0": (0.0, 0.0, 0.0), "s1": (30.0, 0.0, 0.0)}
++    bd = _Capture()
++    bd._run_curvature((a, b), {a: 1, b: 2}, pos)
++    (cand,) = bd.seen[EdgeType.CURVATURE]
++    got = _slots(cand[4])
++    spec = S.edge_slot_spec("EDGE_CURVATURE", "chord_len")
++    assert got["chord_len"] == float(S.quantise(spec, 3.0))
++    assert got["curv_rate"] != UNKNOWN and got["signed_turn"] != UNKNOWN
+-- 
+2.39.5
+

@@ -57,14 +57,14 @@ CONSTITUTIONAL_EDGE_RANGES: Dict[str, Tuple[float, ...]] = {
     "EDGE_JUNCTION_CONTOUR": (8.0, 12.0, 7.0),
     # [Pass 22] CO_MOTION: (mean_speed, dir_theta, speed_diff, dir_diff)
     "EDGE_CO_MOTION": (8.0, 12.0, 8.0, 8.0),
-    "EDGE_CONTOUR_ORIENTATION": (2.0,),
-    "EDGE_JUNCTION_ORIENTATION": (2.0,),
+    "EDGE_CONTOUR_ORIENTATION": (8.0,),
+    "EDGE_JUNCTION_ORIENTATION": (8.0,),
     # [Pass 18 / C4+C6] (rel_dist, polar_angle, log_scale_ratio). The polar
     # slot is 24 bins on a circle, hence range 12.0 under N_HALF; registered
     # in CIRCULAR_EDGE_CYCLE_LENGTHS below.
     "EDGE_CURVE_CONTAINMENT": (8.0, 12.0, 8.0),
     "EDGE_PART_CONTAINMENT": (8.0, 12.0, 8.0),
-    "EDGE_REGION_CONTENT": (2.0,),
+    "EDGE_REGION_CONTENT": (8.0,),
     # [Stage 3] Occlusion: (rank_gap | depth_step, stack_depth | 8 = none, source
     # 0 = T-junction, 1 = depth). Was arity 2 (dz_bin, conf_bin); the depth-DAG
     # path now carries the longest-path rank gap and the weakly-connected stack
@@ -305,17 +305,27 @@ EDGE_SCHEMAS: Dict[str, Tuple[Slot, ...]] = {
         Slot("angle_diff",      "linear",      8.0, "same"),
     ),
     # [A4] THE MEMBERSHIP FLAG IS AN INDEX, NOT A GRADED QUANTITY.  The unit
-    # table declares `containment` a lookup key over two levels (0 / 1), and
-    # the writers only ever store the literal 1.0 (EDGE_INDEX_ONLY).  This
-    # table called it "linear" over 8 bins -- a graded axis with a range the
-    # value can never span.  Both tables now say the same thing: categorical,
-    # two levels.  The slot is NOT an identity (NAP) gate: it cannot differ
-    # between two edges of the class, so there is nothing for a gate to veto.
+    # table declares `containment` a lookup key, and the writers only ever
+    # store the literal 1.0 (EDGE_INDEX_ONLY).  This table called it
+    # "linear" -- a graded axis.  Both tables now name the same KIND of
+    # thing: categorical.  The slot is NOT an identity (NAP) gate: it cannot
+    # differ between two edges of the class, so there is nothing for a gate
+    # to veto.
+    #
+    # THE NUMBER OF LEVELS STILL DIFFERS, ON PURPOSE: 8 here, 2 in the unit
+    # table.  The 8 is what CONSTITUTIONAL_EDGE_RANGES is derived from, and
+    # memory.assembly_readout charges a relation's description length from
+    # that range (`_relation_parameter_widths` -> `shadow_mdl`).  Writing 2
+    # here would change that cost for every relation of these three
+    # classes, and nothing in the export checkout exercises it.  The
+    # mismatch is listed by `edge_table_level_mismatches()` and pinned, so
+    # it cannot grow unnoticed; closing it is a decision for whoever can
+    # run the assembly bars.
     "EDGE_CONTOUR_ORIENTATION": (
-        Slot("containment",     "categorical", 2.0, "same"),
+        Slot("containment",     "categorical", 8.0, "same"),
     ),
     "EDGE_JUNCTION_ORIENTATION": (
-        Slot("containment",     "categorical", 2.0, "same"),
+        Slot("containment",     "categorical", 8.0, "same"),
     ),
     # 3 slots: rel_dist_bin, polar_angle_bin (24-cycle), scale_bin
     "EDGE_CURVE_CONTAINMENT": (
@@ -338,7 +348,7 @@ EDGE_SCHEMAS: Dict[str, Tuple[Slot, ...]] = {
     # EDGE_PART_CONTENT schema is removed rather than left as a second name
     # for the same relation.
     "EDGE_REGION_CONTENT": (
-        Slot("containment",     "categorical", 2.0, "same"),  # [A4] see above
+        Slot("containment",     "categorical", 8.0, "same"),  # [A4] see above
     ),
     # 3 slots: depth (rank_gap|depth_step), stack_depth (|8=none), source (0=T-junction, 1=depth)
     # 4 slots: depth (the LAYER gap), stack_depth (the layer COUNT),
@@ -1693,10 +1703,10 @@ def edge_measured_axes(qp: "EdgeParams", cp: "EdgeParams") -> int:
     # earns f(1) = 2 of edge mass. P.EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS
     # (default False = the historical count) leaves them out.
     # [A4] The two tables now AGREE that all four are categorical indices
-    # (`edge_table_disagreements()` is empty), so this count is the one
-    # reader left that still treats an index as a measurement. The switch
-    # stays OFF as the rollback lever until A4 has been verified in the
-    # full tree; turning it ON is then the whole remaining change.
+    # (`edge_table_disagreements()` is empty). This count STILL treats them
+    # as a measured axis while the switch is off: A4 changed what the
+    # tables say, not what this reader does, and left the switch where it
+    # was.
     key_slots: FrozenSet[int] = frozenset()
     if getattr(P, "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS", False):
         key_slots = _edge_lookup_key_slots(qp) | _edge_lookup_key_slots(cp)
@@ -2070,15 +2080,16 @@ def edge_table_disagreements() -> List[Tuple[str, str, str]]:
 
     The two tables are two descriptions of the same slots: EDGE_SCHEMAS
     carries the domain the similarity reads, EDGE_UNIT_TABLE the unit and
-    quantiser the writers use.  They agree on a slot when
+    quantiser the writers use.  They agree on the KIND of a slot when
 
-      * the slot has the same name at the same index in both,
+      * the slot has the same name at the same index in both, and
       * it is "categorical" in the schema exactly when it is a "lookup_key"
-        in the unit table (an index is an index in both), and
-      * a categorical slot has the same number of levels in both.
+        in the unit table (an index is an index in both).
 
     Returns (class, slot, what differs) triples, sorted; empty when the
     tables agree.  Classes present in only one table are reported too.
+    The NUMBER OF LEVELS of a categorical slot is a separate question:
+    `edge_table_level_mismatches`.
     """
     out: List[Tuple[str, str, str]] = []
     for cls in sorted(set(EDGE_SCHEMAS) | set(EDGE_UNIT_TABLE)):
@@ -2100,9 +2111,29 @@ def edge_table_disagreements() -> List[Tuple[str, str, str]]:
                 out.append((cls, s.tag,
                             f"schema domain {s.domain!r} but unit-table "
                             f"quantiser {u.quantiser!r}"))
-            elif is_cat and float(s.n_bins) != float(u.n_bins):
-                out.append((cls, s.tag,
-                            f"categorical levels {s.n_bins} != {u.n_bins}"))
+    return out
+
+
+def edge_table_level_mismatches() -> List[Tuple[str, str, float, float]]:
+    """[A4] Categorical slots whose two tables declare different numbers of
+    levels: (class, slot, EDGE_SCHEMAS levels, EDGE_UNIT_TABLE levels).
+
+    Not asserted by `verify_schema_consistency`: the schema's level count
+    feeds CONSTITUTIONAL_EDGE_RANGES, which memory.assembly_readout reads
+    as a description-length range, so bringing a slot into line here is a
+    behaviour change there.  The list is pinned instead
+    (tests_matcher/test_stage5_writer_truth.py).
+    """
+    out: List[Tuple[str, str, float, float]] = []
+    for cls in sorted(set(EDGE_SCHEMAS) & set(EDGE_UNIT_TABLE)):
+        slots, specs = EDGE_SCHEMAS[cls], EDGE_UNIT_TABLE[cls]
+        if len(slots) != len(specs):
+            continue
+        for s, u in zip(slots, specs):
+            if (s.tag == u.name and s.domain == "categorical"
+                    and u.quantiser == "lookup_key"
+                    and float(s.n_bins) != float(u.n_bins)):
+                out.append((cls, s.tag, float(s.n_bins), float(u.n_bins)))
     return out
 
 
@@ -2132,7 +2163,9 @@ def verify_schema_consistency() -> None:
             assert c_a in EDGE_FAMILY_COMPATIBILITY[c_b], (
                 f"Asymmetric compatibility: {c_b} in {c_a}, but {c_a} not in {c_b}"
             )
-    # [A4] the two slot tables describe every slot as the same kind of thing
+    # [A4] the two slot tables describe every slot as the same KIND of thing
+    # (the level counts are a separate, pinned list: see
+    # edge_table_level_mismatches)
     _disagree = edge_table_disagreements()
     assert not _disagree, f"EDGE_SCHEMAS / EDGE_UNIT_TABLE disagree: {_disagree}"
 

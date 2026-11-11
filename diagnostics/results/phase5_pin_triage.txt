@@ -1,0 +1,826 @@
+PIN TRIAGE -- every failing assertion of tests_matcher, pin baseline disabled
+soft copies: 668 assertions wrapped; original line numbers reported
+
+====================================================================================================
+defaults   (tree defaults)
+====================================================================================================
+  419 tests collected; 0 with a failing assertion; 0 failing assertions (0 distinct lines)   [pytest: 419 passed in 4.73s]
+
+====================================================================================================
+d3n   EVIDENCE_QUERY_SIDE_TERMS=("node",)
+====================================================================================================
+  419 tests collected; 7 with a failing assertion; 45 failing assertions (11 distinct lines)   [pytest: 419 passed in 4.51s]
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [S] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.9248822057604883 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9248822057604883 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> states the one-sided weighted mean; balanced, with weights on the core only, it is (1.25 s1 + 3b s2) / (3.25 + 3b), as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_balanced_node_term]
+    [S] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.9248822057604883 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9248822057604883 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> states the one-sided weighted mean; balanced, with weights on the core only, it is (1.25 s1 + 3b s2) / (3.25 + 3b), as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_balanced_node_term]
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [S] line 145  x35  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.6551904778013827 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.6551904778013827 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> states the one-sided fraction; the balanced term reads 2 x sum(sims) / (n_q + n_c), as derived on all 40 random pairs  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+  test_d1_graded_node_credit.py :: test_an_unmatched_core_node_earns_nothing_under_either_rule
+    [S] line 170  x1   assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.6666666664444444 == 0.5 ± 1.0e-06 | Obtained: 0.6666666664444444 | Expected: 0.5 ± 1.0e-06
+         -> states the one-sided 1/2; the balanced term reads (1 + 1) / (1 + 2) = 2/3, as derived; core_node_coverage stays 1/2  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_balanced_node_term]
+    [S] line 172  x1   assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.6666666664444444 == 0.5 ± 1.0e-06 | Obtained: 0.6666666664444444 | Expected: 0.5 ± 1.0e-06
+         -> states the one-sided 1/2; the balanced term reads (1 + 1) / (1 + 2) = 2/3, as derived; core_node_coverage stays 1/2  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_balanced_node_term]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+  test_nullcal_node_coverage.py :: test_chance_is_the_mean_of_the_candidate_matrix
+    [S] line 97   x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.28575154169816747 == 0.2381262847960982 ± 1.0e-09 | Obtained: 0.28575154169816747 | Expected: 0.2381262847960982 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+    [S] line 99   x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.7311449480707536 == 0.6092874568474854 ± 1.0e-09 | Obtained: 0.7311449480707536 | Expected: 0.6092874568474854 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+    [S] line 100  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.6235832940144317 == 0.4871688898626101 ± 1.0e-09 | Obtained: 0.6235832940144317 | Expected: 0.4871688898626101 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+  test_nullcal_node_coverage.py :: test_chance_carries_the_lens_boost
+    [S] line 121  x1   assert tr["node_coverage_chance"] == pytest.approx( (tex_sum + boost * con_sum) / c_total, abs=1e-9)
+         assert 0.43778296259019644 == 0.5198672681442619 ± 1.0e-09 | Obtained: 0.43778296259019644 | Expected: 0.5198672681442619 ± 1.0e-09
+         -> states the one-sided chance level; balanced it is 2 (tex + b con) / (q_total + c_total), as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+  test_nullcal_node_coverage.py :: test_chance_carries_the_node_weights
+    [S] line 144  x1   assert tr["node_coverage_chance"] == pytest.approx(c_ch / 2.5, abs=1e-9)
+         assert 0.5526105645551425 == 0.5556530856183615 ± 1.0e-09 | Obtained: 0.5526105645551425 | Expected: 0.5556530856183615 ± 1.0e-09
+         -> states the one-sided chance level; balanced it is (q_ch + c_ch) / (4.0 + 2.5), as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+
+====================================================================================================
+d3   EVIDENCE_QUERY_SIDE_TERMS=("node","relation","absence")
+====================================================================================================
+  419 tests collected; 7 with a failing assertion; 45 failing assertions (11 distinct lines)   [pytest: 419 passed in 4.38s]
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [S] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.9248822057604883 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9248822057604883 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> states the one-sided weighted mean; balanced, with weights on the core only, it is (1.25 s1 + 3b s2) / (3.25 + 3b), as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_balanced_node_term]
+    [S] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.9248822057604883 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9248822057604883 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> states the one-sided weighted mean; balanced, with weights on the core only, it is (1.25 s1 + 3b s2) / (3.25 + 3b), as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_balanced_node_term]
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [S] line 145  x35  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.6551904778013827 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.6551904778013827 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> states the one-sided fraction; the balanced term reads 2 x sum(sims) / (n_q + n_c), as derived on all 40 random pairs  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+  test_d1_graded_node_credit.py :: test_an_unmatched_core_node_earns_nothing_under_either_rule
+    [S] line 170  x1   assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.6666666664444444 == 0.5 ± 1.0e-06 | Obtained: 0.6666666664444444 | Expected: 0.5 ± 1.0e-06
+         -> states the one-sided 1/2; the balanced term reads (1 + 1) / (1 + 2) = 2/3, as derived; core_node_coverage stays 1/2  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_balanced_node_term]
+    [S] line 172  x1   assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.6666666664444444 == 0.5 ± 1.0e-06 | Obtained: 0.6666666664444444 | Expected: 0.5 ± 1.0e-06
+         -> states the one-sided 1/2; the balanced term reads (1 + 1) / (1 + 2) = 2/3, as derived; core_node_coverage stays 1/2  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_balanced_node_term]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+  test_nullcal_node_coverage.py :: test_chance_is_the_mean_of_the_candidate_matrix
+    [S] line 97   x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.28575154169816747 == 0.2381262847960982 ± 1.0e-09 | Obtained: 0.28575154169816747 | Expected: 0.2381262847960982 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+    [S] line 99   x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.7311449480707536 == 0.6092874568474854 ± 1.0e-09 | Obtained: 0.7311449480707536 | Expected: 0.6092874568474854 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+    [S] line 100  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.6235832940144317 == 0.4871688898626101 ± 1.0e-09 | Obtained: 0.6235832940144317 | Expected: 0.4871688898626101 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+  test_nullcal_node_coverage.py :: test_chance_carries_the_lens_boost
+    [S] line 121  x1   assert tr["node_coverage_chance"] == pytest.approx( (tex_sum + boost * con_sum) / c_total, abs=1e-9)
+         assert 0.43778296259019644 == 0.5198672681442619 ± 1.0e-09 | Obtained: 0.43778296259019644 | Expected: 0.5198672681442619 ± 1.0e-09
+         -> states the one-sided chance level; balanced it is 2 (tex + b con) / (q_total + c_total), as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+  test_nullcal_node_coverage.py :: test_chance_carries_the_node_weights
+    [S] line 144  x1   assert tr["node_coverage_chance"] == pytest.approx(c_ch / 2.5, abs=1e-9)
+         assert 0.5526105645551425 == 0.5556530856183615 ± 1.0e-09 | Obtained: 0.5526105645551425 | Expected: 0.5556530856183615 ± 1.0e-09
+         -> states the one-sided chance level; balanced it is (q_ch + c_ch) / (4.0 + 2.5), as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+
+====================================================================================================
+null   EVIDENCE_NODE_NULL_CALIBRATED=True
+====================================================================================================
+  419 tests collected; 14 with a failing assertion; 67 failing assertions (26 distinct lines)   [pytest: 419 passed in 4.44s]
+  test_d1_graded_node_credit.py :: test_credit_is_boost_times_weight_times_similarity
+    [S] line 80   x2   assert tr["node_coverage"] == pytest.approx( _expected_cov(QUERY, core, corr), abs=1e-9)
+         assert 0.9164432304981106 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432304981106 | Expected: 0.9559974818331 ± 1.0e-09
+         -> states the uncalibrated sum(sims)/3; calibrated it is (N - N0)/(1 - N0) with N0 the mean of the 3 x 3 candidate matrix, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+    [S] line 82   x2   assert tr["node_coverage"] == pytest.approx(sum(sims) / 3, abs=1e-9)
+         assert 0.9164432304981106 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432304981106 | Expected: 0.9559974818331 ± 1.0e-09
+         -> states the uncalibrated sum(sims)/3; calibrated it is (N - N0)/(1 - N0) with N0 the mean of the 3 x 3 candidate matrix, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d1_graded_node_credit.py :: test_binary_credit_tied_them_and_the_switch_restores_it
+    [S] line 102  x1   assert tr_near["node_coverage"] == tr_near["node_coverage_binary"]
+         assert 0.0 == 0.9999999996666666
+         -> binary credit calibrates to 0 and the twin is never calibrated: the identity is node_coverage_raw == node_coverage_binary  [pinned: test_trace_binary_twin.py]
+    [S] line 103  x1   assert s_near == s_far == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> binary credit under calibration: N0 = N, score 0, as derived (a count is what a random pairing earns)  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [S] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> one candidate per lens type: calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+    [S] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> one candidate per lens type: calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [S] line 145  x40  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.35895869358808197 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.35895869358808197 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> states the uncalibrated fraction; the calibrated value equals the definition (chance by enumeration) on every random pair  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+  test_d1_graded_node_credit.py :: test_an_unmatched_core_node_earns_nothing_under_either_rule
+    [S] line 170  x1   assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> one candidate per lens type: the only pairing IS the random pairing, so the calibrated term is 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+    [S] line 172  x1   assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> one candidate per lens type: the only pairing IS the random pairing, so the calibrated term is 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d3_query_side_terms.py :: test_empty_setting_is_the_historical_one_sided_score
+    [S] line 68   x1   assert tr["node_coverage"] == tr["core_node_coverage"]
+         assert 0.9999999989521132 == 0.9999999996666666
+         -> states node_coverage == core_node_coverage; calibrated, the identity holds for node_coverage_raw and the score is the calibrated term x R - 0.15 A, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+    [S] line 72   x1   assert score == pytest.approx(want, abs=1e-12)
+         assert 0.9999999989521132 == 0.9999999996666666 ± 1.0e-12 | Obtained: 0.9999999989521132 | Expected: 0.9999999996666666 ± 1.0e-12
+         -> states node_coverage == core_node_coverage; calibrated, the identity holds for node_coverage_raw and the score is the calibrated term x R - 0.15 A, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+  test_d3_query_side_terms.py :: test_node_term_prefers_the_core_that_explains_the_whole_query
+    [S] line 91   x1   assert s_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> states the uncalibrated 6/9; calibrated it is (2/3 - N0)/(1 - N0) with N0 = sum(S)/27, as derived; the whole still beats the fragment  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+    [S] line 95   x1   assert tr["node_coverage"] == pytest.approx(2 / 3, abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> states the uncalibrated 6/9; calibrated it is (2/3 - N0)/(1 - N0) with N0 = sum(S)/27, as derived; the whole still beats the fragment  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+  test_d3_query_side_terms.py :: test_node_term_carries_the_graded_credit
+    [S] line 106  x1   assert tr["node_coverage"] == pytest.approx( 2 * sum(sims) / (2 + 3), abs=1e-9)
+         assert 0.6374254769797993 == 0.7647979854664799 ± 1.0e-09 | Obtained: 0.6374254769797993 | Expected: 0.7647979854664799 ± 1.0e-09
+         -> states the uncalibrated 2 sum(sims)/5; calibrated with N0 = 2 sum(S)/15, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+  test_nullcal_node_coverage.py :: test_off_is_the_uncalibrated_score
+    [S] line 65   x1   assert tr_off["node_null_calibrated"] is False
+         assert True is False
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 66   x1   assert tr_off["node_coverage"] == tr_off["node_coverage_raw"]
+         assert 0.8637621129156853 == 0.9139311848142626
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 67   x1   assert "node_coverage_chance" not in tr_off
+         assert 'node_coverage_chance' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'rel_present': 0, ...}
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 68   x1   assert "c_chance_nm" not in tr_off and "q_chance_nm" not in tr_off
+         assert ('c_chance_nm' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'rel_present': 0, ...})
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 79   x1   assert tr_on["node_coverage_raw"] == tr_off["node_coverage"]
+         assert 0.9139311848142626 == 0.8637621129156853
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 80   x1   assert on < off
+         assert 0.8637621129156853 < 0.8637621129156853
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_a_coverage_any_pairing_reaches_is_worth_nothing
+    [S] line 153  x1   assert off == pytest.approx(_sim(1, 2), abs=1e-6)
+         assert 0.0 == 0.9139311852712282 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.9139311852712282 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_binary_credit_calibrates_to_nothing
+    [S] line 190  x1   assert off == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_a_homogeneous_graph_scores_nothing_against_itself
+    [S] line 202  x1   assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_calibration_keeps_the_balanced_preference_for_the_whole
+    [S] line 250  x1   assert raw_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.5836610536361684 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.5836610536361684 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 254  x1   assert 0.0 < cal_frag < raw_frag
+         assert 0.5836610536361684 < 0.5836610536361684
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+
+====================================================================================================
+d3n_null   EVIDENCE_QUERY_SIDE_TERMS=("node",);EVIDENCE_NODE_NULL_CALIBRATED=True
+====================================================================================================
+  419 tests collected; 17 with a failing assertion; 72 failing assertions (31 distinct lines)   [pytest: 419 passed in 4.55s]
+  test_d1_graded_node_credit.py :: test_credit_is_boost_times_weight_times_similarity
+    [S] line 80   x2   assert tr["node_coverage"] == pytest.approx( _expected_cov(QUERY, core, corr), abs=1e-9)
+         assert 0.9164432307881508 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432307881508 | Expected: 0.9559974818331 ± 1.0e-09
+         -> states the uncalibrated sum(sims)/3; calibrated it is (N - N0)/(1 - N0) with N0 the mean of the 3 x 3 candidate matrix, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+    [S] line 82   x2   assert tr["node_coverage"] == pytest.approx(sum(sims) / 3, abs=1e-9)
+         assert 0.9164432307881508 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432307881508 | Expected: 0.9559974818331 ± 1.0e-09
+         -> states the uncalibrated sum(sims)/3; calibrated it is (N - N0)/(1 - N0) with N0 the mean of the 3 x 3 candidate matrix, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d1_graded_node_credit.py :: test_binary_credit_tied_them_and_the_switch_restores_it
+    [S] line 102  x1   assert tr_near["node_coverage"] == tr_near["node_coverage_binary"]
+         assert 0.0 == 0.9999999998333333
+         -> binary credit calibrates to 0 and the twin is never calibrated: the identity is node_coverage_raw == node_coverage_binary  [pinned: test_trace_binary_twin.py]
+    [S] line 103  x1   assert s_near == s_far == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> binary credit under calibration: N0 = N, score 0, as derived (a count is what a random pairing earns)  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [S] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> one candidate per lens type: calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+    [S] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> one candidate per lens type: calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [S] line 145  x40  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.45373826765179187 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.45373826765179187 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> states the uncalibrated fraction; the calibrated value equals the definition (chance by enumeration) on every random pair  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+  test_d1_graded_node_credit.py :: test_an_unmatched_core_node_earns_nothing_under_either_rule
+    [S] line 170  x1   assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> one candidate per lens type: the only pairing IS the random pairing, so the calibrated term is 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+    [S] line 172  x1   assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> one candidate per lens type: the only pairing IS the random pairing, so the calibrated term is 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d3_query_side_terms.py :: test_empty_setting_is_the_historical_one_sided_score
+    [S] line 68   x1   assert tr["node_coverage"] == tr["core_node_coverage"]
+         assert 0.9999999989521132 == 0.9999999996666666
+         -> states node_coverage == core_node_coverage; calibrated, the identity holds for node_coverage_raw and the score is the calibrated term x R - 0.15 A, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+    [S] line 72   x1   assert score == pytest.approx(want, abs=1e-12)
+         assert 0.9999999989521132 == 0.9999999996666666 ± 1.0e-12 | Obtained: 0.9999999989521132 | Expected: 0.9999999996666666 ± 1.0e-12
+         -> states node_coverage == core_node_coverage; calibrated, the identity holds for node_coverage_raw and the score is the calibrated term x R - 0.15 A, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+  test_d3_query_side_terms.py :: test_node_term_prefers_the_core_that_explains_the_whole_query
+    [S] line 91   x1   assert s_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> states the uncalibrated 6/9; calibrated it is (2/3 - N0)/(1 - N0) with N0 = sum(S)/27, as derived; the whole still beats the fragment  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+    [S] line 95   x1   assert tr["node_coverage"] == pytest.approx(2 / 3, abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> states the uncalibrated 6/9; calibrated it is (2/3 - N0)/(1 - N0) with N0 = sum(S)/27, as derived; the whole still beats the fragment  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+  test_d3_query_side_terms.py :: test_node_term_carries_the_graded_credit
+    [S] line 106  x1   assert tr["node_coverage"] == pytest.approx( 2 * sum(sims) / (2 + 3), abs=1e-9)
+         assert 0.6374254769797993 == 0.7647979854664799 ± 1.0e-09 | Obtained: 0.6374254769797993 | Expected: 0.7647979854664799 ± 1.0e-09
+         -> states the uncalibrated 2 sum(sims)/5; calibrated with N0 = 2 sum(S)/15, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+  test_nullcal_node_coverage.py :: test_off_is_the_uncalibrated_score
+    [S] line 65   x1   assert tr_off["node_null_calibrated"] is False
+         assert True is False
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 66   x1   assert tr_off["node_coverage"] == tr_off["node_coverage_raw"]
+         assert 0.6188632467499043 == 0.7311449480707536
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 67   x1   assert "node_coverage_chance" not in tr_off
+         assert 'node_coverage_chance' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'rel_present': 0, ...}
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 68   x1   assert "c_chance_nm" not in tr_off and "q_chance_nm" not in tr_off
+         assert ('c_chance_nm' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'rel_present': 0, ...})
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 79   x1   assert tr_on["node_coverage_raw"] == tr_off["node_coverage"]
+         assert 0.7311449480707536 == 0.6188632467499043
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 80   x1   assert on < off
+         assert 0.6188632467499043 < 0.6188632467499043
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_chance_is_the_mean_of_the_candidate_matrix
+    [S] line 97   x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.28575154169816747 == 0.2381262847960982 ± 1.0e-09 | Obtained: 0.28575154169816747 | Expected: 0.2381262847960982 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+    [S] line 99   x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.7311449480707536 == 0.6092874568474854 ± 1.0e-09 | Obtained: 0.7311449480707536 | Expected: 0.6092874568474854 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+    [S] line 100  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.6235832940144317 == 0.4871688898626101 ± 1.0e-09 | Obtained: 0.6235832940144317 | Expected: 0.4871688898626101 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+  test_nullcal_node_coverage.py :: test_chance_carries_the_lens_boost
+    [S] line 121  x1   assert tr["node_coverage_chance"] == pytest.approx( (tex_sum + boost * con_sum) / c_total, abs=1e-9)
+         assert 0.43778296259019644 == 0.5198672681442619 ± 1.0e-09 | Obtained: 0.43778296259019644 | Expected: 0.5198672681442619 ± 1.0e-09
+         -> states the one-sided chance level; balanced it is 2 (tex + b con) / (q_total + c_total), as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+  test_nullcal_node_coverage.py :: test_chance_carries_the_node_weights
+    [S] line 144  x1   assert tr["node_coverage_chance"] == pytest.approx(c_ch / 2.5, abs=1e-9)
+         assert 0.5526105645551425 == 0.5556530856183615 ± 1.0e-09 | Obtained: 0.5526105645551425 | Expected: 0.5556530856183615 ± 1.0e-09
+         -> states the one-sided chance level; balanced it is (q_ch + c_ch) / (4.0 + 2.5), as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+  test_nullcal_node_coverage.py :: test_a_coverage_any_pairing_reaches_is_worth_nothing
+    [S] line 153  x1   assert off == pytest.approx(_sim(1, 2), abs=1e-6)
+         assert 0.0 == 0.9139311852712282 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.9139311852712282 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_binary_credit_calibrates_to_nothing
+    [S] line 190  x1   assert off == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_a_homogeneous_graph_scores_nothing_against_itself
+    [S] line 202  x1   assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_calibration_keeps_the_balanced_preference_for_the_whole
+    [S] line 250  x1   assert raw_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.5836610536361684 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.5836610536361684 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 254  x1   assert 0.0 < cal_frag < raw_frag
+         assert 0.5836610536361684 < 0.5836610536361684
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+
+====================================================================================================
+d3_null   EVIDENCE_QUERY_SIDE_TERMS=("node","relation","absence");EVIDENCE_NODE_NULL_CALIBRATED=True
+====================================================================================================
+  419 tests collected; 17 with a failing assertion; 72 failing assertions (31 distinct lines)   [pytest: 419 passed in 4.62s]
+  test_d1_graded_node_credit.py :: test_credit_is_boost_times_weight_times_similarity
+    [S] line 80   x2   assert tr["node_coverage"] == pytest.approx( _expected_cov(QUERY, core, corr), abs=1e-9)
+         assert 0.9164432307881508 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432307881508 | Expected: 0.9559974818331 ± 1.0e-09
+         -> states the uncalibrated sum(sims)/3; calibrated it is (N - N0)/(1 - N0) with N0 the mean of the 3 x 3 candidate matrix, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+    [S] line 82   x2   assert tr["node_coverage"] == pytest.approx(sum(sims) / 3, abs=1e-9)
+         assert 0.9164432307881508 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432307881508 | Expected: 0.9559974818331 ± 1.0e-09
+         -> states the uncalibrated sum(sims)/3; calibrated it is (N - N0)/(1 - N0) with N0 the mean of the 3 x 3 candidate matrix, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d1_graded_node_credit.py :: test_binary_credit_tied_them_and_the_switch_restores_it
+    [S] line 102  x1   assert tr_near["node_coverage"] == tr_near["node_coverage_binary"]
+         assert 0.0 == 0.9999999998333333
+         -> binary credit calibrates to 0 and the twin is never calibrated: the identity is node_coverage_raw == node_coverage_binary  [pinned: test_trace_binary_twin.py]
+    [S] line 103  x1   assert s_near == s_far == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> binary credit under calibration: N0 = N, score 0, as derived (a count is what a random pairing earns)  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [S] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> one candidate per lens type: calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+    [S] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> one candidate per lens type: calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [S] line 145  x40  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.45373826765179187 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.45373826765179187 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> states the uncalibrated fraction; the calibrated value equals the definition (chance by enumeration) on every random pair  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+  test_d1_graded_node_credit.py :: test_an_unmatched_core_node_earns_nothing_under_either_rule
+    [S] line 170  x1   assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> one candidate per lens type: the only pairing IS the random pairing, so the calibrated term is 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+    [S] line 172  x1   assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> one candidate per lens type: the only pairing IS the random pairing, so the calibrated term is 0, as derived  [pinned: test_switch_interactions.py::test_d1_scenarios_under_the_null]
+  test_d3_query_side_terms.py :: test_empty_setting_is_the_historical_one_sided_score
+    [S] line 68   x1   assert tr["node_coverage"] == tr["core_node_coverage"]
+         assert 0.9999999989521132 == 0.9999999996666666
+         -> states node_coverage == core_node_coverage; calibrated, the identity holds for node_coverage_raw and the score is the calibrated term x R - 0.15 A, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+    [S] line 72   x1   assert score == pytest.approx(want, abs=1e-12)
+         assert 0.9999999989521132 == 0.9999999996666666 ± 1.0e-12 | Obtained: 0.9999999989521132 | Expected: 0.9999999996666666 ± 1.0e-12
+         -> states node_coverage == core_node_coverage; calibrated, the identity holds for node_coverage_raw and the score is the calibrated term x R - 0.15 A, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+  test_d3_query_side_terms.py :: test_node_term_prefers_the_core_that_explains_the_whole_query
+    [S] line 91   x1   assert s_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> states the uncalibrated 6/9; calibrated it is (2/3 - N0)/(1 - N0) with N0 = sum(S)/27, as derived; the whole still beats the fragment  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+    [S] line 95   x1   assert tr["node_coverage"] == pytest.approx(2 / 3, abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> states the uncalibrated 6/9; calibrated it is (2/3 - N0)/(1 - N0) with N0 = sum(S)/27, as derived; the whole still beats the fragment  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+  test_d3_query_side_terms.py :: test_node_term_carries_the_graded_credit
+    [S] line 106  x1   assert tr["node_coverage"] == pytest.approx( 2 * sum(sims) / (2 + 3), abs=1e-9)
+         assert 0.6374254769797993 == 0.7647979854664799 ± 1.0e-09 | Obtained: 0.6374254769797993 | Expected: 0.7647979854664799 ± 1.0e-09
+         -> states the uncalibrated 2 sum(sims)/5; calibrated with N0 = 2 sum(S)/15, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_under_the_null]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+  test_nullcal_node_coverage.py :: test_off_is_the_uncalibrated_score
+    [S] line 65   x1   assert tr_off["node_null_calibrated"] is False
+         assert True is False
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 66   x1   assert tr_off["node_coverage"] == tr_off["node_coverage_raw"]
+         assert 0.6188632467499043 == 0.7311449480707536
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 67   x1   assert "node_coverage_chance" not in tr_off
+         assert 'node_coverage_chance' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'rel_present': 0, ...}
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 68   x1   assert "c_chance_nm" not in tr_off and "q_chance_nm" not in tr_off
+         assert ('c_chance_nm' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'rel_present': 0, ...})
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 79   x1   assert tr_on["node_coverage_raw"] == tr_off["node_coverage"]
+         assert 0.7311449480707536 == 0.6188632467499043
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 80   x1   assert on < off
+         assert 0.6188632467499043 < 0.6188632467499043
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_chance_is_the_mean_of_the_candidate_matrix
+    [S] line 97   x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.28575154169816747 == 0.2381262847960982 ± 1.0e-09 | Obtained: 0.28575154169816747 | Expected: 0.2381262847960982 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+    [S] line 99   x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.7311449480707536 == 0.6092874568474854 ± 1.0e-09 | Obtained: 0.7311449480707536 | Expected: 0.6092874568474854 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+    [S] line 100  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.6235832940144317 == 0.4871688898626101 ± 1.0e-09 | Obtained: 0.6235832940144317 | Expected: 0.4871688898626101 ± 1.0e-09
+         -> states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+  test_nullcal_node_coverage.py :: test_chance_carries_the_lens_boost
+    [S] line 121  x1   assert tr["node_coverage_chance"] == pytest.approx( (tex_sum + boost * con_sum) / c_total, abs=1e-9)
+         assert 0.43778296259019644 == 0.5198672681442619 ± 1.0e-09 | Obtained: 0.43778296259019644 | Expected: 0.5198672681442619 ± 1.0e-09
+         -> states the one-sided chance level; balanced it is 2 (tex + b con) / (q_total + c_total), as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+  test_nullcal_node_coverage.py :: test_chance_carries_the_node_weights
+    [S] line 144  x1   assert tr["node_coverage_chance"] == pytest.approx(c_ch / 2.5, abs=1e-9)
+         assert 0.5526105645551425 == 0.5556530856183615 ± 1.0e-09 | Obtained: 0.5526105645551425 | Expected: 0.5556530856183615 ± 1.0e-09
+         -> states the one-sided chance level; balanced it is (q_ch + c_ch) / (4.0 + 2.5), as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term]
+  test_nullcal_node_coverage.py :: test_a_coverage_any_pairing_reaches_is_worth_nothing
+    [S] line 153  x1   assert off == pytest.approx(_sim(1, 2), abs=1e-6)
+         assert 0.0 == 0.9139311852712282 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.9139311852712282 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_binary_credit_calibrates_to_nothing
+    [S] line 190  x1   assert off == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_a_homogeneous_graph_scores_nothing_against_itself
+    [S] line 202  x1   assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+  test_nullcal_node_coverage.py :: test_calibration_keeps_the_balanced_preference_for_the_whole
+    [S] line 250  x1   assert raw_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.5836610536361684 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.5836610536361684 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+    [S] line 254  x1   assert 0.0 < cal_frag < raw_frag
+         assert 0.5836610536361684 < 0.5836610536361684
+         -> the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated  [pinned: test_nullcal_node_coverage.py::(the same pin under the baseline)]
+
+====================================================================================================
+d1off   EVIDENCE_GRADED_NODE_CREDIT=False
+====================================================================================================
+  419 tests collected; 17 with a failing assertion; 76 failing assertions (35 distinct lines)   [pytest: 419 passed in 4.36s]
+  test_d1_graded_node_credit.py :: test_identical_graphs_keep_a_full_node_term
+    [S] line 67   x1   assert tr["node_credit"] == "graded"
+         assert 'binary' == 'graded'
+         -> asserts the trace label 'graded' with the switch unstated  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+  test_d1_graded_node_credit.py :: test_credit_is_boost_times_weight_times_similarity
+    [S] line 80   x2   assert tr["node_coverage"] == pytest.approx( _expected_cov(QUERY, core, corr), abs=1e-9)
+         assert 0.9999999996666666 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9999999996666666 | Expected: 0.9559974818331 ± 1.0e-09
+         -> the pin's own subject with its switch unstated: binary credit reads full coverage  [pinned: test_d1_graded_node_credit.py::test_binary_credit_tied_them_and_the_switch_restores_it]
+    [S] line 82   x2   assert tr["node_coverage"] == pytest.approx(sum(sims) / 3, abs=1e-9)
+         assert 0.9999999996666666 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9999999996666666 | Expected: 0.9559974818331 ± 1.0e-09
+         -> the pin's own subject with its switch unstated: binary credit reads full coverage  [pinned: test_d1_graded_node_credit.py::test_binary_credit_tied_them_and_the_switch_restores_it]
+  test_d1_graded_node_credit.py :: test_equal_census_the_more_alike_core_now_wins
+    [S] line 90   x1   assert tr_near["node_coverage"] > tr_far["node_coverage"] + 0.05
+         assert 0.9999999996666666 > (0.9999999996666666 + 0.05)
+         -> the pin's own subject with its switch unstated: binary credit ties the two cores  [pinned: test_d1_graded_node_credit.py::test_binary_credit_tied_them_and_the_switch_restores_it]
+    [S] line 91   x1   assert s_near > s_far + 0.05
+         assert 0.9999999996666666 > (0.9999999996666666 + 0.05)
+         -> the pin's own subject with its switch unstated: binary credit ties the two cores  [pinned: test_d1_graded_node_credit.py::test_binary_credit_tied_them_and_the_switch_restores_it]
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [S] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.9999999996226415 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9999999996226415 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> the pin's own subject with its switch unstated: binary credit  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+    [S] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.9999999996226415 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9999999996226415 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> the pin's own subject with its switch unstated: binary credit  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [S] line 145  x40  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.7142857141836735 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.7142857141836735 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> the pin's own subject with its switch unstated: binary coverage  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+  test_d3_query_side_terms.py :: test_node_term_carries_the_graded_credit
+    [S] line 106  x1   assert tr["node_coverage"] == pytest.approx( 2 * sum(sims) / (2 + 3), abs=1e-9)
+         assert 0.79999999984 == 0.7647979854664799 ± 1.0e-09 | Obtained: 0.79999999984 | Expected: 0.7647979854664799 ± 1.0e-09
+         -> binary credit: (2 + 2) / (2 + 3) = 0.8, as derived  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+  test_nullcal_node_coverage.py :: test_chance_is_the_mean_of_the_candidate_matrix
+    [S] line 94   x1   assert tr["c_chance_nm"] == pytest.approx(total / 3.0, abs=1e-12)
+         assert 2.0 == 0.7143788543882946 ± 1.0e-12 | Obtained: 2.0 | Expected: 0.7143788543882946 ± 1.0e-12
+         -> binary credit: chance masses 6/3 = 2, N = N0 = 2/3, calibrated 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 95   x1   assert tr["q_chance_nm"] == pytest.approx(total / 3.0, abs=1e-12)
+         assert 2.0 == 0.7143788543882946 ± 1.0e-12 | Obtained: 2.0 | Expected: 0.7143788543882946 ± 1.0e-12
+         -> binary credit: chance masses 6/3 = 2, N = N0 = 2/3, calibrated 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 97   x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.6666666664444444 == 0.2381262847960982 ± 1.0e-09 | Obtained: 0.6666666664444444 | Expected: 0.2381262847960982 ± 1.0e-09
+         -> binary credit: chance masses 6/3 = 2, N = N0 = 2/3, calibrated 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 99   x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.6666666664444444 == 0.6092874568474854 ± 1.0e-09 | Obtained: 0.6666666664444444 | Expected: 0.6092874568474854 ± 1.0e-09
+         -> binary credit: chance masses 6/3 = 2, N = N0 = 2/3, calibrated 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 100  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.0 == 0.4871688898626101 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.4871688898626101 ± 1.0e-09
+         -> binary credit: chance masses 6/3 = 2, N = N0 = 2/3, calibrated 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 102  x1   assert 0.0 < tr["node_coverage"] < tr["node_coverage_raw"]
+         assert 0.0 < 0.0
+         -> binary credit: chance masses 6/3 = 2, N = N0 = 2/3, calibrated 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+  test_nullcal_node_coverage.py :: test_chance_carries_the_lens_boost
+    [S] line 119  x1   assert tr["c_chance_nm"] == pytest.approx(tex_sum + boost * con_sum, abs=1e-12)
+         assert 3.2 == 1.663575258061638 ± 1.0e-12 | Obtained: 3.2 | Expected: 1.663575258061638 ± 1.0e-12
+         -> binary credit: the chance mass is the count, 2 + b, and N0 = 1, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 121  x1   assert tr["node_coverage_chance"] == pytest.approx( (tex_sum + boost * con_sum) / c_total, abs=1e-9)
+         assert 0.9999999996875 == 0.5198672681442619 ± 1.0e-09 | Obtained: 0.9999999996875 | Expected: 0.5198672681442619 ± 1.0e-09
+         -> binary credit: the chance mass is the count, 2 + b, and N0 = 1, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+  test_nullcal_node_coverage.py :: test_chance_carries_the_node_weights
+    [S] line 142  x1   assert tr["c_chance_nm"] == pytest.approx(c_ch, abs=1e-12)
+         assert 2.5 == 1.3891327140459038 ± 1.0e-12 | Obtained: 2.5 | Expected: 1.3891327140459038 ± 1.0e-12
+         -> binary credit: chance masses 2.5 and 4.0 (the weights), N0 = 1, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 143  x1   assert tr["q_chance_nm"] == pytest.approx(q_ch, abs=1e-12)
+         assert 4.0 == 2.2028359561151327 ± 1.0e-12 | Obtained: 4.0 | Expected: 2.2028359561151327 ± 1.0e-12
+         -> binary credit: chance masses 2.5 and 4.0 (the weights), N0 = 1, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 144  x1   assert tr["node_coverage_chance"] == pytest.approx(c_ch / 2.5, abs=1e-9)
+         assert 0.9999999996 == 0.5556530856183615 ± 1.0e-09 | Obtained: 0.9999999996 | Expected: 0.5556530856183615 ± 1.0e-09
+         -> binary credit: chance masses 2.5 and 4.0 (the weights), N0 = 1, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+  test_nullcal_node_coverage.py :: test_a_coverage_any_pairing_reaches_is_worth_nothing
+    [S] line 153  x1   assert off == pytest.approx(_sim(1, 2), abs=1e-6)
+         assert 0.9999999996666666 == 0.9139311852712282 ± 1.0e-06 | Obtained: 0.9999999996666666 | Expected: 0.9139311852712282 ± 1.0e-06
+         -> binary credit: the uncalibrated score is 1.0, not the similarity  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+  test_nullcal_node_coverage.py :: test_a_specific_correspondence_keeps_its_credit
+    [S] line 167  x1   assert 0.3 < tr["node_coverage_chance"] < 0.5
+         assert 0.9999999996666666 < 0.5
+         -> binary credit: N0 = 1, calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 168  x1   assert tr["node_coverage"] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> binary credit: N0 = 1, calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 169  x1   assert score == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> binary credit: N0 = 1, calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+  test_nullcal_node_coverage.py :: test_between_the_two_the_value_is_the_excess_over_chance
+    [S] line 179  x1   assert tr["node_coverage"] == pytest.approx((n - n0) / (1.0 - n0), abs=1e-9)
+         assert 0.0 == 0.8184246250715185 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.8184246250715185 ± 1.0e-09
+         -> binary credit: N0 = N, 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 181  x1   assert score == pytest.approx((n - n0) / (1.0 - n0), abs=1e-6)
+         assert 0.0 == 0.8184246250715185 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.8184246250715185 ± 1.0e-06
+         -> binary credit: N0 = N, 0, as derived  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+  test_nullcal_node_coverage.py :: test_a_homogeneous_graph_scores_nothing_against_itself
+    [S] line 209  x1   assert _ev(q2, q2)[0] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> binary credit under calibration: a self-match of DISTINGUISHABLE nodes is 0 too -- the calibration presupposes graded credit  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+  test_nullcal_node_coverage.py :: test_balanced_node_term_is_calibrated_over_both_sides
+    [S] line 223  x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.79999999984 == 0.2945968878252688 ± 1.0e-09 | Obtained: 0.79999999984 | Expected: 0.2945968878252688 ± 1.0e-09
+         -> binary credit, balanced: N = N0 = 4/5, calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+    [S] line 224  x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.79999999984 == 0.7311449482169825 ± 1.0e-09 | Obtained: 0.79999999984 | Expected: 0.7311449482169825 ± 1.0e-09
+         -> binary credit, balanced: N = N0 = 4/5, calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+    [S] line 225  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.0 == 0.618863246925368 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.618863246925368 ± 1.0e-09
+         -> binary credit, balanced: N = N0 = 4/5, calibrated term 0, as derived  [pinned: test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting]
+  test_nullcal_node_coverage.py :: test_calibrated_balanced_score_is_symmetric
+    [G] line 238  x1   assert 0.0 < s_qc < 1.0
+         assert 0.0 < 0.0
+         -> guard 0 < score: the score is 0 here (binary credit calibrates to nothing / the topology edge is unmatched); the symmetry assertions hold  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+  test_nullcal_node_coverage.py :: test_calibration_keeps_the_balanced_preference_for_the_whole
+    [S] line 253  x1   assert cal_whole == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> binary credit: fragment and whole both calibrate to 0 -- the preference needs graded credit  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 254  x1   assert 0.0 < cal_frag < raw_frag
+         assert 0.0 < 0.0
+         -> binary credit: fragment and whole both calibrate to 0 -- the preference needs graded credit  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+    [S] line 255  x1   assert cal_whole > cal_frag
+         assert 0.0 > 0.0
+         -> binary credit: fragment and whole both calibrate to 0 -- the preference needs graded credit  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+
+====================================================================================================
+f6off   EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=False
+====================================================================================================
+  419 tests collected; 9 with a failing assertion; 20 failing assertions (17 distinct lines)   [pytest: 1 failed, 418 passed in 4.40s]
+  test_d3_query_side_terms.py :: test_empty_setting_is_the_historical_one_sided_score
+    [S] line 73   x1   assert score == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_without_the_structural_match]
+  test_d3_query_side_terms.py :: test_relation_term_counts_a_query_relation_the_core_lacks
+    [S] line 117  x1   assert _ev(q, c)[0] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_without_the_structural_match]
+    [S] line 122  x1   assert tr["matched_rel_sim_sum"] == 1.0
+         assert 0.0 == 1.0
+         -> the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_without_the_structural_match]
+    [S] line 124  x1   assert tr["q_matched_rel_sim_sum"] == 1.0
+         assert 0.0 == 1.0
+         -> the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_without_the_structural_match]
+    [S] line 125  x1   assert tr["relational_consistency"] == pytest.approx(2 / 3)
+         assert 0.0 == 0.6666666666666666 ± 6.7e-07 | Obtained: 0.0 | Expected: 0.6666666666666666 ± 6.7e-07
+         -> the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_without_the_structural_match]
+    [S] line 126  x1   assert score == pytest.approx(2 / 3, abs=1e-6)
+         assert 0.0 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_without_the_structural_match]
+  test_d3_query_side_terms.py :: test_absence_term_counts_a_query_edge_the_map_cannot_reach
+    [S] line 142  x1   assert s0 == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_without_the_structural_match]
+    [S] line 149  x1   assert s1 == pytest.approx(1.0 - 0.15 / 3, abs=1e-6)
+         assert 0.0 == 0.95 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.95 ± 1.0e-06
+         -> the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_without_the_structural_match]
+  test_d3_query_side_terms.py :: test_mirror_loop_in_the_core_direction_is_the_matchers_own_loop
+    [G] line 191  x1   assert 2.0 < sim_sum < 3.0
+         assert 2.0 < 1.6411803884299547
+         -> non-degeneracy guard (2 < sim sum < 3; it is 1.64 without the topology match); the mirror identity itself holds  [pinned: test_switch_interactions.py::test_d3_scenarios_without_the_structural_match]
+  test_d3_query_side_terms.py :: test_identical_graphs_score_one_under_every_setting
+    [S] line 225  x4   assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6), terms
+         assert 0.59999999988 == 1.0 ± 1.0e-06 | Obtained: 0.59999999988 | Expected: 1.0 ± 1.0e-06
+         -> 5 edges, 3 parameterised: without F6 the graph scores 3/5 against itself, as derived  [pinned: test_switch_interactions.py::test_d3_scenarios_without_the_structural_match]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+  test_f6_unparameterised_edge_match.py :: test_same_predicate_without_params_is_a_structural_match
+    [S] line 40   x1   assert polymorphic_edge_similarity(None, None, edge_types=(T, T)) == 1.0
+         assert 0.0 == 1.0
+         -> the F6 pin's own subject with its switch unstated: the historical strict 0.0  [pinned: test_f6_unparameterised_edge_match.py::test_the_switch_restores_the_historical_strict_zero]
+    [S] line 41   x1   assert polymorphic_edge_similarity(None, None, edge_types=(D, D)) == 1.0
+         assert 0.0 == 1.0
+         -> the F6 pin's own subject with its switch unstated: the historical strict 0.0  [pinned: test_f6_unparameterised_edge_match.py::test_the_switch_restores_the_historical_strict_zero]
+  test_f6_unparameterised_edge_match.py :: test_matcher_credits_a_topology_edge_present_on_both_sides
+    [S] line 109  x1   assert tr["matched_rel_sim_sum"] == 1.0
+         assert 0.0 == 1.0
+         -> the F6 pin's own subject with its switch unstated: the historical strict 0.0  [pinned: test_f6_unparameterised_edge_match.py::test_matcher_gave_that_edge_nothing_before_the_fix]
+    [S] line 110  x1   assert tr["relational_consistency"] == 1.0
+         assert 0.0 == 1.0
+         -> the F6 pin's own subject with its switch unstated: the historical strict 0.0  [pinned: test_f6_unparameterised_edge_match.py::test_matcher_gave_that_edge_nothing_before_the_fix]
+    [!!] line 137  x1   <raised, soft copy line>
+         KeyError('coverage_axes')
+         -> raised after a soft failure
+  test_nullcal_node_coverage.py :: test_calibrated_balanced_score_is_symmetric
+    [G] line 238  x1   assert 0.0 < s_qc < 1.0
+         assert 0.0 < 0.0
+         -> guard 0 < score: the score is 0 here (binary credit calibrates to nothing / the topology edge is unmatched); the symmetry assertions hold  [pinned: test_switch_interactions.py::test_null_scenarios_under_binary_credit]
+
+====================================================================================================
+p4off   EDGE_UNMEASURED_IS_NOT_EVIDENCE=False
+====================================================================================================
+  419 tests collected; 7 with a failing assertion; 12 failing assertions (12 distinct lines)   [pytest: 419 passed in 4.76s]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...': False, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_two_all_unknown_tuples_are_not_evidence
+    [S] line 50   x1   assert sim(co(U, U), co(U, U)) == 0.0
+         assert 0.2 == 0.0
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_tuples_measured_on_different_axes_are_not_a_perfect_match
+    [S] line 58   x1   assert sim(a, b) == 0.0
+         assert 1.0 == 0.0
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+    [S] line 59   x1   assert sim(b, a) == 0.0
+         assert 1.0 == 0.0
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_one_side_all_unknown_is_not_evidence
+    [S] line 65   x1   assert sim(co(U, U), co(3.0, 5.0)) == 0.0
+         assert 1.0 == 0.0
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+    [S] line 66   x1   assert sim(co(3.0, 5.0), co(U, U)) == 0.0
+         assert 1.0 == 0.0
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_cross_schema_with_no_measured_shared_axis_is_not_evidence
+    [S] line 104  x1   assert polymorphic_edge_similarity(a, b) == 0.0
+         assert 0.45 == 0.0
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+    [S] line 105  x1   assert polymorphic_edge_similarity(b, a) == 0.0
+         assert 0.45 == 0.0
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_cross_schema_mean_runs_over_the_measured_shared_axes
+    [S] line 121  x1   assert 0.0 < honest < floor
+         assert 0.4779863919318107 < 0.4779863919318107
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+    [S] line 124  x1   assert honest / same == pytest.approx((floor / same_floor) ** 2, rel=1e-9)
+         assert 0.5310959910353452 == 0.2820629516938155 ± 2.8e-10 | Obtained: 0.5310959910353452 | Expected: 0.2820629516938155 ± 2.8e-10
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_matcher_gives_an_unmeasured_edge_pair_no_similarity
+    [S] line 153  x1   assert tr["matched_rel_sim_sum"] == 0.0
+         assert 0.2 == 0.0
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+    [S] line 154  x1   assert score == 0.0
+         assert 0.1999999999 == 0.0
+         -> the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)  [pinned: test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)]
+
+====================================================================================================
+mxoff   EDGE_REVERSE_FLIPS_MIXTURE=False
+====================================================================================================
+  419 tests collected; 1 with a failing assertion; 1 failing assertions (1 distinct lines)   [pytest: 419 passed in 4.59s]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+
+====================================================================================================
+maoff   MATCH_ASSIGNMENT_EXACT=False
+====================================================================================================
+  419 tests collected; 1 with a failing assertion; 1 failing assertions (1 distinct lines)   [pytest: 419 passed in 4.75s]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+
+====================================================================================================
+bloff   MATCH_SIGNATURE_MATRIX_BLOCKS=False
+====================================================================================================
+  419 tests collected; 1 with a failing assertion; 1 failing assertions (1 distinct lines)   [pytest: 419 passed in 5.00s]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+
+====================================================================================================
+caon   EVIDENCE_RELATION_COUNT_APART=True
+====================================================================================================
+  419 tests collected; 2 with a failing assertion; 2 failing assertions (2 distinct lines)   [pytest: 419 passed in 5.01s]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_matcher_gives_an_unmeasured_edge_pair_no_similarity
+    [S] line 158  x1   assert score == pytest.approx(0.2, abs=1e-6)
+         assert 0.9999999995 == 0.2 ± 1.0e-06 | Obtained: 0.9999999995 | Expected: 0.2 ± 1.0e-06
+         -> states the mean's value under the Phase-4 floors: an all-UNKNOWN pair reads 0.2. With the count kept apart the same pair is one present relation with nothing measured: presence 1, physics 1 (vacuous), term 1.0  [pinned: test_p4b_count_apart.py::test_with_the_floors_restored_an_unmeasured_pair_is_a_full_count]
+
+====================================================================================================
+lkon   EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=True
+====================================================================================================
+  419 tests collected; 1 with a failing assertion; 1 failing assertions (1 distinct lines)   [pytest: 419 passed in 4.54s]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+
+====================================================================================================
+broff   MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=False
+====================================================================================================
+  419 tests collected; 1 with a failing assertion; 1 failing assertions (1 distinct lines)   [pytest: 419 passed in 4.42s]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+
+====================================================================================================
+apon   MATCH_GLOBAL_ANCHOR_PRIOR=True
+====================================================================================================
+  419 tests collected; 1 with a failing assertion; 1 failing assertions (1 distinct lines)   [pytest: 419 passed in 4.60s]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+
+====================================================================================================
+capon   EDGE_SPECIFICITY_CAP_SAME_SCHEMA=True
+====================================================================================================
+  419 tests collected; 13 with a failing assertion; 24 failing assertions (17 distinct lines)   [pytest: 419 passed in 4.64s]
+  test_d3_only_edges_branch.py :: test_only_the_node_term_acts
+    [G] line 80   x1   assert s_node < s_one - 0.05
+         assert 0.3250695265277138 < (0.36570321729288596 - 0.05)
+         -> guard on the pin's own scenario (a margin of 0.05 between two scores): under the dark cap every generic edge of the scenario reads its specificity, both scores fall and the margin with them; the assertions on which term acts hold  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+  test_d3_query_side_terms.py :: test_mirror_loop_in_the_core_direction_is_the_matchers_own_loop
+    [G] line 191  x1   assert 2.0 < sim_sum < 3.0
+         assert 2.0 < 1.462812869537247
+         -> guard on the pin's own scenario (the similarity sum lies between 2 and 3): the scenario's CO_LOCATED matches read 0.282 under the dark cap; the loop identity itself holds  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+  test_d3_query_side_terms.py :: test_identical_graphs_score_one_under_every_setting
+    [S] line 225  x4   assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6), terms
+         assert 0.56919999988616 == 1.0 ± 1.0e-06 | Obtained: 0.56919999988616 | Expected: 1.0 ± 1.0e-06
+         -> states the uncapped matcher: under the dark cap a graph of generic edges does not score 1.0 against itself, because the relational term is a mean similarity and each generic edge reads its specificity  [pinned: test_specificity_cap.py::test_under_the_cap_a_graph_no_longer_scores_one_against_itself]
+  test_declared_defaults.py :: test_declared_defaults
+    [X] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> the one test meant to redden when a declared default differs from the pin baseline
+  test_f6_unparameterised_edge_match.py :: test_parameterised_pairs_are_untouched_by_the_switch
+    [S] line 75   x1   assert on[0] == 1.0
+         assert 0.282 == 1.0
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+  test_mixture_reverse_traversal.py :: test_what_the_switch_does_not_touch
+    [S] line 205  x1   assert on[0] == off[0] == pytest.approx(1.0, abs=1e-6), name
+         assert 0.2819999999295 == 1.0 ± 1.0e-06 | Obtained: 0.2819999999295 | Expected: 1.0 ± 1.0e-06
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+    [S] line 207  x2   assert on[2][k] == off[2][k] == 1.0, (name, k)
+         assert 0.282 == 1.0
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_two_all_unknown_tuples_are_not_evidence
+    [S] line 52   x1   assert sim(co(U, U), co(U, U)) == pytest.approx(0.2)
+         assert 0.0564 == 0.2 ± 2.0e-07 | Obtained: 0.0564 | Expected: 0.2 ± 2.0e-07
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor (0.2 x 0.282 = 0.0564: the historical floor, capped)  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_tuples_measured_on_different_axes_are_not_a_perfect_match
+    [S] line 61   x1   assert sim(a, b) == pytest.approx(1.0)
+         assert 0.282 == 1.0 ± 1.0e-06 | Obtained: 0.282 | Expected: 1.0 ± 1.0e-06
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_a_slot_measured_on_both_sides_keeps_the_historical_value
+    [S] line 79   x1   assert on[0] == 1.0 and on[3] == 1.0
+         assert (0.282 == 1.0)
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_matcher_gives_an_unmeasured_edge_pair_no_similarity
+    [S] line 157  x1   assert tr["matched_rel_sim_sum"] == pytest.approx(0.2)
+         assert 0.0564 == 0.2 ± 2.0e-07 | Obtained: 0.0564 | Expected: 0.2 ± 2.0e-07
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor (0.2 x 0.282 = 0.0564)  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+    [S] line 158  x1   assert score == pytest.approx(0.2, abs=1e-6)
+         assert 0.056399999971799994 == 0.2 ± 1.0e-06 | Obtained: 0.056399999971799994 | Expected: 0.2 ± 1.0e-06
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor (0.2 x 0.282 = 0.0564)  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_matcher_still_credits_a_measured_edge_pair
+    [S] line 163  x1   assert tr["matched_rel_sim_sum"] == 1.0
+         assert 0.282 == 1.0
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor  [pinned: test_specificity_cap.py::test_under_the_cap_a_graph_no_longer_scores_one_against_itself]
+    [S] line 165  x1   assert score == pytest.approx(1.0, abs=1e-6)
+         assert 0.281999999859 == 1.0 ± 1.0e-06 | Obtained: 0.281999999859 | Expected: 1.0 ± 1.0e-06
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor  [pinned: test_specificity_cap.py::test_under_the_cap_a_graph_no_longer_scores_one_against_itself]
+  test_p4b_count_apart.py :: test_a_membership_flag_is_a_perfect_match_with_nothing_measured
+    [S] line 99   x1   assert esim(a, b, getattr(EdgeType, cls)) == 1.0
+         assert 0.576 == 1.0
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor (the CONTOUR_ORIENTATION flag: 0.576)  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+  test_switch_interactions.py :: test_d3_scenarios_without_the_structural_match
+    [S] line 466  x4   assert _ev(mixed, mixed)[0] == pytest.approx(3 / 5, abs=1e-6), terms
+         assert 0.16919999996615995 == 0.6 ± 1.0e-06 | Obtained: 0.16919999996615995 | Expected: 0.6 ± 1.0e-06
+         -> the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor (3/5 x 0.282 = 0.1692)  [pinned: test_specificity_cap.py::test_under_the_cap_a_graph_no_longer_scores_one_against_itself]
+    [G] line 475  x1   assert 1.0 < sim_sum < 2.0
+         assert 1.0 < 0.46281286953724715
+         -> guard on the pin's own scenario (the similarity sum lies between 1 and 2): the scenario's CO_LOCATED matches read 0.282 under the dark cap  [pinned: test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges]
+
+====================================================================================================
+SUMMARY   setting: tests with a failure / distinct failing assertions / by class
+  defaults    0 /  0   
+  d3n         7 / 11   S=10  X=1
+  d3          7 / 11   S=10  X=1
+  null       14 / 26   S=25  X=1
+  d3n_null   17 / 31   S=30  X=1
+  d3_null    17 / 31   S=30  X=1
+  d1off      17 / 35   G=1  S=33  X=1
+  f6off       9 / 17   !!=1  G=2  S=13  X=1
+  p4off       7 / 12   S=11  X=1
+  mxoff       1 /  1   X=1
+  maoff       1 /  1   X=1
+  bloff       1 /  1   X=1
+  caon        2 /  2   S=1  X=1
+  lkon        1 /  1   X=1
+  broff       1 /  1   X=1
+  apon        1 /  1   X=1
+  capon      13 / 17   G=3  S=13  X=1
+  unclassified failing assertions: 0
+  classes: S old semantics (the pin states the form its baseline setting gives; the other value is pinned where named)
+           G guard on the pin's own scenario   B implementation bug   X by design   !! raised after a soft failure
+  classification entries that matched no failing assertion: 2
+    [B] test_binary_credit_tied_them_and_the_switch_restores_it lines [102] (d3,d3n): TRACE BUG: node_coverage_binary stayed the one-sided core fraction while node_coverage was balanced (two forms
+    [B] test_graded_coverage_never_exceeds_binary_coverage lines [142] (d3,d3n,d3n_null,d3_null): TRACE BUG: 'graded <= binary' was false because the binary key had another form than the term (10 of 40 random

@@ -1,0 +1,25 @@
+PHASE 5 -- reach of the figground bar into the stage-5 writers (final tree, front-end digest 1484aec90b48)
+
+PYTHONPATH=.:diagnostics:diagnostics/_export_shims python -m pytest tests_figground \
+    --ignore=tests_figground/test_renderer_truth.py -q -p no:cacheprovider -p _stage5_reach_plugin
+
+REACH -- calls into the stage-5 writers, whole session:
+  lenses.chain_lens.ChainLens.step                           36
+  lenses.v4.CurveComplexLens.step                            0
+  orchestration.binder.Binder._containment_geometry          0
+  orchestration.binder.Binder._containment_values            0
+  orchestration.binder.Binder._footprint                     0
+  orchestration.binder.Binder._run_co_located                0
+  orchestration.binder.Binder._run_curvature                 0
+  orchestration.binder.Binder._run_curve_containment         0
+  orchestration.binder.Binder._run_radiality                 0
+  orchestration.binder.Binder._run_spirality                 0
+  orchestration.binder.Binder._size_ratio                    0
+  orchestration.binder.Binder.step                           0
+  _containment_values results: none
+99 passed, 4 xfailed in 144.35s (0:02:24)
+
+The figground bar never runs the binder (Binder.step: 0 calls).  It is evidence
+for the chain lens only (A5).  The binder changes are covered by the matcher
+pins (the writers called on built detections) and by the 79 graphs of the
+ETH-80 harness, and by nothing else in this checkout.

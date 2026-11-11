@@ -1,0 +1,15 @@
+PHASE 5 -- declared defaults before / after the writer fixes, EVAL-75 (in-sample, descriptive)
+
+window = full
+  before: source ec8a7ebce62d  front end c1ea81ae1b6c
+  after:  source 3ecefa5fd226  front end 1484aec90b48
+  hits 37 -> 38 of 75   +1/-0, exact McNemar p = 1.000   answers changed on 2 queries
+  per class (hits): apple (1, 16) -> (1, 16)   car (7, 24) -> (8, 24)   cup (16, 18) -> (16, 18)   horse (13, 17) -> (13, 17)
+  stored per-pair values: 10200 compared, 5970 differ; `score` differs on 270 of 300 pairs; largest difference 54.55 on `q_matched_em`
+
+window = v1
+  before: source ec8a7ebce62d  front end c1ea81ae1b6c
+  after:  source 3ecefa5fd226  front end 1484aec90b48
+  hits 39 -> 39 of 75   +0/-0, exact McNemar p = 1.000   answers changed on 0 queries
+  per class (hits): apple (2, 16) -> (2, 16)   car (8, 24) -> (8, 24)   cup (15, 18) -> (15, 18)   horse (14, 17) -> (14, 17)
+  stored per-pair values: 10200 compared, 0 differ; `score` differs on 0 of 300 pairs; largest difference 0 on ``

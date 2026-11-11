@@ -20,7 +20,6 @@ import numpy as np
 import pytest
 
 import core.schema as S
-import parameters as P
 from core.schema import UNKNOWN
 from core.types import Detection, EdgeType, TypedSignature
 from orchestration.binder import Binder
@@ -110,7 +109,7 @@ def test_a_whole_is_located_at_its_footprint_centroid_not_at_its_first_member():
     assert _values(flipped, 12, MEMBERS, POS) == vb
 
 
-def test_a_whole_with_one_member_has_no_internal_geometry():
+def test_a_whole_with_one_member_has_no_internal_geometry(params):
     """RULE: a quantity compared with itself is not a measurement.
 
     A whole whose only member is M has M's footprint: separation 0 and size
@@ -118,6 +117,9 @@ def test_a_whole_with_one_member_has_no_internal_geometry():
     CurveComplex on the single-step path (1,090 of 1,090 containment edges
     of the 79 graphs), and written as measurements the two zeros made every
     such edge agree with every other on "2 measured axes".  They are ABSENT.
+
+    This rule was added AFTER the pre-registration, which expected only the
+    bearing to be absent here (REPORT.md, stage 5, "Departures").
     """
     solo = _whole(9, [(11, A)])
     v = _values(solo, 11, [(11, A)], POS)
@@ -128,6 +130,10 @@ def test_a_whole_with_one_member_has_no_internal_geometry():
     # no information: nothing measured on both sides, so nothing to agree on
     assert S.edge_measured_axes(ep, ep) == 0
     assert S.edge_graded_axes(ep, ep) == 0
+    # what a reader makes of "nothing measured" is Phase 4's subject, stated
+    # here at its declared value (off, the pair reads the historical floor:
+    # test_p4_unmeasured_edge_is_not_evidence.py)
+    params(EDGE_UNMEASURED_IS_NOT_EVIDENCE=True)
     assert ep.similarity(ep) == 0.0
 
     # what the same edge used to say, and what it earned for saying it
@@ -164,19 +170,24 @@ def test_the_bearing_of_a_zero_separation_is_absent():
 def test_the_size_ratio_of_a_part_is_the_ratio_of_the_two_footprint_extents():
     """RULE: a size ratio needs two independently measured sizes.
 
-    No lens on the region path declares a size (`Detection.scale` is 0 on
-    every detection), so the ratio was never measured.  A whole and its
-    member do have sizes the step can measure with one ruler: the extent
+    The lenses that emit wholes and members declare no size (they write
+    `Detection.scale` = 0), so the ratio was never measured.  A whole and
+    its member do have sizes the step can measure with one ruler: the extent
     (half-diameter) of each footprint.  Whole: anchors span 0..100 in x and
     -5..5 in y, diameter |(0,0)-(100,+-5)| = sqrt(10025).  A: diameter 40.
     B: diameter 10.
+
+    NOT EXERCISED ON ETH-80: every CurveComplex of the 79 graphs has one
+    member, so this branch runs on no real edge there (see the next-but-one
+    pin and REPORT.md, stage 5).  It is pinned on built geometry only.
     """
     whole_extent = 0.5 * math.hypot(100.0, 5.0)
     va = _values(WHOLE, 11, MEMBERS, POS)
     vb = _values(WHOLE, 12, MEMBERS, POS)
     assert va["scale_ratio"] == pytest.approx(math.log2(20.0 / whole_extent))
     assert vb["scale_ratio"] == pytest.approx(math.log2(5.0 / whole_extent))
-    # a member is never larger than its whole: half-diameter is monotone
+    # a member whose anchors are all among its whole's is never larger than
+    # the whole: half-diameter is monotone under subsets
     assert va["scale_ratio"] < 0.0 and vb["scale_ratio"] < 0.0
     assert vb["scale_ratio"] < va["scale_ratio"]
 
@@ -311,18 +322,17 @@ FLAG_CLASSES = ("EDGE_CONTOUR_ORIENTATION", "EDGE_JUNCTION_ORIENTATION",
 def test_the_two_edge_tables_describe_every_slot_as_the_same_kind_of_thing():
     """RULE: an index is an index in both tables.
 
-    EDGE_SCHEMAS said "linear over 8 bins" of three membership flags the
-    unit table calls a two-level lookup key, and "ordinal" of a polarity
-    class the unit table calls a lookup key.
+    EDGE_SCHEMAS said "linear" of three membership flags the unit table
+    calls a lookup key, and "ordinal" of a polarity class the unit table
+    calls a lookup key.  The KIND now agrees on every slot of every class.
     """
     assert S.edge_table_disagreements() == []
     S.verify_schema_consistency()
     for cls in FLAG_CLASSES:
         (slot,), (spec,) = S.EDGE_SCHEMAS[cls], S.EDGE_UNIT_TABLE[cls]
-        assert (slot.tag, slot.domain, slot.n_bins) == ("containment", "categorical", 2.0)
-        assert (spec.quantiser, spec.n_bins) == ("lookup_key", 2)
+        assert (slot.tag, slot.domain) == ("containment", "categorical")
+        assert spec.quantiser == "lookup_key"
         assert not slot.is_identity          # nothing to veto: it cannot differ
-        assert S.CONSTITUTIONAL_EDGE_RANGES[cls] == (2.0,)
     by_tag = {s.tag: s for s in S.EDGE_SCHEMAS["EDGE_ORIENTATION_CONTINUITY"]}
     assert by_tag["polarity_rel"].domain == "categorical"
     by_tag = {s.tag: s for s in S.EDGE_SCHEMAS["EDGE_OCCLUSION"]}
@@ -330,8 +340,24 @@ def test_the_two_edge_tables_describe_every_slot_as_the_same_kind_of_thing():
     assert S.edge_slot_spec("EDGE_OCCLUSION", "source").quantiser == "lookup_key"
 
 
+def test_the_level_counts_of_the_flags_still_differ_and_only_those():
+    """NOT FIXED, ON PURPOSE.  The schema says 8 levels, the unit table 2.
+
+    The schema's 8 is what CONSTITUTIONAL_EDGE_RANGES is derived from, and
+    memory.assembly_readout charges a relation's description length from
+    that range.  Writing 2 would change that cost for every relation of the
+    three classes, and no bar in the export checkout exercises it.  This pin
+    holds the list at exactly these three: a fourth cannot appear unnoticed,
+    and closing the mismatch reddens the pin so the change is deliberate.
+    """
+    assert S.edge_table_level_mismatches() == [
+        (cls, "containment", 8.0, 2.0) for cls in sorted(FLAG_CLASSES)]
+    for cls in FLAG_CLASSES:
+        assert S.CONSTITUTIONAL_EDGE_RANGES[cls] == (8.0,)   # unchanged by A4
+
+
 @pytest.mark.parametrize("cls", FLAG_CLASSES)
-def test_a_membership_flag_has_no_graded_population(cls):
+def test_a_membership_flag_has_no_graded_population(cls, params):
     """RULE: an index carries no graded evidence.
 
     The flag's population is the uniform activity (the overlap reads it as
@@ -347,14 +373,14 @@ def test_a_membership_flag_has_no_graded_population(cls):
     assert ep.quantized == (1.0,)
     assert ep.population == ((0.5, 0.5),)
     assert S.edge_graded_axes(ep, ep) == 0
-    assert P.EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS is False
+    params(EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False)   # its declared value
     assert S.edge_measured_axes(ep, ep) == 1          # unchanged by A4
 
 
 @pytest.mark.parametrize("cls", FLAG_CLASSES)
-def test_the_existing_switch_removes_the_flag_from_the_measured_axes(cls, monkeypatch):
+def test_the_existing_switch_removes_the_flag_from_the_measured_axes(cls, params):
     """The existing switch still does what it did; A4 leaves it alone."""
-    monkeypatch.setattr(P, "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS", True)
+    params(EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=True)
     ep = S.edge_params(cls, {"containment": 1.0})
     assert S.edge_measured_axes(ep, ep) == 0
 
@@ -493,35 +519,46 @@ def _segment(tag, anchor, theta_bin, idx, n=2):
                              quantized=(float(theta_bin), 1.0, 0.0, float(tag)),
                              population=()),
         alpha=anchor, z=1.0, t=0,
-        rho=(("entity", "E", 0, "+"), ("segment", idx, 0, "+"),
+        rho=(("entity", "E", 0, "+"), ("segment", idx, 0, "+"),  # as the lens writes it
              ("num_segments", n, 0, "+"), ("closed", False, 0, "+")))
 
 
-def test_curvature_chord_is_measured_between_the_two_segments_or_is_absent():
+def test_curvature_chord_is_absent_when_a_segment_has_no_position_of_its_own():
     """RULE: absence is never a neutral number.
 
-    The chord between two boundary segments was looked up through their
-    MEMBER anchors; a segment has none, so the lookup found nothing and the
-    writer fell back to chord 0.0 and rate 0.0 -- on all 87 CURVATURE edges
-    of the 79 graphs.  A segment is located at its own anchor: two segments
-    30 apart (3 wavelengths at R = 10) have a chord of 3 and a rate of
-    |turn| / 3.  With no position, both are ABSENT.
-    """
-    a, b = _segment(1, "s0", 2, 0), _segment(2, "s1", 10, 1)
-    ids = {a: 1, b: 2}
-    pos = {"s0": (0.0, 0.0, 0.0), "s1": (30.0, 0.0, 0.0)}
-    bd = _Capture()
-    bd._run_curvature((a, b), ids, pos)
-    (cand,) = bd.seen[EdgeType.CURVATURE]
-    ep = cand[4]
-    got = _slots(ep)
-    spec = S.edge_slot_spec("EDGE_CURVATURE", "chord_len")
-    assert got["chord_len"] == float(S.quantise(spec, 3.0))
-    assert got["curv_rate"] != UNKNOWN and got["signed_turn"] != UNKNOWN
+    THE REAL CASE.  A boundary segment's anchor is the pair (entity, segment
+    index), which is not a key of the position table, and a segment has no
+    member roles.  The writer looked the positions up through the members,
+    found nothing, and fell back to chord 0.0 and rate 0.0 -- on all 87
+    CURVATURE edges of the 79 graphs.  Both are now ABSENT on all 87: this
+    removes a fabricated zero, it does not produce a measurement.
 
+    The entity's own position must not be used instead: it is the same for
+    every segment of the entity, so the chord between two of them would be 0
+    again (one ruler read twice).
+    """
+    a = _segment(1, ("E", 0), 2, 0)
+    b = _segment(2, ("E", 1), 10, 1)
+    pos = {"E": (50.0, 50.0, 0.0)}                # the entity is positioned
     bd = _Capture()
-    bd._run_curvature((a, b), ids, {"elsewhere": (1.0, 1.0, 0.0)})
+    bd._run_curvature((a, b), {a: 1, b: 2}, pos)
     (cand,) = bd.seen[EdgeType.CURVATURE]
     got = _slots(cand[4])
     assert got["chord_len"] == UNKNOWN and got["curv_rate"] == UNKNOWN
     assert got["signed_turn"] != UNKNOWN          # the turn needs no position
+
+
+def test_curvature_chord_is_measured_once_a_segment_has_a_position():
+    """NOT THE CASE ON ANY REAL EDGE TODAY: the branch a future lens would
+    reach by giving a segment a positioned anchor.  Two segments 30 apart
+    (3 wavelengths at R = 10) have a chord of 3 and a rate of |turn| / 3.
+    """
+    a, b = _segment(1, "s0", 2, 0), _segment(2, "s1", 10, 1)
+    pos = {"s0": (0.0, 0.0, 0.0), "s1": (30.0, 0.0, 0.0)}
+    bd = _Capture()
+    bd._run_curvature((a, b), {a: 1, b: 2}, pos)
+    (cand,) = bd.seen[EdgeType.CURVATURE]
+    got = _slots(cand[4])
+    spec = S.edge_slot_spec("EDGE_CURVATURE", "chord_len")
+    assert got["chord_len"] == float(S.quantise(spec, 3.0))
+    assert got["curv_rate"] != UNKNOWN and got["signed_turn"] != UNKNOWN

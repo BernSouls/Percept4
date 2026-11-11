@@ -1908,8 +1908,9 @@ class Binder:
                 unit.  It is None when fewer than two members are positioned:
                 one position has no extent, and no number is put in its
                 place.  Half-diameter is used because it is monotone under
-                subsets -- a member's extent can never exceed its whole's --
-                and does not depend on the order of the members.
+                subsets -- a member whose anchors are all among its whole's
+                cannot come out larger than the whole -- and does not
+                depend on the order of the members.
         """
         if det is None or not anchor_positions:
             return None, None
@@ -1946,11 +1947,12 @@ class Binder:
 
         [A1] A SIZE RATIO NEEDS TWO INDEPENDENTLY MEASURED SIZES.  A size a
         lens DECLARES (`Detection.scale` > 0) is read when both ends declare
-        one.  No lens on the region path declares a size, so a whole and its
-        member are measured by the one ruler the step does hold for both:
-        the extent of each footprint (`_footprint`).  When either size is
-        missing the ratio is ABSENT -- never 0, which would assert "equal
-        size".
+        one.  The lenses that emit wholes and their members (CurveComplex,
+        Contour, Junction) declare none -- they write scale = 0 -- so a
+        whole and its member are measured by the one ruler the step does
+        hold for both: the extent of each footprint (`_footprint`).  When
+        either size is missing the ratio is ABSENT -- never 0, which would
+        assert "equal size".
         """
         p_s = _detection_scale(parent_det) if parent_det is not None else 0.0
         c_s = _detection_scale(child_det) if child_det is not None else 0.0
@@ -6227,17 +6229,24 @@ class Binder:
                 # difference over a fixed constant, i.e. not a rate at all.
                 # Both are measured now: the chord between the two segments'
                 # own positions, and the turn per unit chord.
-                # [STAGE 5] ...and they were NOT measured: the positions
-                # were looked up through the segments' MEMBER anchors, a
-                # segment has no member roles, so the lookup found nothing
-                # and the chord fell back to 0.0 -- with a curvature rate
-                # of 0.0 derived from it.  Every CURVATURE edge of the 79
-                # ETH-80 graphs carried (chord 0, rate 0): two measurements
-                # nobody made.  A segment is located at its own anchor
-                # (`_footprint`: the member centroid, else the anchor); when
-                # either segment has no position the chord is ABSENT, and
-                # the rate -- a turn per unit chord -- is ABSENT whenever
-                # the chord is absent or zero.
+                # [STAGE 5] ...and they were NOT measured, and STILL ARE
+                # NOT.  The positions were looked up through the segments'
+                # MEMBER anchors; a segment has no member roles, so the
+                # lookup found nothing and the chord fell back to 0.0, with
+                # a curvature rate of 0.0 derived from it: every CURVATURE
+                # edge of the 79 ETH-80 graphs carried (chord 0, rate 0),
+                # two measurements nobody made.
+                #
+                # THE STEP HOLDS NO POSITION FOR A SEGMENT.  A segment's
+                # anchor is the pair (entity, segment index), which is not
+                # a key of the position table; the entity's own position is
+                # shared by all of its segments, so it cannot measure a
+                # chord between two of them (one ruler read twice).  The
+                # chord is therefore ABSENT on every CURVATURE edge today,
+                # and the rate -- a turn per unit chord -- with it.  What
+                # changed is that the edge no longer claims a chord of 0.
+                # The branch below measures both once a lens gives a
+                # segment a positioned anchor or positioned members.
                 chord_w: Optional[float] = None
                 curv_rate: Optional[float] = None
                 pi_a, _ext_a = self._footprint(d_i, anchor_positions)
@@ -6520,11 +6529,13 @@ class Binder:
                     # [A1] ONE RULER READ TWICE IS NOT A MEASUREMENT.  The
                     # two detections are pooled over the SAME anchor, so the
                     # only sizes that can differ are sizes the lenses
-                    # DECLARE (Detection.scale > 0).  No lens on the region
-                    # path declares one, so the ratio is ABSENT.  It must
-                    # not be filled from the anchor's own radius: that is 0
-                    # for every pair of every image, and would read as one
-                    # agreeing measured axis on every CO_LOCATED edge.
+                    # DECLARE (Detection.scale > 0).  None of the lens types
+                    # this relation pairs (INFORMATIVE_LENS_TYPES) declares
+                    # one today, so the ratio is ABSENT on every edge.  It
+                    # must not be filled from the anchor's own radius: that
+                    # gives a ratio of 0 for every pair of every image, and
+                    # would read as one agreeing measured axis on every
+                    # CO_LOCATED edge.
                     sa, sb = _detection_scale(d1), _detection_scale(d2)
                     # UNSIGNED: the edge is undirected, so a signed ratio
                     # would depend on the d1/d2 pair order. abs(log2) is

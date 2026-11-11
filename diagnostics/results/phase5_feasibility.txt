@@ -1,5 +1,5 @@
 PHASE 5 / B -- static feasibility of relation growth, 79 EVAL graphs
-front-end digest f2461c926fd2; no matcher is run
+front-end digest 1484aec90b48; no matcher is run
 
 per graph (n = 79)
   (1) FRAME nodes                                            median  290.00   p10  195.20   min  161.00   max  409.00

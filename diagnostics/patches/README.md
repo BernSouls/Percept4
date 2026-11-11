@@ -75,3 +75,51 @@ run after each.
 
 Diagnostics (`diagnostics/`, `.gitignore`) are not in the series: they are
 not library and are not ported.
+
+## Stage 5: 0017–0019 (apply to `main`, `9315d24`)
+
+These three are **not commits of the branch**. The branch
+(`arena/dea2ca5a-percept4`) keeps the order in which things were run,
+including a change that was taken back (the level count of the three
+membership flags, written 8 → 2 in `66e6457` and restored in the stage's last
+commit — see REPORT.md, stage 5, "Departures"). A port by hand should not
+have to replay that, so the patches carry the **final form** of each change,
+cut from the final tree and exported with `git format-patch -k
+--zero-commit`. Applied in order to `main` they reproduce the branch's four
+library files and two pin files byte for byte (checked: `git am -k
+--keep-cr` on an export of `9315d24`, then `cmp`).
+
+    git am -k --keep-cr diagnostics/patches/0017*.patch diagnostics/patches/0018*.patch diagnostics/patches/0019*.patch
+
+| patch | change | switch | library files |
+|---|---|---|---|
+| 0017 | A1–A5, writer truth: containment geometry measured from the footprints or ABSENT; the two slot tables agree on the kind of every slot; `PEAK_CHAIN` writes its closure axis | **none** | `orchestration/binder.py` (+141 / −64), `core/schema.py` (+102 / −11), `lenses/chain_lens.py` (+18 / −3) |
+| 0018 | three more writers: `RADIALITY.alignment`, `SPIRALITY.expansion`, `CURVATURE.chord_len` / `curv_rate` are ABSENT instead of a number nobody measured | **none** | `orchestration/binder.py` (+42 / −13) |
+| 0019 | the FRAME / ATTRIBUTE partition and its readers; used by the feasibility census only, imported by nothing in the library; optional to port | – | `matching/relation_frame.py` (new, +129) |
+
+Pins after each patch: 410, 414, 419 passed (390 before).
+
+**These changes have no switch.** Every behaviour change of 0001–0016 sits
+behind a parameter; 0017 and 0018 do not, because they change what the
+writers put into a graph, and a switch would keep the false writer alive
+next to the true one. That was my decision, not an instruction; if you want
+switches, say so — it is a mechanical change. To take a change back, leave
+its hunk out:
+
+- `RADIALITY` and `SPIRALITY` (0018) are one line each and stand alone;
+- the `CURVATURE` hunk (0018) calls `Binder._footprint`, which 0017 adds;
+- in 0017 the containment hunks of `orchestration/binder.py` go together
+  (the two helpers, `_containment_geometry`, `_containment_values`, the
+  removed call in `_run_curve_containment`, the `edge_quantise` import);
+  the `CO_LOCATED` hunk is a comment only;
+- A4 (`core/schema.py`) and A5 (`lenses/chain_lens.py`) are separate files
+  and stand alone.
+
+What each change does to a graph is listed slot by slot in REPORT.md,
+stage 5.
+
+The CurveComplex lens (`lenses/v4.py`) is not in the series: the
+pre-registered fix of its link filter failed its own criterion and was not
+applied. It is kept as `diagnostics/results/phase5_a2_trial.patch` (a plain
+`git apply` patch, deliberately not in this directory) next to the censuses
+it produced.

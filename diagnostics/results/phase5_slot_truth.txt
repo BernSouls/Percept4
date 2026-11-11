@@ -1,4 +1,4 @@
-PHASE 5 / A -- slot truth, 79 EVAL graphs, front-end digest f2461c926fd2
+PHASE 5 / A -- slot truth, 79 EVAL graphs, front-end digest 1484aec90b48
 
 EDGE SLOTS  (n = edges carrying the slot; measured = not UNKNOWN)
   class                       slot                  n  meas%  bins modal%   top%  state
