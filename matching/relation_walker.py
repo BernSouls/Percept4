@@ -57,11 +57,22 @@ SEED_MIN_SHARED_TOKENS: int = 2
 #: two measured values agree when their bins differ by at most this
 BIN_TOLERANCE: float = 1.0
 #: pairs examined (signature similarities computed) <= this share of
-#: |FRAME_q| x |FRAME_r|
+#: |FRAME_q| x |FRAME_r| ...
 BUDGET_FRACTION: float = 0.05
+#: ... but never fewer than this many looks per node of the smaller frame (on
+#: a small frame 5 % of the product is less than one look per node: 13 nodes
+#: would get 8 pairs), and never more than the product itself
+BUDGET_FLOOR_PER_NODE: int = 8
 #: minimum support: this many frame pairs AND this share of the smaller frame
 MIN_SUPPORT_PAIRS: int = 8
 MIN_SUPPORT_FRACTION: float = 0.10
+
+
+def budget(frame_q: int, frame_r: int) -> int:
+    """How many pairs one walk may examine."""
+    product = frame_q * frame_r
+    return min(product, max(int(BUDGET_FRACTION * product),
+                            BUDGET_FLOOR_PER_NODE * min(frame_q, frame_r)))
 
 
 def is_growth_edge_type(et: Any) -> bool:
@@ -281,7 +292,7 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
     gq, gr = _Index(Q, q_sigs), _Index(R, r_sigs)
     res = WalkResult(frame_q=len(gq.frame), frame_r=len(gr.frame),
                      dense=len(q_sigs) * len(r_sigs))
-    res.budget = int(BUDGET_FRACTION * len(gq.frame) * len(gr.frame))
+    res.budget = budget(len(gq.frame), len(gr.frame))
     sim_cache: Dict[Tuple[int, int], float] = {}
 
     def similarity(u: int, v: int) -> Optional[float]:

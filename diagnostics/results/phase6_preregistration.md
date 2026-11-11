@@ -613,3 +613,24 @@ Section 6 stands except where a point below says otherwise.
   the reference positions, read in query order, are a rotation of a rising or
   of a falling sequence.  Features at one position on either side constrain
   nothing.
+* 4.8 THE BUDGET ON A SMALL FRAME (added when the first pins ran, on
+  hand-built graphs of 6 to 13 frame nodes; no real-graph result motivated
+  it).  5 % of |FRAME_q| x |FRAME_r| is less than one look per node when the
+  frames are small (13 x 13: 8 pairs), so no walk can even confirm a graph
+  against itself.  Budget = max(5 % of the product, 8 looks per node of the
+  smaller frame), never more than the product.  On the ETH graphs (frames of
+  158 to 402 nodes) the 5 % term is the larger one from 160 nodes up, so the
+  registered budget is what binds there.
+* 4.1, CORRECTION OF ITS REASON (written when the first mutation run showed
+  that no pin held the rule).  The reason given above is wrong: with the
+  canonical keys alone a graph matched against itself DOES come out as the
+  identity (whenever (u, v) is proposed, (v, v) and (u, u) are proposed with
+  at least the same support and one of them has the smaller key, so an
+  identity pair is always served first).  The two keys are kept for another
+  reason, stated now: among equally supported proposals the registered order
+  was the canonical key order, which is arbitrary with respect to the
+  measurement, while the walk is meant to be best-first; exact agreement on
+  the measured axes is better evidence than agreement within a bin, and of
+  two candidates that agree equally the more similar one is the safer.  No
+  result motivated it (the walker had run on the four reference graphs only,
+  with this order, and nothing was compared).  Pinned.
