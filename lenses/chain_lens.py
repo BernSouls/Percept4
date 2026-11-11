@@ -308,9 +308,13 @@ class ChainLens(HigherLens):
             # gradient. The graded companion of a chain is the ENSEMBLE's
             # evidence (the member orientation distribution, the member
             # curvature mixture, the normalised length), which the
-            # population carries; the closure is a separate, binary fact
-            # that the population layout (core.registries.POPULATION_AXES,
-            # owned by core) does not declare an axis for.
+            # population carries; the closure is a separate, binary fact.
+            # [A5] The population layout (core.registries.POPULATION_AXES)
+            # declares a two-level `closure` axis for it, and this writer
+            # fills it below with the ONE-HOT activity of the level the
+            # chain has.  It used to write three axes against that
+            # four-axis layout, so every chain comparison fell back to the
+            # aligned (skip-the-missing-axis) path.
             slot3 = 1.0 if is_ring else 0.0
 
             # Slot 4: mean |signed curvature| over members.
@@ -350,6 +354,7 @@ class ChainLens(HigherLens):
             _ax_theta = population_axis(CLASS_CHAIN, "theta_dist")
             _ax_curv = population_axis(CLASS_CHAIN, "curvature")
             _ax_len = population_axis(CLASS_CHAIN, "length")
+            _ax_closure = population_axis(CLASS_CHAIN, "closure")
             if _ax_theta is None or _ax_curv is None or _ax_len is None:
                 population = ()
             else:
@@ -362,6 +367,16 @@ class ChainLens(HigherLens):
                     soft_bump_bins(min(1.0, max(0.0, len_frac)) * N_LEN_BINS,
                                    _ax_len),
                 )
+                if _ax_closure is not None:
+                    # [A5] Closure is topological: the chain returns to its
+                    # start (level 1) or it does not (level 0).  There is no
+                    # quantity between the two, so the activity is one-hot,
+                    # not a tuning bump: two chains of the same level
+                    # overlap at 1.0, a closed and an open chain at 0.0.
+                    _level = 1 if is_ring else 0
+                    population = population + (tuple(
+                        1.0 if j == _level else 0.0
+                        for j in range(_ax_closure.n_bins)),)
 
             sigma = TypedSignature(
                 kind="CANONICAL",

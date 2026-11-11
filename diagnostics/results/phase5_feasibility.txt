@@ -1,0 +1,91 @@
+PHASE 5 / B -- static feasibility of relation growth, 79 EVAL graphs
+front-end digest e12a5a4ca862; no matcher is run
+
+per graph (n = 79)
+  (1) FRAME nodes                                            median  290.00   p10  195.20   min  161.00   max  409.00
+      ATTRIBUTE nodes                                        median  424.00   p10  334.00   min  293.00   max  528.00
+  (2) FRAME nodes with >= 1 structural edge, share           median    0.65   p10    0.59   min    0.55   max    0.72
+      FRAME nodes with >= 2 structural edges, share          median    0.35   p10    0.25   min    0.21   max    0.56
+  (3) largest structural component, nodes                    median   87.00   p10   62.80   min   37.00   max  158.00
+      largest structural component / FRAME                   median    0.30   p10    0.19   min    0.14   max    0.57
+      structural edges                                       median  452.00   p10  282.60   min  224.00   max 1115.00
+  (4) structural edges with a measured graded axis, share    median    0.68   p10    0.53   min    0.44   max    0.79
+  (5) reachable set (measured component), nodes              median   47.00   p10   30.00   min   22.00   max   85.00
+      reachable set / FRAME                                  median    0.16   p10    0.10   min    0.07   max    0.35
+      measured structural degree, median over FRAME nodes    median    0.00   p10    0.00   min    0.00   max    1.00
+      FRAME nodes with measured degree 0, share              median    0.70   p10    0.55   min    0.44   max    0.86
+
+per class: median (1) | (3) | (5) | (5)/(1)
+  apple    n=17     244 |     95 |     48 | 0.20
+  car      n=25     314 |     68 |     36 | 0.14
+  cup      n=19     243 |    100 |     59 | 0.24
+  horse    n=18     342 |     69 |     40 | 0.11
+
+structural edges by type (all graphs): count, with a measured graded axis
+  CONTOUR_ORIENTATION            10303   measured       0  (  0.0%)
+  JUNCTION_CONTOUR                5500   measured    5500  (100.0%)
+  ORIENTATION_CONTINUITY          4093   measured    4093  (100.0%)
+  CONTOUR_CONTINUITY              2802   measured    2802  (100.0%)
+  CURVATURE_SIGN_CONTINUITY       2496   measured    2496  (100.0%)
+  ORIENTATION_BEND                2288   measured    2288  (100.0%)
+  RADIALITY                       1691   measured    1691  (100.0%)
+  ORIENTATION_JUNCTION            1536   measured    1536  (100.0%)
+  SYMMETRY                        1145   measured    1145  (100.0%)
+  CURVE_CONTAINMENT               1090   measured       0  (  0.0%)
+  PARALLEL                        1029   measured    1029  (100.0%)
+  SPIRALITY                        939   measured     939  (100.0%)
+  COCIRCULAR                       921   measured     921  (100.0%)
+  JUNCTION_ORIENTATION             736   measured       0  (  0.0%)
+  AMODAL_LINK                      508   measured     508  (100.0%)
+  CONCENTRICITY                    456   measured     456  (100.0%)
+  LINE_TERMINATION                 208   measured     208  (100.0%)
+  CURVATURE                         87   measured      87  (100.0%)
+  REGION_CONTENT                    69   measured       0  (  0.0%)
+
+FRAME nodes by lens type (all graphs): count, in the reachable set
+  CONTOUR_PEAK          8169   reachable       0  (  0.0%)
+  Orientation           4172   reachable    3667  ( 87.9%)
+  EndStopped            2718   reachable       0  (  0.0%)
+  Contour               1509   reachable      42  (  2.8%)
+  PEAK_CHAIN            1442   reachable       0  (  0.0%)
+  ContourFragment       1324   reachable       0  (  0.0%)
+  CurveComplex          1090   reachable      15  (  1.4%)
+  RegionShape           1045   reachable       0  (  0.0%)
+  Corner                 988   reachable       1  (  0.1%)
+  IllusoryContour        125   reachable       0  (  0.0%)
+  Junction                98   reachable       5  (  5.1%)
+  T                       31   reachable       2  (  6.5%)
+  Y                        3   reachable       0  (  0.0%)
+
+STOP RULE (pre-registered): median (3) < 8 -> False (87);  median (5)/(1) < 0.25 -> True (0.163)
+VERDICT: STOP -- do not build the matcher
+
+DESCRIPTIVE (after the verdict; decides nothing)
+  measured component, largest, nodes                         median   47.00   p10   30.00   min   22.00   max   85.00
+  measured component, second, nodes                          median   29.00   p10   16.00   min   12.00   max   61.00
+  measured component, third, nodes                           median    5.00   p10    2.00   min    1.00   max   22.00
+  measured components of size >= 2, count                    median    4.00   p10    3.00   min    2.00   max    9.00
+  FRAME share in measured components of size >= 8 (any number of seeds) median    0.29   p10    0.17   min    0.12   max    0.49
+  FRAME share in measured components of size >= 2            median    0.30   p10    0.19   min    0.14   max    0.56
+  what-if every structural edge were measured: (3)/(1)       median    0.30   p10    0.19   min    0.14   max    0.57
+  structural components of size >= 2, count                  median   20.00   p10   10.00   min    2.00   max   34.00
+
+second-largest measured component, by lens type (all graphs): {'Contour': 1433, 'CurveComplex': 451, 'Corner': 145, 'Junction': 91, 'Orientation': 86, 'T': 27, 'Y': 3}
+
+FRAME nodes by lens type: total | with a measured structural edge | with NO structural edge at all
+  CONTOUR_PEAK          8169 |       0 (  0.0%) |    2136 ( 26.1%)
+  Orientation           4172 |    4131 ( 99.0%) |      41 (  1.0%)
+  EndStopped            2718 |       0 (  0.0%) |    2718 (100.0%)
+  Contour               1509 |    1505 ( 99.7%) |       0 (  0.0%)
+  PEAK_CHAIN            1442 |       0 (  0.0%) |      20 (  1.4%)
+  ContourFragment       1324 |       0 (  0.0%) |    1279 ( 96.6%)
+  CurveComplex          1090 |     947 ( 86.9%) |       0 (  0.0%)
+  RegionShape           1045 |       0 (  0.0%) |    1045 (100.0%)
+  Corner                 988 |     146 ( 14.8%) |     842 ( 85.2%)
+  IllusoryContour        125 |       0 (  0.0%) |     125 (100.0%)
+  Junction                98 |      98 (100.0%) |       0 (  0.0%)
+  T                       31 |      31 (100.0%) |       0 (  0.0%)
+  Y                        3 |       3 (100.0%) |       0 (  0.0%)
+
+lens types with at least one measured structural edge anywhere: ['Contour', 'Corner', 'CurveComplex', 'Junction', 'Orientation', 'T', 'Y']
+  (5) / FRAME restricted to those lens types: median 0.476, p10 0.368   [not the pre-registered frame: it leaves out 65% of the FRAME nodes]

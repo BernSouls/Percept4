@@ -45,6 +45,7 @@ from core.hashing import (  # noqa: F401
 )
 from core.schema import EdgeParams  # noqa: F401
 from core.schema import edge_params as _edge_params  # noqa: F401
+from core.schema import edge_quantise  # noqa: F401
 from core.schema import u30_edge_params as _u30_edge_params  # noqa: F401
 from core.schema import U30_EDGE_UNIT_TABLE  # noqa: F401
 from core.slots import (  # noqa: F401
@@ -1894,64 +1895,105 @@ class Binder:
         self._process_channel(EdgeType.JUNCTION_ORIENTATION, candidates)
 
     @staticmethod
+    def _footprint(
+        det: Optional[Detection],
+        anchor_positions: Optional[Dict[Any, Tuple[float, ...]]],
+    ) -> Tuple[Optional[Tuple[float, ...]], Optional[float]]:
+        """(centre, extent) of a detection, from the positions the step holds.
+
+        centre  the centroid of the detection's positioned member anchors;
+                a detection with no members is located at its own anchor.
+        extent  HALF THE DIAMETER of the positioned member anchors (half the
+                largest separation between two of them), in the positions'
+                unit.  It is None when fewer than two members are positioned:
+                one position has no extent, and no number is put in its
+                place.  Half-diameter is used because it is monotone under
+                subsets -- a member's extent can never exceed its whole's --
+                and does not depend on the order of the members.
+        """
+        if det is None or not anchor_positions:
+            return None, None
+        pts = [
+            anchor_positions[a] for a in _extract_member_anchors(det)
+            if a in anchor_positions
+        ]
+        if not pts:
+            return anchor_positions.get(det.alpha), None
+        dims = len(pts[0])
+        if any(len(p) != dims for p in pts):
+            return None, None
+        centre = tuple(sum(p[d] for p in pts) / len(pts) for d in range(dims))
+        extent: Optional[float] = None
+        if len(pts) >= 2:
+            diameter = 0.0
+            for i in range(len(pts)):
+                for j in range(i + 1, len(pts)):
+                    d = _pos_dist(pts[i], pts[j])
+                    if d > diameter:
+                        diameter = d
+            if diameter > 0.0:
+                extent = 0.5 * diameter
+        return centre, extent
+
+    @staticmethod
+    def _size_ratio(
+        parent_det: Optional[Detection],
+        child_det: Optional[Detection],
+        parent_extent: Optional[float],
+        child_extent: Optional[float],
+    ) -> Optional[float]:
+        """log2(child size / parent size), or None when it is not measured.
+
+        [A1] A SIZE RATIO NEEDS TWO INDEPENDENTLY MEASURED SIZES.  A size a
+        lens DECLARES (`Detection.scale` > 0) is read when both ends declare
+        one.  No lens on the region path declares a size, so a whole and its
+        member are measured by the one ruler the step does hold for both:
+        the extent of each footprint (`_footprint`).  When either size is
+        missing the ratio is ABSENT -- never 0, which would assert "equal
+        size".
+        """
+        p_s = _detection_scale(parent_det) if parent_det is not None else 0.0
+        c_s = _detection_scale(child_det) if child_det is not None else 0.0
+        if p_s > 0.0 and c_s > 0.0:
+            return math.log2(c_s / p_s)
+        if (parent_extent is not None and child_extent is not None
+                and parent_extent > 0.0 and child_extent > 0.0):
+            return math.log2(child_extent / parent_extent)
+        return None
+
+    @staticmethod
     def _containment_geometry(
         parent_det: Detection,
         child_nid: int,
         det_by_nid: Dict[int, Detection],
         anchor_positions: Optional[Dict[Any, Tuple[float, ...]]],
         r_scale: float,
-    ) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
+    ) -> Tuple[Tuple[float, float, float],
+               Tuple[Optional[float], Optional[float], Optional[float]]]:
         """(rel_dist_bin, polar_angle_bin, scale_ratio_bin) of a child node
-        as seen from its parent detection, AND the CONTINUOUS positions
-        those bins name.
+        as seen from its parent detection, AND the continuous values those
+        bins name.
 
-        This is the posterior-IT compositional code: relative distance r/R
-        to the parent, the egocentric polar angle phi, and log2 of the size
-        ratio S_child/S_parent (Pasupathy & Connor 2001; Tanaka 1996). The
-        angle slot is 24 bins on a circle, so it is declared with range 12.0
-        and cycle 24 under the tree's N_HALF convention.
+        This is the posterior-IT compositional code: relative distance to
+        the parent, the egocentric polar angle, and log2 of the size ratio
+        (Pasupathy & Connor 2001; Tanaka 1996).
 
-        The second triple holds the same three quantities in the writers'
-        own bin units, BEFORE the rounding that names the bin: the graded
-        population is built from these, so the activity vector keeps the
-        sub-bin position the coarse index rounds off.
-
-        Returns the neutral triple (0.0, 0.0, 4.0) when either end has no
-        position or the child detection is unknown, so the edge is still
-        emitted. [Pass 18] replaces a stub; it must never shrink the edge
-        set relative to the pre-Pass-18 behaviour, or a benchmark regression
-        would be attributable to the dropped edge rather than to the new
-        geometry.
+        [A3] ABSENCE IS NEVER A NEUTRAL NUMBER.  This used to return the
+        triple (0.0, 0.0, 4.0) when the geometry was missing: "at the
+        parent's centre, bearing 0, equal size" -- three statements nobody
+        measured.  The bins are now the unit table's own quantisation of
+        `_containment_values`, so a slot that was not measured is UNKNOWN
+        here exactly as it is on the edge, and the two paths cannot
+        disagree.  The second triple holds the same three quantities in the
+        unit table's units, None where absent.
         """
-        pa = anchor_positions.get(parent_det.alpha) if anchor_positions else None
-        child = det_by_nid.get(child_nid)
-        pb = (
-            anchor_positions.get(child.alpha)
-            if (child is not None and anchor_positions)
-            else None
+        values = Binder._containment_values(
+            parent_det, child_nid, det_by_nid, anchor_positions, r_scale)
+        bins = edge_quantise("EDGE_CURVE_CONTAINMENT", values)
+        return (
+            (float(bins[0]), float(bins[1]), float(bins[2])),
+            (values["rel_dist"], values["polar_angle"], values["scale_ratio"]),
         )
-        if pa is None or pb is None:
-            return (0.0, 0.0, 4.0), (0.0, 0.0, 4.0)
-        dx = pb[0] - pa[0]
-        dy = pb[1] - pa[1]
-        dist = math.hypot(dx, dy)
-        R = max(r_scale, 1.0)
-        # the CONTINUOUS relative distance, in the writer's bin units
-        rel_dist_pos = (dist / (2.0 * R)) * 7.0
-        rel_dist_bin = float(min(7, max(0, int(round(rel_dist_pos)))))
-        angle = math.atan2(dy, dx) % (2.0 * math.pi)
-        # the CONTINUOUS bearing, in the writer's bin units (24 per turn)
-        angle_pos = (angle / (2.0 * math.pi)) * 24.0
-        angle_bin = float(int(round(angle_pos)) % 24)
-        p_s = float(getattr(parent_det, "scale", 0.0) or 0.0)
-        c_s = float(getattr(child, "scale", 0.0) or 0.0)
-        ratio = math.log2(c_s / p_s) if (p_s > 0.0 and c_s > 0.0) else 0.0
-        # ratio 0.0 (equal scale) must land on the neutral centre bin 4.
-        # the CONTINUOUS log2 scale ratio, in the writer's bin units
-        scale_pos = ratio * 2.0 + 4.0
-        scale_bin = float(min(7, max(0, int(round(ratio * 2.0)) + 4)))
-        return (rel_dist_bin, angle_bin, scale_bin), (
-            rel_dist_pos, angle_pos, scale_pos)
 
     @staticmethod
     def _containment_values(
@@ -1966,27 +2008,53 @@ class Binder:
 
         [P2] THE NAMED WRITER: the separation in WAVELENGTHS (the
         relation's reach is 2 * R), the egocentric bearing in RADIANS and
-        the LOG2 SIZE RATIO.  A value the writer cannot measure (no
-        geometry) is None -- "no measurement", never a fabricated 0.
+        the LOG2 SIZE RATIO.  A value the writer cannot measure is None --
+        "no measurement", never a fabricated 0.
+
+        [A2] WHERE THE WHOLE IS.  The parent is located at the CENTROID OF
+        ITS FOOTPRINT, the centre `_member_geometry` and the part
+        containment writer use, and the child at the centroid of its own
+        footprint.  The parent used to be located at `parent_det.alpha`,
+        which the CurveComplex lens sets to its FIRST member's anchor: a
+        point on the rim, so every address was measured from one member
+        instead of from the whole.
+
+        [A2] A QUANTITY COMPARED WITH ITSELF IS NOT A MEASUREMENT.  A whole
+        with ONE member has no internal geometry: its footprint is that
+        member's footprint, so the separation and the size ratio are 0 by
+        construction, for any image.  Written as measurements they made
+        every such edge agree with every other on two axes (similarity 1.0
+        over "2 measured axes").  They are ABSENT; the edge itself -- the
+        membership -- is still emitted.
+
+        [A2] THE BEARING OF A ZERO SEPARATION IS UNDEFINED.  atan2(0, 0)
+        returns 0, which reads as "due east".  When the child sits at the
+        parent's centre the bearing is ABSENT; the separation (0) is a
+        real measurement and stays.
         """
+        absent: Dict[str, Optional[float]] = {
+            "rel_dist": None, "polar_angle": None, "scale_ratio": None}
         child = det_by_nid.get(child_nid)
-        pa = anchor_positions.get(parent_det.alpha) if anchor_positions else None
-        pb = (anchor_positions.get(child.alpha)
-              if (child is not None and anchor_positions) else None)
+        if child is None or not anchor_positions:
+            return absent
+        members = _extract_member_node_ids(parent_det)
+        if len(members) == 1 and members[0] == child_nid:
+            return absent
+        pa, p_extent = Binder._footprint(parent_det, anchor_positions)
+        pb, c_extent = Binder._footprint(child, anchor_positions)
         if pa is None or pb is None:
-            return {"rel_dist": None, "polar_angle": None, "scale_ratio": None}
+            return absent
         dx = pb[0] - pa[0]
         dy = pb[1] - pa[1]
         dist = math.hypot(dx, dy)
-        R = max(r_scale, 1.0)
-        angle = math.atan2(dy, dx) % (2.0 * math.pi)
-        p_s = float(getattr(parent_det, "scale", 0.0) or 0.0)
-        c_s = float(getattr(child, "scale", 0.0) or 0.0)
-        ratio = math.log2(c_s / p_s) if (p_s > 0.0 and c_s > 0.0) else None
+        angle: Optional[float] = None
+        if dist > 1e-9:
+            angle = math.atan2(dy, dx) % (2.0 * math.pi)
         return {
             "rel_dist": dist / max(r_scale, 1e-6),
             "polar_angle": angle,
-            "scale_ratio": ratio,
+            "scale_ratio": Binder._size_ratio(
+                parent_det, child, p_extent, c_extent),
         }
 
     @staticmethod
@@ -2065,9 +2133,6 @@ class Binder:
             for member_nid in _extract_member_node_ids(d):
                 if u == member_nid:
                     continue
-                _bins, _positions = self._containment_geometry(
-                    d, member_nid, det_by_nid, anchor_positions, r_scale
-                )
                 values = self._containment_values(
                     d, member_nid, det_by_nid, anchor_positions, r_scale
                 )
@@ -6430,6 +6495,14 @@ class Binder:
                     if signal <= 0.0:
                         continue
                     a_id, b_id = (src, dst) if src < dst else (dst, src)
+                    # [A1] ONE RULER READ TWICE IS NOT A MEASUREMENT.  The
+                    # two detections are pooled over the SAME anchor, so the
+                    # only sizes that can differ are sizes the lenses
+                    # DECLARE (Detection.scale > 0).  No lens on the region
+                    # path declares one, so the ratio is ABSENT.  It must
+                    # not be filled from the anchor's own radius: that is 0
+                    # for every pair of every image, and would read as one
+                    # agreeing measured axis on every CO_LOCATED edge.
                     sa, sb = _detection_scale(d1), _detection_scale(d2)
                     # UNSIGNED: the edge is undirected, so a signed ratio
                     # would depend on the d1/d2 pair order. abs(log2) is
