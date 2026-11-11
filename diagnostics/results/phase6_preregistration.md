@@ -566,3 +566,50 @@ degrees, while `compute_endstopped_map` measures it along the axis);
 `_arm_tangent_stats` (a doubled-angle concentration: a global turn changes
 nothing); `IllusoryContourLens` (joins terminators across their bars, which
 is what a line-end contour is: correct if the slot is the bar).
+
+## Amendment 4 (Track M, written with the walker's first draft, before it had run on anything)
+
+WHAT HAD BEEN SEEN: no output of the walker on any graph, real or synthetic;
+no pin of M3 had been run.  The census figures listed under Amendment 3.
+
+Section 6 stands except where a point below says otherwise.
+
+* 4.1 THE PROPOSAL ORDER gains two keys.  Section 6: "(number of admitted
+  pairs supporting it, descending; canonical keys)".  Now: (supporting pairs,
+  descending; TOTAL SLACK, ascending; signature similarity, descending;
+  canonical keys).  Slack of one supporting pair = the number of shared
+  measured axes on which its best agreeing relation differs by one bin; total
+  slack = the sum over the supporting pairs.  REASON: with canonical keys
+  alone a graph matched against itself need not come out as the identity (a
+  feature can be proposed toward a neighbour with a smaller key before its
+  own image is proposed); with slack and similarity ahead of the keys the
+  identity proposal is never behind a competitor (its support is at least as
+  large, its slack is 0, its similarity is 1).  The similarity therefore has
+  to be known when a proposal is made, so it is computed then; the BUDGET
+  counts every distinct pair whose similarity is computed (5 % of
+  |FRAME_q| x |FRAME_r|, unchanged), seeds included.  Similarity still adds
+  to no score: it gates, and it orders ties.
+* 4.2 GROWTH EDGES, stated exactly: an edge between two FRAME nodes whose
+  type is declared in `core.types.LEGACY_TO_CATEGORY` with a category other
+  than PROXIMITY (so CO_LOCATED, CONTACT, TOPOLOGY, DEGREE and
+  CROSS_SCALE_IDENTITY never are), and which carries at least one measured
+  axis.  An edge with no measured axis cannot agree with anything: it is
+  neither a growth edge nor a relation of the score.
+* 4.3 THE SCORE, one clarification: a pair of corresponding edges with no
+  axis measured on BOTH weighs nothing (counted on neither side).  Section 6
+  left this case open.
+* 4.4 SEEDS pass the order constraint like every other pair.
+* 4.5 THE CANONICAL NODE KEY is (lens type, signature class, relation,
+  quantised slots).  A graph's nodes are pattern nodes, so the key is unique
+  inside a graph; node ids break a tie only between nodes with one key.
+* 4.6 THE SWITCH `MATCH_RELATION_WALKER` is read at one place,
+  `matching.relation_walker.match_evidence`, which is `evidence_score` when
+  the switch is off.  The memory system's own callers of `evidence_score`
+  (mapper, consolidator) are not rewired in this stage: the walker is
+  measured on the benchmark first.
+* 4.7 ORDER CONSTRAINT, the test made exact.  Open boundaries: over every two
+  admitted features with distinct arc positions on both boundaries, the
+  product of the two position differences has one sign.  Closed boundaries:
+  the reference positions, read in query order, are a rotation of a rising or
+  of a falling sequence.  Features at one position on either side constrain
+  nothing.

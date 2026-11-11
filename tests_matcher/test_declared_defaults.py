@@ -46,4 +46,7 @@ def test_declared_defaults(declared_defaults):
         # [STAGE 6] the measured relations (R1-R3, R5) -- OFF until the R6
         # gate passes on EVAL and HELDOUT (pre-registration, section 8)
         "GRAPH_STAGE6_RELATIONS": False,
+        # [STAGE 6 / TRACK M] the relation walker -- OFF: the old matcher is
+        # the matcher until the final measurement says otherwise
+        "MATCH_RELATION_WALKER": False,
     }

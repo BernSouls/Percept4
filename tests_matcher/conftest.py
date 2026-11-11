@@ -49,6 +49,7 @@ PIN_BASELINE = {
     "FIELD_BORDER_DISCARD_PER_CHANNEL": False,         # 0b, per-channel border
     "BINDER_COMPLETE_POSITION_MAP": False,             # direction 1, the map
     "GRAPH_STAGE6_RELATIONS": False,                   # R1-R3, R5
+    "MATCH_RELATION_WALKER": False,                    # Track M: the old matcher
 }
 
 #: the tree's own values, read once before any pin touches them

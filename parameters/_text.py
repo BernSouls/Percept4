@@ -2768,6 +2768,14 @@ GRAPH_STAGE6_RELATIONS = False
 # what the gate owes to this rule, which was written after presence counts
 # had been seen.
 ATTACHMENT_EVERY_NAMED_HOST = True
+# [STAGE 6 / TRACK M] THE RELATION WALKER (matching/relation_walker.py): a
+# correspondence grown along measured relations from a few seeds; signature
+# similarity is only a gate; attributes are attached afterwards; the score is
+# a Jaccard on preserved relations and a pair of graphs below the minimum
+# support has NO score.  ONE switch, read at ONE place
+# (`matching.relation_walker.match_evidence`).  OFF (default): that function
+# is `memory.cores.evidence_score`, the old matcher, untouched.
+MATCH_RELATION_WALKER = False
 # [O5] Thread count for the value-preserving field/V1 loops. This is a
 # PERFORMANCE knob only: every task writes a disjoint output slice, so the
 # produced arrays are byte-identical at any value (proven in the O5 harness
