@@ -1,0 +1,888 @@
+{
+ "comment": "Classification of every assertion of tests_matcher that fails when the pin baseline is disabled and one switch is set to another value. Read by phase2_pin_triage.py; derivations in REPORT.md (Pin triage). Line numbers are those of the pin files.",
+ "entries": [
+  {
+   "test": "test_an_unmatched_core_node_earns_nothing_under_either_rule",
+   "lines": [
+    170,
+    172
+   ],
+   "settings": [
+    "d3",
+    "d3n"
+   ],
+   "class": "S",
+   "why": "states the one-sided 1/2; the balanced term reads (1 + 1) / (1 + 2) = 2/3, as derived; core_node_coverage stays 1/2",
+   "pinned": "test_switch_interactions.py::test_d1_scenarios_under_the_balanced_node_term"
+  },
+  {
+   "test": "test_an_unmatched_core_node_earns_nothing_under_either_rule",
+   "lines": [
+    170,
+    172
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "one candidate per lens type: the only pairing IS the random pairing, so the calibrated term is 0, as derived",
+   "pinned": "test_switch_interactions.py::test_d1_scenarios_under_the_null"
+  },
+  {
+   "test": "test_binary_credit_tied_them_and_the_switch_restores_it",
+   "lines": [
+    102
+   ],
+   "settings": [
+    "d3",
+    "d3n"
+   ],
+   "class": "B",
+   "why": "TRACE BUG: node_coverage_binary stayed the one-sided core fraction while node_coverage was balanced (two forms, 3/(3+eps) against 6/(6+eps)). FIXED: the key is the binary twin of the term in use",
+   "pinned": "test_trace_binary_twin.py"
+  },
+  {
+   "test": "test_binary_credit_tied_them_and_the_switch_restores_it",
+   "lines": [
+    102
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "binary credit calibrates to 0 and the twin is never calibrated: the identity is node_coverage_raw == node_coverage_binary",
+   "pinned": "test_trace_binary_twin.py"
+  },
+  {
+   "test": "test_binary_credit_tied_them_and_the_switch_restores_it",
+   "lines": [
+    103
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "binary credit under calibration: N0 = N, score 0, as derived (a count is what a random pairing earns)",
+   "pinned": "test_switch_interactions.py::test_d1_scenarios_under_the_null"
+  },
+  {
+   "test": "test_credit_is_boost_times_weight_times_similarity",
+   "lines": [
+    80,
+    82
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "the pin's own subject with its switch unstated: binary credit reads full coverage",
+   "pinned": "test_d1_graded_node_credit.py::test_binary_credit_tied_them_and_the_switch_restores_it"
+  },
+  {
+   "test": "test_credit_is_boost_times_weight_times_similarity",
+   "lines": [
+    80,
+    82
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "states the uncalibrated sum(sims)/3; calibrated it is (N - N0)/(1 - N0) with N0 the mean of the 3 x 3 candidate matrix, as derived",
+   "pinned": "test_switch_interactions.py::test_d1_scenarios_under_the_null"
+  },
+  {
+   "test": "test_equal_census_the_more_alike_core_now_wins",
+   "lines": [
+    90,
+    91
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "the pin's own subject with its switch unstated: binary credit ties the two cores",
+   "pinned": "test_d1_graded_node_credit.py::test_binary_credit_tied_them_and_the_switch_restores_it"
+  },
+  {
+   "test": "test_graded_coverage_never_exceeds_binary_coverage",
+   "lines": [
+    142
+   ],
+   "settings": [
+    "d3",
+    "d3n",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "B",
+   "why": "TRACE BUG: 'graded <= binary' was false because the binary key had another form than the term (10 of 40 random pairs under D3, 2 under D3 + calibration). FIXED: binary twin",
+   "pinned": "test_trace_binary_twin.py"
+  },
+  {
+   "test": "test_graded_coverage_never_exceeds_binary_coverage",
+   "lines": [
+    145
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "the pin's own subject with its switch unstated: binary coverage",
+   "pinned": "test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting"
+  },
+  {
+   "test": "test_graded_coverage_never_exceeds_binary_coverage",
+   "lines": [
+    145
+   ],
+   "settings": [
+    "d3",
+    "d3n"
+   ],
+   "class": "S",
+   "why": "states the one-sided fraction; the balanced term reads 2 x sum(sims) / (n_q + n_c), as derived on all 40 random pairs",
+   "pinned": "test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting"
+  },
+  {
+   "test": "test_graded_coverage_never_exceeds_binary_coverage",
+   "lines": [
+    145
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "states the uncalibrated fraction; the calibrated value equals the definition (chance by enumeration) on every random pair",
+   "pinned": "test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting"
+  },
+  {
+   "test": "test_identical_graphs_keep_a_full_node_term",
+   "lines": [
+    67
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "asserts the trace label 'graded' with the switch unstated",
+   "pinned": "test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting"
+  },
+  {
+   "test": "test_node_weight_and_lens_boost_enter_the_credit",
+   "lines": [
+    118,
+    119
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "the pin's own subject with its switch unstated: binary credit",
+   "pinned": "test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting"
+  },
+  {
+   "test": "test_node_weight_and_lens_boost_enter_the_credit",
+   "lines": [
+    118,
+    119
+   ],
+   "settings": [
+    "d3",
+    "d3n"
+   ],
+   "class": "S",
+   "why": "states the one-sided weighted mean; balanced, with weights on the core only, it is (1.25 s1 + 3b s2) / (3.25 + 3b), as derived",
+   "pinned": "test_switch_interactions.py::test_d1_scenarios_under_the_balanced_node_term"
+  },
+  {
+   "test": "test_node_weight_and_lens_boost_enter_the_credit",
+   "lines": [
+    118,
+    119
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "one candidate per lens type: calibrated term 0, as derived",
+   "pinned": "test_switch_interactions.py::test_d1_scenarios_under_the_null"
+  },
+  {
+   "test": "test_absence_term_counts_a_query_edge_the_map_cannot_reach",
+   "lines": [
+    142,
+    149
+   ],
+   "settings": [
+    "f6off"
+   ],
+   "class": "S",
+   "why": "the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived",
+   "pinned": "test_switch_interactions.py::test_d3_scenarios_without_the_structural_match"
+  },
+  {
+   "test": "test_empty_setting_is_the_historical_one_sided_score",
+   "lines": [
+    68,
+    72
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "states node_coverage == core_node_coverage; calibrated, the identity holds for node_coverage_raw and the score is the calibrated term x R - 0.15 A, as derived",
+   "pinned": "test_switch_interactions.py::test_d3_scenarios_under_the_null"
+  },
+  {
+   "test": "test_empty_setting_is_the_historical_one_sided_score",
+   "lines": [
+    73
+   ],
+   "settings": [
+    "f6off"
+   ],
+   "class": "S",
+   "why": "the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived",
+   "pinned": "test_switch_interactions.py::test_d3_scenarios_without_the_structural_match"
+  },
+  {
+   "test": "test_identical_graphs_score_one_under_every_setting",
+   "lines": [
+    225
+   ],
+   "settings": [
+    "f6off"
+   ],
+   "class": "S",
+   "why": "5 edges, 3 parameterised: without F6 the graph scores 3/5 against itself, as derived",
+   "pinned": "test_switch_interactions.py::test_d3_scenarios_without_the_structural_match"
+  },
+  {
+   "test": "test_mirror_loop_in_the_core_direction_is_the_matchers_own_loop",
+   "lines": [
+    191
+   ],
+   "settings": [
+    "f6off"
+   ],
+   "class": "G",
+   "why": "non-degeneracy guard (2 < sim sum < 3; it is 1.64 without the topology match); the mirror identity itself holds",
+   "pinned": "test_switch_interactions.py::test_d3_scenarios_without_the_structural_match"
+  },
+  {
+   "test": "test_node_term_carries_the_graded_credit",
+   "lines": [
+    106
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "binary credit: (2 + 2) / (2 + 3) = 0.8, as derived",
+   "pinned": "test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting"
+  },
+  {
+   "test": "test_node_term_carries_the_graded_credit",
+   "lines": [
+    106
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "states the uncalibrated 2 sum(sims)/5; calibrated with N0 = 2 sum(S)/15, as derived",
+   "pinned": "test_switch_interactions.py::test_d3_scenarios_under_the_null"
+  },
+  {
+   "test": "test_node_term_prefers_the_core_that_explains_the_whole_query",
+   "lines": [
+    91,
+    95
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "states the uncalibrated 6/9; calibrated it is (2/3 - N0)/(1 - N0) with N0 = sum(S)/27, as derived; the whole still beats the fragment",
+   "pinned": "test_switch_interactions.py::test_d3_scenarios_under_the_null"
+  },
+  {
+   "test": "test_relation_term_counts_a_query_relation_the_core_lacks",
+   "lines": [
+    117,
+    122,
+    124,
+    125,
+    126
+   ],
+   "settings": [
+    "f6off"
+   ],
+   "class": "S",
+   "why": "the scenario's relations are parameter-less TOPOLOGY edges; with F6 off they are never matched, so the relational term and the score are 0, as derived",
+   "pinned": "test_switch_interactions.py::test_d3_scenarios_without_the_structural_match"
+  },
+  {
+   "test": "test_declared_defaults",
+   "lines": [
+    14
+   ],
+   "settings": null,
+   "class": "X",
+   "why": "the one test meant to redden when a declared default differs from the pin baseline",
+   "pinned": ""
+  },
+  {
+   "test": "test_matcher_credits_a_topology_edge_present_on_both_sides",
+   "lines": [
+    109,
+    110
+   ],
+   "settings": [
+    "f6off"
+   ],
+   "class": "S",
+   "why": "the F6 pin's own subject with its switch unstated: the historical strict 0.0",
+   "pinned": "test_f6_unparameterised_edge_match.py::test_matcher_gave_that_edge_nothing_before_the_fix"
+  },
+  {
+   "test": "test_same_predicate_without_params_is_a_structural_match",
+   "lines": [
+    40,
+    41
+   ],
+   "settings": [
+    "f6off"
+   ],
+   "class": "S",
+   "why": "the F6 pin's own subject with its switch unstated: the historical strict 0.0",
+   "pinned": "test_f6_unparameterised_edge_match.py::test_the_switch_restores_the_historical_strict_zero"
+  },
+  {
+   "test": "test_a_coverage_any_pairing_reaches_is_worth_nothing",
+   "lines": [
+    153
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated",
+   "pinned": "test_nullcal_node_coverage.py::(the same pin under the baseline)"
+  },
+  {
+   "test": "test_a_coverage_any_pairing_reaches_is_worth_nothing",
+   "lines": [
+    153
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "binary credit: the uncalibrated score is 1.0, not the similarity",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_binary_credit"
+  },
+  {
+   "test": "test_a_homogeneous_graph_scores_nothing_against_itself",
+   "lines": [
+    202
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated",
+   "pinned": "test_nullcal_node_coverage.py::(the same pin under the baseline)"
+  },
+  {
+   "test": "test_a_homogeneous_graph_scores_nothing_against_itself",
+   "lines": [
+    209
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "binary credit under calibration: a self-match of DISTINGUISHABLE nodes is 0 too -- the calibration presupposes graded credit",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_binary_credit"
+  },
+  {
+   "test": "test_a_specific_correspondence_keeps_its_credit",
+   "lines": [
+    167,
+    168,
+    169
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "binary credit: N0 = 1, calibrated term 0, as derived",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_binary_credit"
+  },
+  {
+   "test": "test_balanced_node_term_is_calibrated_over_both_sides",
+   "lines": [
+    223,
+    224,
+    225
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "binary credit, balanced: N = N0 = 4/5, calibrated term 0, as derived",
+   "pinned": "test_switch_interactions.py::test_node_term_is_its_definition_under_every_setting"
+  },
+  {
+   "test": "test_between_the_two_the_value_is_the_excess_over_chance",
+   "lines": [
+    179,
+    181
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "binary credit: N0 = N, 0, as derived",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_binary_credit"
+  },
+  {
+   "test": "test_binary_credit_calibrates_to_nothing",
+   "lines": [
+    190
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated",
+   "pinned": "test_nullcal_node_coverage.py::(the same pin under the baseline)"
+  },
+  {
+   "test": "test_calibrated_balanced_score_is_symmetric",
+   "lines": [
+    238
+   ],
+   "settings": [
+    "d1off",
+    "f6off"
+   ],
+   "class": "G",
+   "why": "guard 0 < score: the score is 0 here (binary credit calibrates to nothing / the topology edge is unmatched); the symmetry assertions hold",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_binary_credit"
+  },
+  {
+   "test": "test_calibration_keeps_the_balanced_preference_for_the_whole",
+   "lines": [
+    250,
+    254
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated",
+   "pinned": "test_nullcal_node_coverage.py::(the same pin under the baseline)"
+  },
+  {
+   "test": "test_calibration_keeps_the_balanced_preference_for_the_whole",
+   "lines": [
+    253,
+    254,
+    255
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "binary credit: fragment and whole both calibrate to 0 -- the preference needs graded credit",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_binary_credit"
+  },
+  {
+   "test": "test_chance_carries_the_lens_boost",
+   "lines": [
+    119,
+    121
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "binary credit: the chance mass is the count, 2 + b, and N0 = 1, as derived",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_binary_credit"
+  },
+  {
+   "test": "test_chance_carries_the_lens_boost",
+   "lines": [
+    121
+   ],
+   "settings": [
+    "d3",
+    "d3n",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "states the one-sided chance level; balanced it is 2 (tex + b con) / (q_total + c_total), as derived",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term"
+  },
+  {
+   "test": "test_chance_carries_the_node_weights",
+   "lines": [
+    142,
+    143,
+    144
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "binary credit: chance masses 2.5 and 4.0 (the weights), N0 = 1, as derived",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_binary_credit"
+  },
+  {
+   "test": "test_chance_carries_the_node_weights",
+   "lines": [
+    144
+   ],
+   "settings": [
+    "d3",
+    "d3n",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "states the one-sided chance level; balanced it is (q_ch + c_ch) / (4.0 + 2.5), as derived",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term"
+  },
+  {
+   "test": "test_chance_is_the_mean_of_the_candidate_matrix",
+   "lines": [
+    94,
+    95,
+    97,
+    99,
+    100,
+    102
+   ],
+   "settings": [
+    "d1off"
+   ],
+   "class": "S",
+   "why": "binary credit: chance masses 6/3 = 2, N = N0 = 2/3, calibrated 0, as derived",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_binary_credit"
+  },
+  {
+   "test": "test_chance_is_the_mean_of_the_candidate_matrix",
+   "lines": [
+    97,
+    99,
+    100
+   ],
+   "settings": [
+    "d3",
+    "d3n",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "states the one-sided values; balanced: N0 = 2 total/15, N = 2 (s12 + s67)/5, as derived",
+   "pinned": "test_switch_interactions.py::test_null_scenarios_under_the_balanced_node_term"
+  },
+  {
+   "test": "test_off_is_the_uncalibrated_score",
+   "lines": [
+    65,
+    66,
+    67,
+    68,
+    79,
+    80
+   ],
+   "settings": [
+    "null",
+    "d3n_null",
+    "d3_null"
+   ],
+   "class": "S",
+   "why": "the pin's UNCALIBRATED leg does not state the switch, so it ran calibrated",
+   "pinned": "test_nullcal_node_coverage.py::(the same pin under the baseline)"
+  },
+  {
+   "test": "test_cross_schema_mean_runs_over_the_measured_shared_axes",
+   "lines": [
+    121,
+    124
+   ],
+   "settings": [
+    "p4off"
+   ],
+   "class": "S",
+   "why": "the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)",
+   "pinned": "test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)"
+  },
+  {
+   "test": "test_cross_schema_with_no_measured_shared_axis_is_not_evidence",
+   "lines": [
+    104,
+    105
+   ],
+   "settings": [
+    "p4off"
+   ],
+   "class": "S",
+   "why": "the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)",
+   "pinned": "test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)"
+  },
+  {
+   "test": "test_matcher_gives_an_unmeasured_edge_pair_no_similarity",
+   "lines": [
+    153,
+    154
+   ],
+   "settings": [
+    "p4off"
+   ],
+   "class": "S",
+   "why": "the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)",
+   "pinned": "test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)"
+  },
+  {
+   "test": "test_one_side_all_unknown_is_not_evidence",
+   "lines": [
+    65,
+    66
+   ],
+   "settings": [
+    "p4off"
+   ],
+   "class": "S",
+   "why": "the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)",
+   "pinned": "test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)"
+  },
+  {
+   "test": "test_tuples_measured_on_different_axes_are_not_a_perfect_match",
+   "lines": [
+    58,
+    59
+   ],
+   "settings": [
+    "p4off"
+   ],
+   "class": "S",
+   "why": "the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)",
+   "pinned": "test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)"
+  },
+  {
+   "test": "test_two_all_unknown_tuples_are_not_evidence",
+   "lines": [
+    50
+   ],
+   "settings": [
+    "p4off"
+   ],
+   "class": "S",
+   "why": "the Phase 4 pin's own subject with its switch unstated: the historical floors (0.2, 1.0, unmeasured shared axes in the mean)",
+   "pinned": "test_p4_unmeasured_edge_is_not_evidence.py (each pin's own switch-off leg)"
+  },
+  {
+   "test": "test_matcher_gives_an_unmeasured_edge_pair_no_similarity",
+   "lines": [
+    158
+   ],
+   "settings": [
+    "caon"
+   ],
+   "class": "S",
+   "why": "states the mean's value under the Phase-4 floors: an all-UNKNOWN pair reads 0.2. With the count kept apart the same pair is one present relation with nothing measured: presence 1, physics 1 (vacuous), term 1.0",
+   "pinned": "test_p4b_count_apart.py::test_with_the_floors_restored_an_unmeasured_pair_is_a_full_count"
+  },
+  {
+   "test": "test_only_the_node_term_acts",
+   "lines": [
+    80
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "G",
+   "why": "guard on the pin's own scenario (a margin of 0.05 between two scores): under the dark cap every generic edge of the scenario reads its specificity, both scores fall and the margin with them; the assertions on which term acts hold",
+   "pinned": "test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges"
+  },
+  {
+   "test": "test_mirror_loop_in_the_core_direction_is_the_matchers_own_loop",
+   "lines": [
+    191
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "G",
+   "why": "guard on the pin's own scenario (the similarity sum lies between 2 and 3): the scenario's CO_LOCATED matches read 0.282 under the dark cap; the loop identity itself holds",
+   "pinned": "test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges"
+  },
+  {
+   "test": "test_identical_graphs_score_one_under_every_setting",
+   "lines": [
+    225
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "S",
+   "why": "states the uncapped matcher: under the dark cap a graph of generic edges does not score 1.0 against itself, because the relational term is a mean similarity and each generic edge reads its specificity",
+   "pinned": "test_specificity_cap.py::test_under_the_cap_a_graph_no_longer_scores_one_against_itself"
+  },
+  {
+   "test": "test_parameterised_pairs_are_untouched_by_the_switch",
+   "lines": [
+    75
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "S",
+   "why": "the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor",
+   "pinned": "test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges"
+  },
+  {
+   "test": "test_what_the_switch_does_not_touch",
+   "lines": [
+    205,
+    207
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "S",
+   "why": "the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor",
+   "pinned": "test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges"
+  },
+  {
+   "test": "test_two_all_unknown_tuples_are_not_evidence",
+   "lines": [
+    52
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "S",
+   "why": "the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor (0.2 x 0.282 = 0.0564: the historical floor, capped)",
+   "pinned": "test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges"
+  },
+  {
+   "test": "test_tuples_measured_on_different_axes_are_not_a_perfect_match",
+   "lines": [
+    61
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "S",
+   "why": "the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor",
+   "pinned": "test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges"
+  },
+  {
+   "test": "test_a_slot_measured_on_both_sides_keeps_the_historical_value",
+   "lines": [
+    79
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "S",
+   "why": "the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor",
+   "pinned": "test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges"
+  },
+  {
+   "test": "test_matcher_gives_an_unmeasured_edge_pair_no_similarity",
+   "lines": [
+    157,
+    158
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "S",
+   "why": "the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor (0.2 x 0.282 = 0.0564)",
+   "pinned": "test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges"
+  },
+  {
+   "test": "test_matcher_still_credits_a_measured_edge_pair",
+   "lines": [
+    163,
+    165
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "S",
+   "why": "the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor",
+   "pinned": "test_specificity_cap.py::test_under_the_cap_a_graph_no_longer_scores_one_against_itself"
+  },
+  {
+   "test": "test_a_membership_flag_is_a_perfect_match_with_nothing_measured",
+   "lines": [
+    99
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "S",
+   "why": "the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor (the CONTOUR_ORIENTATION flag: 0.576)",
+   "pinned": "test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges"
+  },
+  {
+   "test": "test_d3_scenarios_without_the_structural_match",
+   "lines": [
+    466
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "S",
+   "why": "the pin's example is a generic proximity edge (CO_LOCATED, CONTOUR_ORIENTATION): under the dark cap its similarity is multiplied by the class's specificity (0.282, 0.576), so the value the pin states for the uncapped matcher is scaled by that factor (3/5 x 0.282 = 0.1692)",
+   "pinned": "test_specificity_cap.py::test_under_the_cap_a_graph_no_longer_scores_one_against_itself"
+  },
+  {
+   "test": "test_d3_scenarios_without_the_structural_match",
+   "lines": [
+    475
+   ],
+   "settings": [
+    "capon"
+   ],
+   "class": "G",
+   "why": "guard on the pin's own scenario (the similarity sum lies between 1 and 2): the scenario's CO_LOCATED matches read 0.282 under the dark cap",
+   "pinned": "test_specificity_cap.py::test_the_switch_caps_a_same_schema_pair_of_generic_edges"
+  }
+ ]
+}
