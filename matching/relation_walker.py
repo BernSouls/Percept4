@@ -373,6 +373,37 @@ class WalkResult:
     log: List[Tuple[int, int, Any]] = field(default_factory=list)
 
 
+def _record_support(sup_d: Dict[Any, Tuple[float, bool]], sup: Any,
+                    slack: float, measured: bool) -> None:
+    """Record ONE proposal's evidence for a pair (Amendment 7.19).
+
+    `sup_d` maps a support (the admitted pair the proposal came through) to
+    (slack, measured).  An ORDER proposal carries NO measured slack: it may
+    open a support that no measurement opened (then it records (0.0, False)),
+    it may never lower a measured slack, and a measurement arriving later
+    REPLACES a weak entry instead of being minimized into it.  Two measured
+    proposals through the same support keep the smaller slack.
+    """
+    prev = sup_d.get(sup)
+    if prev is None:
+        sup_d[sup] = (slack, measured)
+        return
+    prev_slack, prev_measured = prev
+    if measured and not prev_measured:
+        sup_d[sup] = (slack, True)          # the measurement is the evidence now
+    elif measured and prev_measured:
+        sup_d[sup] = (min(prev_slack, slack), True)
+    elif not prev_measured:
+        sup_d[sup] = (min(prev_slack, slack), False)   # two order backings: no slack either way
+
+
+def _measured_slack(sup_d: Dict[Any, Tuple[float, bool]]) -> float:
+    """The slack the MEASUREMENTS give a pair: 0 when there are none.  The
+    serving order must not read that 0 as perfect agreement -- that is what
+    the tier in `_serve_key` is for."""
+    return sum(sl for sl, measured in sup_d.values() if measured)
+
+
 def _serve_key(how: Any, n_support: int, slack: float, sim: float,
                key_q: Tuple, key_r: Tuple, u: int, v: int) -> Tuple:
     """The order proposals are served in (Amendment 4.1 + 7.18).
@@ -539,11 +570,12 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
                 pts.append((af, ag))
         return _order_consistent(pts, gq.closed(u) and gr.closed(v))
 
-    support: Dict[Tuple[int, int], Dict[Tuple[int, int], float]] = {}
+    support: Dict[Tuple[int, int], Dict[Tuple[int, int], Tuple[float, bool]]] = {}
     via: Dict[Tuple[int, int], List[Tuple]] = {}
     heap: List[Tuple] = []
 
-    def propose(u: int, v: int, sup: Tuple[int, int], slack: float, how: Tuple) -> None:
+    def propose(u: int, v: int, sup: Tuple[int, int], slack: float, how: Tuple,
+                measured: bool = True) -> None:
         if u in map_q or v in map_r or (u, v) in rejected:
             return
         s = sim(u, v)
@@ -551,11 +583,9 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
             return
         note(u, v, s)
         sup_d = support.setdefault((u, v), {})
-        prev = sup_d.get(sup)
-        if prev is None or slack < prev:
-            sup_d[sup] = slack
+        _record_support(sup_d, sup, slack, measured)          # 7.19
         via.setdefault((u, v), []).append(how)
-        heapq.heappush(heap, _serve_key(how, len(sup_d), sum(sup_d.values()), s,
+        heapq.heappush(heap, _serve_key(how, len(sup_d), _measured_slack(sup_d), s,
                                         gq.key[u], gr.key[v], u, v))
 
     def order_propose(hq: int, hr: int) -> None:
@@ -577,7 +607,7 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
                 if not _order_consistent(pts + [(af, ag)],
                                          gq.closed(hq) and gr.closed(hr)):
                     continue
-                propose(f, g, (hq, hr), 0.0, ("order", hq, hr))
+                propose(f, g, (hq, hr), 0.0, ("order", hq, hr), measured=False)
 
     def contradicted(u: int, v: int) -> bool:
         """[D2 / 7.16-7.17] the veto is on the PAIR, not on the one relation
@@ -656,7 +686,7 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
         if u in map_q or v in map_r or (u, v) in rejected:
             continue
         sup_d = support.get((u, v))
-        if not sup_d or _neg != -len(sup_d) or _slack_sum != sum(sup_d.values()):
+        if not sup_d or _neg != -len(sup_d) or _slack_sum != _measured_slack(sup_d):
             continue
         s = sim(u, v)
         if not _node_gate(s, best.get(u, 0.0)):

@@ -979,3 +979,35 @@ measured relation behind them are served first, and an order proposal is
 served when no measured proposal is pending.  Within a tier the 4.1 rank is
 unchanged.  (D4's purpose -- reaching what no measured relation reaches -- is
 what a tier keeps; what it loses is the power to overrule a measurement.)
+
+### 7.19 AN ORDER PROPOSAL MAY NOT WRITE INTO A MEASURED SLACK (the 7.18 defect)
+
+7.18 made order proposals a tier below measurements, and that hid a bug in the
+bookkeeping rather than fixing it: proposals were stored per pair per support
+as ONE slack, and `min(existing, incoming)` let an order proposal -- which has
+no measured slack, so it carried 0.0 -- overwrite a measured slack of 2 bins
+with 0.  The pair then looked perfectly supported.  Fixed: the support map
+stores (slack, measured) and an order proposal may only OPEN a support that no
+measurement opened; it never lowers a measured slack, and a measurement that
+arrives after it REPLACES it.  The serving rank reads the sum of MEASURED
+slacks only.
+
+THE TIER (7.18) IS NOW BEHAVIOURALLY REDUNDANT on the hand-built pins: with
+7.19 fixed, removing the tier changes no mapping in the pin set (measured:
+32 of 33 pins green with the tier removed, the one red being the pin that
+tests the key itself).  It is KEPT, on the record, because an order-only
+support still sums to 0.0 measured slack -- indistinguishable in the rank
+from an exact measurement -- and because tuning it out would be a change made
+after seeing a number.  If a later measurement shows the tier costs
+correspondence, it comes out by its own amendment.
+
+### 7.20 THE MUTATION REPORT, written down (not just run)
+
+diagnostics/results/phase6_walker_mutations.md holds the table: 18 single-rule
+breaks, 16 red with the pin named, 2 survivors.  The survivors are named and
+explained there, one behaviourally equivalent by construction (`_measured_slack`
+counting a 0.0 order support as 0.0), one equivalent only in the graphs the
+pins use (a rarity rule that changes ranking alone, and whose ranking never
+separates a candidate on those graphs).  No mutation was swapped for a
+catchable one; a mutation that did not catch anything was replaced by a pin on
+the rule it actually tests (the node gate on a seed), and that is recorded.

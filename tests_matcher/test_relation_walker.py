@@ -481,6 +481,24 @@ def test_the_beam_grows_four_seed_sets_and_keeps_the_best():
     assert best["mapped"] == len(res.mapping)
 
 
+def test_an_order_proposal_never_lowers_a_measured_slack():
+    """RULE (7.19): an order proposal carries no MEASURED slack.  It may open
+    a support no measurement opened, it may never overwrite a measured slack
+    with 0.0, and a measurement arriving later replaces the weak entry."""
+    sup_d = {}
+    W._record_support(sup_d, ("A",), 2.0, True)          # measured, two bins off
+    W._record_support(sup_d, ("A",), 0.0, False)         # order backs the same pair
+    assert sup_d[("A",)] == (2.0, True) and W._measured_slack(sup_d) == 2.0
+    W._record_support(sup_d, ("B",), 0.0, False)         # order only, no measurement
+    assert sup_d[("B",)] == (0.0, False) and W._measured_slack(sup_d) == 2.0
+    W._record_support(sup_d, ("B",), 3.0, True)          # a measurement arrives
+    assert sup_d[("B",)] == (3.0, True) and W._measured_slack(sup_d) == 5.0
+    W._record_support(sup_d, ("A",), 1.0, True)          # two measurements: the smaller
+    assert sup_d[("A",)] == (1.0, True) and W._measured_slack(sup_d) == 4.0
+    W._record_support(sup_d, ("B",), 3.5, True)
+    assert sup_d[("B",)][0] == 3.0
+
+
 def test_an_order_proposal_is_served_after_a_measured_one():
     """RULE (7.18, read on the serving key itself): proposals are ordered by
     (tier; support; slack; signature; keys).  An order proposal carries no
