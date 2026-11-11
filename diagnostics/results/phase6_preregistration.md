@@ -462,3 +462,107 @@ never part of the verdict.  The per-channel border switch is off.
   rate, candidates, emitted (median over images).  The switch cannot default
   on while any affected channel's theta is still moving by more than 0.01 per
   step at step 8, or has reached its ceiling.
+
+## Amendment 3 (after the first truth table and the census under Amendment 2)
+
+WHAT HAD BEEN SEEN when this amendment was written: the attachment census under
+Amendment 2 (`phase6_attachment.txt` as committed in 22aaea1: 7,571 ambiguous
+under distance alone, 1,662 recovered by tangent agreement; Orientation ->
+Contour 789 -> 28 recovered); the first truth table (bar probe: 20 detections
+at bar ends, median 7.5 degrees; synthetic scenes, share of a kind's
+orientation within 15 degrees of the true tangent on smooth boundary:
+CONTOUR_PEAK 0.97, Orientation 0.99, EndStopped 0.09 (0.41 after a 90-degree
+turn), ContourFragment 0.00 (median error 90.0), Corner 0.37 on 19; hosts:
+Contour 0.97, PEAK_CHAIN 0.98); a 12-graph look at the Orientation features
+several Contours name.  NOT seen: any reachability figure of a stage-6 graph,
+the Corner bisector against a true bisector, the stream-2 polylines traced
+without the rotation, any multi-step trajectory, any matcher output, HELDOUT.
+
+### 3.1 Several named hosts are several facts (correction to 2.3)
+
+Amendment 2.3 let tangent agreement decide "where the data names several hosts
+of one kind", and counted the rest as ambiguous.  That clause is WITHDRAWN.
+
+* What the 789 are (12 graphs, 119 such Orientation features): the Contour
+  lens lists the feature as a member of 3 Contours (89), 4 (17), 2 (12) or 5
+  (1), and in 101 of the 119 the feature is the END vertex of every one of
+  them.  They are branch cells of the cell-adjacency graph: the lens ends each
+  branch on the shared cell.  The Contours' mean orientations are within one
+  bin of the feature's own (the gap between the two best is under 15 degrees in
+  97 %), so no tangent rule can pick one, and none should: the feature is on
+  all of them.
+* The ambiguity rule is about a GUESS between candidates.  A recorded
+  membership is a fact; three recorded memberships are three facts.  By the
+  principle 2.3 itself states (membership identifies, attachment measures),
+  the feature is attached to EACH host that names it, and each attachment is
+  measured on its own host (where on it, how far, at what angle).
+* Counted apart ("known, several") in every table.  Tangent agreement keeps
+  its registered role for geometric contenders only.
+* BECAUSE THIS RULE WAS WRITTEN AFTER SEEING PRESENCE COUNTS, its contribution
+  to the gate is isolated: a parameter `ATTACHMENT_EVERY_NAMED_HOST` (True;
+  False restores the Amendment-2 behaviour) and R6 is reported both ways.  The
+  verdict row is the amended rule (True); the False row is printed beside it.
+
+### 3.2 An orientation must pass truth before it is used (addition to 2.6)
+
+2.6 fixed what is reported and no consequence.  The consequence, one rule for
+every feature kind:
+
+* A kind's own orientation enters `tangent_angle` and tangent agreement only
+  if, on the synthetic scenes, AT LEAST HALF of that kind's detections within
+  one scale of a smooth true boundary pixel lie within 15 degrees of the true
+  tangent there.  Otherwise the kind's orientation is ABSENT (its place, i.e.
+  `arc_end_dist`, `perp_dist` and the ordinal, is unaffected).
+* 15 degrees is the constant of 2.3 (one channel step); "half" because a
+  median beyond one step means the typical value is in another bin.
+* This rule is written after the first truth table, so it is not blind for
+  the four kinds already seen; their figures are far from the line on either
+  side (0.97, 0.99 against 0.09, 0.00).  It IS blind for Corner (below).
+* EndStopped.  The registered bar test (2.2) returns TANGENT and stands as a
+  statement about bars: on an isolated bar the slot is the bar's orientation,
+  so no reader should turn it by 90 degrees.  On the boundaries of filled
+  shapes the same slot is within 15 degrees of the tangent in 9 % of the
+  detections: by the rule above the orientation is ABSENT.  Hypothesis for the
+  cause, to be measured in the same diagnostic: the end-stop score is a
+  RELATIVE suppression, so on a smooth edge an off-axis channel that passes
+  the energy gate scores full suppression along its own axis and wins; the
+  test is the share of EndStopped detections whose winning channel is the
+  locally dominant channel.
+* ContourFragment.  The chord carried under 2.2 is, against truth, the
+  boundary NORMAL (median error 90.0 degrees, none within 30).  Hypothesis for
+  the cause: the stream-2 tracer (`_extract_association_field_contours`)
+  follows `carrier + pi/2`, while the bank's channel index already is the
+  orientation of the bar it answers (the kernel's docstring; Orientation and
+  CONTOUR_PEAK, which read the index as it is, are within 4 degrees of
+  truth), so the traces run ACROSS edges.  THE TEST, fixed now: on the
+  synthetic scenes, the angle between the local direction of every stream-2
+  polyline and the true tangent, as traced and with the rotation removed (the
+  energy rolled by half the channels, which is the same tracer following the
+  index as it is); "across" iff the median as traced is above 67.5 degrees and
+  the median with the rotation removed is below 22.5.  Whatever the outcome
+  the fragment's orientation is ABSENT under the rule above (an angle that is
+  90 degrees by construction is not a measurement); the fragment's own
+  midpoint stays.  The tracer is NOT changed in this stage: it feeds the
+  contour regions, the fragments and the shape lenses, so changing it changes
+  the benchmark's nodes.  Reported with the evidence, and asked.
+* Corner.  A bisector is not a tangent, so its truth is the TRUE BISECTOR:
+  the true corner is the centroid of the non-smooth boundary pixels within 4
+  px of the non-smooth pixel nearest the detection (within one scale); the
+  true bisector is the direction of the mean of the unit vectors from it to
+  the boundary pixels between 0.75 and 1.5 scales away (undefined when that
+  mean is shorter than 0.2 or rests on fewer than 6 pixels).  The Corner
+  orientation is used iff at least half of the Corner detections that have a
+  true bisector lie within 15 degrees of it.  Not yet computed.
+
+### 3.3 The convention sites, listed (none changed in this stage)
+
+`core.quantize.carrier_to_tangent` documents "bank theta is the carrier
+(normal) axis".  The sites that apply it or its equivalent, with what each
+would mean if the index is the bar's own orientation: the stream-2 tracer
+(tested, 3.2); `_oriented_tangents` (the curvature sign of a Contour: a lead
+for the frozen `curv_agree` / `curv_diff` slots of R4, to be diagnosed
+there); `_opens_toward` (tests the open side against the axis turned by 90
+degrees, while `compute_endstopped_map` measures it along the axis);
+`_arm_tangent_stats` (a doubled-angle concentration: a global turn changes
+nothing); `IllusoryContourLens` (joins terminators across their bars, which
+is what a line-end contour is: correct if the slot is the bar).
