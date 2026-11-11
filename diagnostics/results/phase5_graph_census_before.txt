@@ -1,0 +1,108 @@
+PHASE 5 step 0 -- graph census, 79 EVAL graphs (read-only)
+front-end digest c1ea81ae1b6c
+
+nodes per graph: median 713 (min 454, max 916);  edges per graph: median 801 (min 444, max 1703)
+
+  lens type               graphs   median      min      max
+  CONTOUR_PEAK                79      105       29      174
+  Position                    79       99       94      102
+  TextureBoundary             79       96       14      172
+  BorderOwnership             79       77       15      117
+  Boundary                    79       72       45      100
+  Orientation                 79       54       25       89
+  Color                       79       35       21       62
+  EndStopped                  79       35       13       73
+  Texture                     79       30       19       39
+  Contour                     79       18       10       40
+  PEAK_CHAIN                  79       18        1       35
+  ContourFragment             79       16        4       29
+  CurveComplex                79       13        7       25
+  Surface                     79       13        2       26
+  RegionShape                 79       13        2       27
+  Corner                      79       11        1       29
+  Polarity                    79        3        3        3
+  IllusoryContour             50        2        1        9
+  Junction                    54        1        1        6
+  Onset                       79        1        1        1
+  T                           24        1        1        4
+  Y                            3        1        1        1
+
+edges: type, count, same-anchor share, endpoint lens pairs (top 4), slots (measured%, distinct values)
+  CO_LOCATED                  17516  same-anchor  29.8% (unknown 0)
+      pairs: Boundary>Texture 4386, Boundary>Color 4108, Color>Texture 3587, Orientation>Texture 1939, +2 more
+      slots: scale_ratio 0% - | salience_ratio 100% 8
+  CONTOUR_ORIENTATION         10303  same-anchor  13.9% (unknown 0)
+      pairs: PEAK_CHAIN>CONTOUR_PEAK 6033, Contour>Orientation 4270
+      slots: containment 100% 1
+  JUNCTION_CONTOUR             5500  same-anchor   1.1% (unknown 0)
+      pairs: Corner>Contour 2861, Junction>Contour 2035, T>Contour 561, Y>Contour 43
+      slots: dist 100% 8 | incidence 100% 13 | topology_class 100% 6
+  REGION_CONTENT               5489  same-anchor   0.1% (unknown 0)
+      pairs: Boundary>Boundary 2091, Boundary>Color 1323, Boundary>Orientation 644, Boundary>Texture 271, +19 more
+      slots: containment 100% 1
+  COLOR_OPPONENT_BORDER        4405  same-anchor   0.0% (unknown 0)
+      pairs: Color>Color 4405
+      slots: opp_angle 100% 24 | contrast 100% 6 | lum_indep 100% 6 | extent 100% 8
+  ORIENTATION_CONTINUITY       4093  same-anchor   0.0% (unknown 0)
+      pairs: Orientation>Orientation 4093
+      slots: dist 100% 7 | perp 100% 6 | cocirc_asym 100% 8 | turn 100% 4 | tail_role 100% 3 | head_role 100% 3 | polarity_rel 100% 1
+  CONTOUR_CONTINUITY           2802  same-anchor   9.6% (unknown 0)
+      pairs: Contour>Contour 2802
+      slots: dist 100% 7 | turn 100% 8 | curv_agree 100% 1
+  CURVATURE_SIGN_CONTINUITY    2496  same-anchor  10.7% (unknown 0)
+      pairs: Contour>Contour 2496
+      slots: curv_diff 100% 1 | dist 100% 5
+  ORIENTATION_BEND             2288  same-anchor   0.0% (unknown 0)
+      pairs: Orientation>Orientation 2288
+      slots: angle_delta 100% 4 | bisector_theta 100% 21 | spatial_dist 100% 1
+  RADIALITY                    1691  same-anchor   0.0% (unknown 0)
+      pairs: Contour>Contour 1691
+      slots: hub_bearing 100% 24 | alignment 100% 1 | hub_ratio 100% 4 | spoke_separation 100% 12
+  ORIENTATION_JUNCTION         1536  same-anchor   0.0% (unknown 0)
+      pairs: Orientation>Orientation 1536
+      slots: angle_delta 100% 3 | bisector_theta 100% 17 | spatial_dist 100% 1
+  SYMMETRY                     1145  same-anchor  10.0% (unknown 0)
+      pairs: CurveComplex>CurveComplex 1145
+      slots: sym_score 100% 4 | axis_angle 100% 12 | dist 100% 5
+  CURVE_CONTAINMENT            1090  same-anchor 100.0% (unknown 0)
+      pairs: CurveComplex>Contour 1090
+      slots: rel_dist 100% 1 | polar_angle 100% 1 | scale_ratio 0% -
+  TOPOLOGY                     1054  same-anchor   0.0% (unknown 0)
+      pairs: Position>Position 1054
+      slots: (no parameters)
+  PARALLEL                     1029  same-anchor  19.6% (unknown 0)
+      pairs: Contour>Contour 1029
+      slots: perp_dist 100% 8 | stagger_dist 100% 8 | convergence 100% 5
+  SPIRALITY                     939  same-anchor   0.0% (unknown 0)
+      pairs: Contour>Contour 939
+      slots: pitch 100% 9 | consistency 100% 7 | chirality 100% 3 | expansion 100% 1
+  COCIRCULAR                    921  same-anchor   0.0% (unknown 0)
+      pairs: Contour>Contour 921
+      slots: cocirc_asym 100% 7 | dist 100% 5
+  JUNCTION_ORIENTATION          736  same-anchor   0.0% (unknown 0)
+      pairs: Junction>Orientation 344, Corner>Orientation 291, T>Orientation 92, Y>Orientation 9
+      slots: containment 100% 1
+  AMODAL_LINK                   508  same-anchor   0.0% (unknown 0)
+      pairs: Contour>Contour 508
+      slots: gap 100% 5 | error 100% 7
+  CONCENTRICITY                 456  same-anchor  25.0% (unknown 0)
+      pairs: Contour>Contour 118, Contour>CurveComplex 116, CurveComplex>Contour 112, CurveComplex>CurveComplex 110
+      slots: radial_ratio 100% 5 | offset 100% 5 | extent 100% 4 | ecc_difference 100% 3
+  BORDER_OWNERSHIP_EDGE         348  same-anchor   0.0% (unknown 0)
+      pairs: BorderOwnership>BorderOwnership 271, BorderOwnership>CONTOUR_PEAK 77
+      slots: owner_signed 100% 8 | dist 0% - | curvature 100% 8
+  CONTACT                       274  same-anchor   0.0% (unknown 0)
+      pairs: Position>Position 274
+      slots: normal_angle 100% 24 | dist 100% 4 | depth_step 100% 1
+  LINE_TERMINATION              208  same-anchor  20.2% (unknown 0)
+      pairs: Contour>Corner 130, Contour>Junction 78
+      slots: junction_type 100% 5 | sharpness 100% 4 | curvature 100% 8 | parent_theta 100% 12
+  CURVATURE                      87  same-anchor   0.0% (unknown 0)
+      pairs: Orientation>Orientation 87
+      slots: signed_turn 100% 5 | chord_len 100% 1 | curv_rate 100% 1
+  DEGREE                         36  same-anchor   0.0% (unknown 0)
+      pairs: Position>Position 36
+      slots: (no parameters)
+  OCCLUSION                       1  same-anchor   0.0% (unknown 0)
+      pairs: Position>Position 1
+      slots: depth 100% 1 | stack_depth 100% 1 | source 100% 1 | depth_units 0% -
