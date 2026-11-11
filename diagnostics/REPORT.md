@@ -28,6 +28,10 @@ Pairs of numbers are `full / v1` window.
 | the documented specificity cap, wired | dark; measured descriptively | off; your decision |
 | D2 — edge-aware correspondence | **gated** on the graded-admission experiment; not started | – |
 | Phase 3 — population wiring | gate open; **not started** | – |
+| stage 5, Phase A — writer truth (A1, A2b, A3, A4, A5 and three more writers) | landed; six edge slots that held a constant which was not a measurement are ABSENT; **no new measurement that varies** | in the tree, **no switch** |
+| stage 5, A2 — the CurveComplex link reader | tried on the 79 graphs; **met its registered failure**; not applied | `lenses/v4.py` unchanged |
+| stage 5, Phase B — can relations carry a correspondence (static census, no matcher) | **STOP**: the reachable set is 16 % of the frame, the floor was 25 % | – |
+| stage 5, Phases C–E — the relation-grown matcher | **not built** (stop rule) | – |
 | HELDOUT-75 | **untouched** | – |
 
 Hits on the declared defaults: **37 | 39** of 75 (Phase 0 baseline 36 | 34;
@@ -38,20 +42,38 @@ score reads (D3, the null calibration, P4b) are off. What is on by default
 is a correctness fix, the spec's wording, or a performance change that
 moves no value.
 
-Bars on the final tree (`results/logs/`): matcher pins **390 passed**; pin
-triage **0 unclassified** over 17 settings; bug hunt sections A–F **0
-findings**; figground **99 passed, 4 xfailed** (the same four as before any
-change); `_u27_selftest.py` all pass (run on this branch; `main` deleted
-the script after the branch point, so it is no longer a bar there, and the
-stored records' source digest will not match a tree without it — see
-`README.md`, "The stored records and `main`"). Not checkable here: the 329-test
-figground bar (103 tests exist in this checkout), U20 WRONG=0, `_u24_*`,
-the per-class L0/L1 thresholds. The figground bar calls the matcher 0
-times, so it says nothing about a matcher change (stage 2 §4).
+After the stage-5 writer fixes the declared defaults read **38 | 39**
+(+1 / −0 on full, 270 of 300 pair scores move; on v1 no stored value
+moves). That is the only configuration re-measured on the new graphs:
+every other full-window figure in this report was measured before those
+fixes and is **PROVISIONAL** (stage 5 §6).
+
+Bars on the final tree (stage 5): matcher pins **419 passed**; pin triage
+**0 unclassified** over 17 settings (`results/phase5_pin_triage.txt`); bug
+hunt sections D, E, F **0 findings** on the rebuilt graphs
+(`results/phase5_walk_order_check.txt`, `phase5_blocks_check.txt`) —
+sections A–C read the stored records of stages 1–4, which no longer match
+the tree, and were not re-run; figground **99 passed, 4 xfailed** (the same
+four as before any change); `_u27_selftest.py` all pass — `main` deleted
+that script, so it was run from the previous branch's copy and is not a
+bar of this tree. Not checkable here: the 329-test figground bar (103
+tests exist in this checkout), U20 WRONG=0, `_u24_*`, the per-class L0/L1
+thresholds. **What these bars do not see:** the figground bar calls the
+matcher 0 times (stage 2 §4) and the binder 0 times
+(`results/phase5_figground_reach.txt`), so it says nothing about a matcher
+change or about the binder changes of stage 5; and the selftest imports
+nothing stage 5 changed.
 
 ---
 
 ## Assessment — what I think the code base needs (opinion; each point names the measurement it rests on)
+
+*Written at the end of stage 4 and left as written. Stage 5 acted on point
+5 and tested the premise of point 2's closing proposal, that the relations
+should decide who is paired: the relations a correspondence would have to
+be grown along are mostly not in the graphs (stage 5 §1), and the writer
+fixes of point 5 withdrew false statements without adding a measurement
+that varies (stage 5 §2). What follows from that is in stage 5 §8.*
 
 1. **The instruments belong in the repository.** The export has none of
    the `_u32_*` harnesses the README's figures come from, 103 of 329
@@ -105,6 +127,433 @@ times, so it says nothing about a matcher change (stage 2 §4).
 What I would not do: flip D3, the null calibration, P4b or the cap on the
 strength of ±3 queries; add a term to the score; or tune a weight on
 EVAL-75.
+
+---
+
+## Stage 5 — writer truth, and whether relations can carry a correspondence: the pre-registered stop rule fires
+
+**No relation-grown matcher was built.** The static census that was to
+decide whether to build one (Phase B) fired its stop rule: the most a
+relation-grown correspondence could ever reach from its best seed is 16 % of
+the shape nodes of the median graph, against a floor of 25 % fixed
+beforehand. Phases C–E were not started.
+
+Phase A (writer truth) landed in part. On the 79 graphs it turned six edge
+slots that held a constant which was not a measurement (zero by
+construction, or a fallback) into ABSENT, and it produced **no new
+measurement that varies**: 43 edge slots varied before, 43 vary now. The
+one fix that was meant to create varying measurements — the CurveComplex
+link reader, A2 — met its own pre-registered failure criterion when tried on
+the 79 graphs, and was not applied.
+
+Scope of every figure here: the 79 graphs of this harness (4 references +
+75 EVAL), built on the single-step settle route (one step per image on a
+fresh graph). Definitions, expected effects and the stop rule were committed
+before any library edit: `results/phase5_preregistration.md` (`48a4c5c`).
+Tables: `results/phase5_feasibility.txt`, `results/phase5_slot_truth.txt`
+(`…_before.txt` on `main`'s writers), `results/phase5_graph_census_before.txt`
+/ `…_after.txt`, `results/phase5_a2_statistic.txt`, `results/phase5_a2_trial_*`,
+`results/phase5_defaults_before_after.txt`, `results/phase5_whatif.txt`
+(post hoc).
+
+### 0. Verdicts
+
+| item | fixed beforehand | result | state |
+|---|---|---|---|
+| **Phase B**, static feasibility | STOP if the median largest structural component is under 8 nodes, or the median reachable set / FRAME is under 0.25 | 87 nodes (passes); **0.163 (fails)**, 10th percentile 0.10; 11 of 79 graphs reach 0.25 | **STOP** |
+| Phases C–E, the relation-grown matcher | built only if the rule does not fire | – | **not built** |
+| **A2**, CurveComplex reads the association strength valid during the step | complexes with more than one member appear; **failure** if the median graph has one complex holding more than half of its Contour nodes | tried on all 79 graphs: median share **1.000**; above one half in 77 of 79; every Contour in 67 of 79 | **failed; not applied** — `lenses/v4.py` is unchanged |
+| A2b, the whole is located at its footprint centroid; a zero separation has no bearing | `polar_angle` unmeasured on single-member complexes, measured elsewhere | unmeasured on 1,090 of 1,090 edges: every complex has one member | landed; the measured branch runs on no real edge |
+| A1, a size ratio needs two measured sizes | `CURVE_CONTAINMENT.scale_ratio` measured, ≤ 0, more than one value; `CO_LOCATED` stays unmeasured | **0 % measured** on both; the expected effect did not appear | landed; the measured branch runs on no real edge (§3, departure 2) |
+| A3, absence is never a neutral number | no graph changes | none | landed |
+| A4, an index is an index in both tables | no bin changes | none; no reader's output changes | landed for the kind of slot; the level counts are left, pinned (§3, departure 5) |
+| A5, `PEAK_CHAIN` writes its closure axis | four axes; node count unchanged | 1,442 of 1,442 chains carry four axes; node counts unchanged | landed; the axis is constant on this data and lifts every chain pair's similarity (§2) |
+| three more writers (not pre-registered) | – | `RADIALITY.alignment`, `SPIRALITY.expansion`, `CURVATURE.chord_len`, `curv_rate`: FROZEN → ABSENT | landed (§3, departure 4) |
+
+Bars on the final tree: matcher pins **419 passed** (390 + 24 + 5); pin
+triage **0 unclassified** over 17 settings; bug hunt sections D, E, F **0
+findings** on the new graphs (F: 14,989,430 + 5,854,028 matrix entries, 0
+differ — `PEAK_CHAIN` is on the kernel's population block for the first
+time); figground **99 passed, 4 xfailed**; `_u27_selftest.py` all pass.
+The last two say less than they seem to: **the figground bar never runs
+the binder** (0 calls to `Binder.step`, measured; 36 calls to the chain
+lens), so it is evidence for A5 only; and the selftest, which `main`
+deleted and which was run from the previous branch's copy, imports nothing
+this stage changed. The binder changes are covered by the new pins (the
+writers called on built detections) and by the 79 rebuilt graphs, and by
+nothing else here.
+
+### 1. Phase B — the reachable set is 16 % of the frame
+
+FRAME nodes are the pieces of shape (13 lens types, listed and pinned in
+`matching/relation_frame.py`); a structural edge joins two FRAME nodes; an
+edge is *measured* when it carries at least one graded slot that is not
+UNKNOWN, not an identity slot and not a lookup key. No matcher is run.
+
+| per graph, n = 79 | median | 10th pct | min | max |
+|---|---|---|---|---|
+| (1) FRAME nodes | 290 | 195 | 161 | 409 |
+| (2) share with ≥ 1 structural edge | 0.65 | 0.59 | 0.55 | 0.72 |
+| (2) share with ≥ 2 structural edges | 0.35 | 0.25 | 0.21 | 0.56 |
+| (3) largest structural component, nodes | **87** | 63 | 37 | 158 |
+| (3) / (1) | 0.30 | 0.19 | 0.14 | 0.57 |
+| (4) share of structural edges that are measured | 0.68 | 0.53 | 0.44 | 0.79 |
+| (5) reachable set (largest measured component), nodes | 47 | 30 | 22 | 85 |
+| **(5) / (1)** | **0.163** | 0.10 | 0.07 | 0.35 |
+
+Per class, median (5)/(1): apple 0.20, car 0.14, cup 0.24, horse 0.11 — all
+four under the floor. The 11 graphs that reach 0.25 are 7 cups and 4
+apples.
+
+**Where the shortfall is.** It is connectivity before it is parameters.
+
+- 35 % of the FRAME nodes of the median graph have no structural edge at
+  all. Pooled over the 79 graphs (22,714 FRAME nodes): every EndStopped
+  (2,718) and every RegionShape (1,045) — these two have no edge of any
+  kind, to any node — every IllusoryContour (125), 97 % of ContourFragment
+  (1,279 of 1,324), 85 % of Corner (842 of 988) and 26 % of CONTOUR_PEAK
+  (2,136 of 8,169).
+- Six lens types have no *measured* structural edge anywhere:
+  CONTOUR_PEAK, EndStopped, PEAK_CHAIN, ContourFragment, RegionShape,
+  IllusoryContour — 14,823 nodes, **65 % of the frame**. The peaks and
+  chains are joined only by `CONTOUR_ORIENTATION`, which is a bare
+  membership flag (6,033 PEAK_CHAIN → CONTOUR_PEAK edges, no graded slot).
+- Flags are also the only relations between the two parts that do have
+  measured relations: the Orientation lattice (the reachable set in 77 of
+  79 graphs; 3,667 of its 3,732 pooled nodes) and the Contour / CurveComplex
+  / Corner / Junction cluster (the second measured component, median 29
+  nodes). 4,270 Contour → Orientation and 736 junction → Orientation edges
+  join them, all bare flags; **no measured edge joins an Orientation node
+  to a node of another lens type, in any of the 79 graphs.** One seed
+  reaches one of the two, never both.
+- **The ceiling.** If every structural edge carried a measurement, the
+  reachable set would be the largest structural component: (3)/(1), median
+  0.30, 10th percentile 0.19, 52 of 79 graphs at 0.25 or more. Fixing edge
+  *parameters* alone therefore lifts the median from 0.16 to at most 0.30.
+  The rest needs relations that do not exist yet.
+- **The peaks and chains are an island.** The largest structural component
+  is the Orientation lattice plus the contour cluster and nothing else: it
+  holds none of the 8,169 peaks and none of the 1,442 chains — 42 % of the
+  frame — in any graph, because no structural edge joins a peak or a chain
+  to any other kind of node. Pretending their flag were a measurement
+  leaves the reachable set at 0.163; pretending the flags between the
+  Orientation lattice and the contours were measurements puts it at 0.287
+  (49 of 79 graphs at 0.25 or more). These two what-ifs were computed after
+  the verdict (`results/phase5_whatif.txt`); they pretend, they do not
+  measure, and they decide nothing.
+
+**How robust the verdict is.**
+
+- It was computed three times and did not move: on the tree with A1–A5
+  only (`66e6457`, front-end digest `e12a5a4ca862`, the first computation),
+  after the three further writers (`c0fc274`, `f2461c926fd2`) and on the
+  final tree (`1484aec90b48`). The three output files differ in their
+  digest line only.
+- With the A2 fix applied (§2) it is 0.168: also STOP.
+- The definition is *generous*. A slot that is measured but takes one value
+  on every edge counts as measured, and a constant axis always agrees, so
+  the growth rule's "agrees on a measured axis" would be satisfied by it
+  vacuously.
+  Seven such slots remain (§4). Removing edges from the measured set can
+  only shrink a component, so the honest figure is at or below 0.163.
+- It depends on the frame list. Restricted to the seven lens types that
+  have a measured structural edge at all, (5) / FRAME is 0.48 (10th
+  percentile 0.37). **That is not the registered frame** — it leaves out
+  65 % of the registered FRAME nodes — and it was computed after the
+  verdict, as were the other lines of the DESCRIPTIVE block of the output
+  file. It says where the failure is; it does not undo it.
+
+### 2. Phase A, fix by fix
+
+**A2 — root cause.** `CurveComplexLens.step` keeps a link between two
+contours only if `edge.weight` reaches `THETA_CONTOUR_EDGE`, and the weight
+is an EMA written after the higher tier has run: on the step that creates
+the links it reads 0.0 for every one of them (285 of 285 on the cup probe).
+No two contours are ever joined, so each complex is one Contour seen from
+its own anchor, and `rel_dist` = 0, `polar_angle` = atan2(0, 0) = 0 follow by
+construction: 1,090 complexes, 1,090 containment edges, 100 % on the
+parent's own anchor, node slots `n_contours` = 1 and `n_junctions` = 0 on
+all of them. (This is the single-step route. On a run of several steps the
+weights may be non-zero from the second step on; what the lens does there
+was not measured.)
+
+**A2 — the fix that failed.** The code already has the reader for this
+case (`edge_association_strength`, which returns the pending signal during
+the step that observed the edge; `ContourLens` uses it). Substituting it —
+three lines, `results/phase5_a2_trial.patch` — was tried in a scratch copy
+of `c0fc274`, and all 79 graphs were rebuilt:
+
+| per graph, n = 79 | lens as it is | with the fix |
+|---|---|---|
+| CurveComplex nodes, median (min–max) | 13 (7–25) | **1** (1–6) |
+| complexes with more than one Contour, median | 0 | 1 |
+| largest complex / Contour nodes, median | 0.056 | **1.000** |
+| graphs where it exceeds one half | 0 | **77** |
+| graphs where it holds every Contour | 0 | 67 |
+
+The registered failure — "the median graph has one complex holding more
+than half of its Contour nodes" — is met. Both readers are wrong in opposite
+directions: one joins nothing, the other joins everything into the
+image-spanning weld the code's own comments warn about. I did not diagnose
+which links cause the weld (on the 8 images probed, 16 to 52 of the
+CONTOUR_CONTINUITY links per image pass the threshold and 7 to 18 do not;
+of the JUNCTION_CONTOUR links, 87 % or more pass; the links are between
+pooled pattern nodes, 1.3 detections per Contour and 2.6 per Junction,
+which is my suspicion and not a finding). The link rule needs a design
+decision, not a different reader.
+
+With the fix, the containment writer of A1 and A2b does run on real edges
+(1,787 of them): `polar_angle` is measured on 99 % and spreads over all 24
+bins; `rel_dist` on 99 %, 72 % in the top bin; `scale_ratio` on 99 %, 98 %
+in the bottom bin (a member is under about a third the size of an
+image-spanning whole). One edge lands in the bin that holds a ratio of 0
+and above; I did not check whether it is exactly 0. SYMMETRY falls from
+1,145 edges to 6 and CONCENTRICITY from 456 to 251.
+
+**A2b / A1 — what landed (`orchestration/binder.py`).** A containment
+relation is measured from the centroid of the parent's footprint instead of
+its first member's anchor; the size ratio is the log2 ratio of the two
+footprint extents (half the largest separation of the positioned member
+anchors), read only when both ends have an extent; a whole with a single
+member has no internal geometry, so all three slots are ABSENT; the bearing
+of a zero separation is ABSENT. The edge is still emitted.
+
+**A1 — root cause.** `Detection.scale` is written as the literal 0 by every
+lens but one (surface fragments), and the `scale_ratio` writers read
+nothing else, so the ratio was never measured on any edge. For CO_LOCATED
+there is no honest fill: the two detections are pooled over one anchor, so
+any size read from it is one ruler read twice and gives a ratio of 0 for
+every pair of every image. It stays ABSENT, and the writer now says why.
+`Detection.scale` is not touched.
+
+**On the 79 graphs none of this is exercised.** Every complex has one
+member, so every containment edge is ABSENT on all three slots (it used to
+claim separation 0 and bearing 0, on which every such edge agreed with every
+other at similarity 1.000 over "2 measured axes"). The measured branches
+are pinned on built geometry and were seen to run only in the A2 trial.
+
+**A3.** The neutral triple (0, 0, 4) was computed and discarded; it never
+reached an edge. The helper now returns the unit table's quantisation of
+the same values the edge is built from, and the discarded call is gone. No
+graph changes.
+
+**A4 (`core/schema.py`).** `EDGE_SCHEMAS` now calls the three membership
+flags and `ORIENTATION_CONTINUITY.polarity_rel` categorical, as
+`EDGE_UNIT_TABLE` does; `edge_table_disagreements()` is empty and is part of
+`verify_schema_consistency`. Nothing reads the difference: `Slot.domain` has
+three readers (two tests for "circular", one tag-and-domain match between
+classes, and the two tags occur in no other class), so no bin, no range and
+no similarity changes. **It does not stop a bare flag from counting as a
+measured axis**: `edge_measured_axes` still counts it while
+`EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS` is off, and that switch is where it
+was.
+
+**A5 (`lenses/chain_lens.py`).** The chain lens writes the fourth axis its
+layout declares, one-hot on the two closure levels. All 1,442 chains now
+carry (12, 8, 8, 2); node identity is unchanged (the population is not in
+the signature bytes: checked directly, and the node counts did not move).
+Two consequences on this data, where every chain is open:
+
+- the axis is a constant, so it agrees on every pair. The node similarity
+  of a chain pair becomes exactly (3 s + 1) / 4 of what it was (111,520
+  pairs, largest deviation 1e-16): median 0.446 → 0.585, minimum 0.19 →
+  0.39. A5 makes every pair of chains more alike and tells none apart;
+- chains now have the declared layout, so the numpy kernel computes them
+  in its population block instead of pair by pair. It still returns the
+  loop's floats (bug hunt F, 0 of 14,989,430 entries differ).
+
+**The three further writers.** `RADIALITY.alignment` asks how well each
+element points at a hub that is defined as the intersection of the two
+elements' own lines: 0 by construction (largest value seen 1.3e-14).
+`SPIRALITY.expansion` is the log ratio of two radii about a hub defined as
+the pair's midpoint: 0 by construction. Both are ABSENT now.
+`CURVATURE.chord_len` and `curv_rate` were 0.0 on all 87 edges because the
+chord was looked up through member anchors a segment does not have; a
+segment's anchor is the pair (entity, segment index), which has no position
+in the step, so both are ABSENT on all 87. That removes a fabricated zero;
+it does not produce a chord.
+
+**Net effect on the graphs** (`phase5_slot_truth_before.txt` against
+`phase5_slot_truth.txt`; 72 edge slots):
+
+| edge slots | before | after |
+|---|---|---|
+| vary | 43 | 43 |
+| index (lookup key or identity) | 10 | 10 |
+| ABSENT (never measured) | 4 | 10 |
+| FROZEN (measured, one value on every edge) | 13 | 7 |
+| SATURATED / NARROW (≥ 90 % in one bin) | 2 | 2 |
+
+Node and edge counts per lens type and edge type are unchanged; the list of
+node-signature slots that take one value is unchanged.
+
+### 3. Departures from the pre-registration — all of them
+
+1. **The A2 lens fix is not in the tree.** It met its registered failure
+   (§2). The registration says such a fix "is not kept as is"; nothing was
+   put in its place.
+2. **A rule was added after the registration: a whole with one member has
+   no internal geometry.** The registration expected only the bearing to be
+   absent there. As registered, the separation would have stayed a measured
+   0 and — with A1's footprint extents — the size ratio a measured 0
+   wherever it could be read: frozen, which is A1's own registered failure.
+   The rule avoids that failure rather than passing the test; I think it is
+   right (a quantity compared with itself is not a measurement), but it was
+   not fixed beforehand.
+3. **The extent is half the diameter, not the covering radius** the
+   registration names. A covering radius about each footprint's own
+   centroid is not monotone under subsets (a member can come out larger
+   than its whole); half-diameter is.
+4. **Three writers outside A1–A5 were edited, after the first Phase B
+   computation.** They can only remove measured slots, the edges they sit on
+   keep other measured slots, and the Phase B file did not change (§1).
+5. **A4 was first committed with the flags' level count changed from 8 to 2
+   (`66e6457`) and that part was taken back in the last commit.** The 8
+   feeds `CONSTITUTIONAL_EDGE_RANGES`, from which `memory.assembly_readout`
+   charges a relation's description length (`shadow_mdl`); writing 2 would
+   change that cost for every relation of the three classes (16,528 edges
+   in these graphs) and no bar in this checkout runs that code. The
+   mismatch (8 against 2, three slots) is listed by
+   `edge_table_level_mismatches()` and pinned at exactly those three. The
+   graphs are identical under both (the census files of the two states
+   differ in their digest line only).
+6. **The DESCRIPTIVE block of `phase5_feasibility.py` was written after the
+   verdict was seen.** It is labelled so in the output and decides nothing.
+7. **No switches.** Every behaviour change of stages 1–4 sits behind a
+   parameter; these writer corrections do not, so "before" and "after" are
+   two trees, not two settings. That was my decision (a switch would keep
+   the false writer alive beside the true one), and it is cheap to reverse.
+
+### 4. What the writers still state that is not a varying measurement (not fixed)
+
+Seven edge slots are measured and take one value on every edge
+(`phase5_slot_truth.txt`). Continuous values were probed on three images
+(one cup, one car, one horse), so the causes below are established on those
+three and on the bin census of all 79:
+
+| slot | edges | what is written | cause |
+|---|---|---|---|
+| `ORIENTATION_BEND.spatial_dist` | 2,288 | top bin on every edge | the table spans 1 wavelength; the values are 1.25 to 19.8 (the lattice pitch alone is 16 px / 12.8 = 1.25) |
+| `ORIENTATION_JUNCTION.spatial_dist` | 1,536 | top bin on every edge | the same: 1.25 to 19.0 against a span of 1 |
+| `CONTOUR_CONTINUITY.curv_agree` | 2,802 | top bin on every edge | the value is 0.875 or 1.0; both fall in the last of 8 bins |
+| `CURVATURE_SIGN_CONTINUITY.curv_diff` | 2,496 | bin 0 | 0.0 on 154 of 154 probed; cause not diagnosed |
+| `CONTACT.depth_step` | 274 | bin 0 | 0.0 on 22 of 22 probed; cause not diagnosed |
+| `OCCLUSION.depth`, `stack_depth` | 1 | – | one edge in 79 graphs |
+
+Saturating without being frozen: `JUNCTION_CONTOUR.dist` (5,500 edges, 90 %
+in the top bin; values 0 to 17.7 against a span of 2.5), `CONTACT.dist`
+(90 %), `CONTOUR_CONTINUITY.dist` (76 %; 0.47 to 18.6 against 2). The
+distance tables span 1 to 2.5 wavelengths; the distances the writers pass
+run to 18 or 20. Narrow for another reason: `CONCENTRICITY.ecc_difference`
+(90 % in one bin, not the top one). I did not change a span: it rebins
+several thousand edges and nothing was registered for it.
+
+Also unchanged: a CurveComplex is still a copy of one Contour on this
+route; the frozen node-signature slots (`Contour.corner_count` = 0,
+`RegionShape.area` = 0, three `Surface` slots, most arm slots of the
+junction classes, `Position` slot 2 — the full list is in the slot-truth
+file); and node pooling, which is mild on the frame types measured (1.0 to
+1.5 detections per node, Junction 2.6; CONTOUR_PEAK and PEAK_CHAIN were not
+measured) and heavy on Color 3.4, Texture 4.6, Onset 30, Polarity 163.
+
+### 5. Corrections to the brief
+
+- **A2 is not the neutral fallback, an unresolved anchor or a quantiser
+  collapse.** It is the lens reading a weight that does not exist yet (§2).
+- **A3's neutral triple never reached an edge.** It was computed and thrown
+  away; the edges already carried UNKNOWN.
+- **`OCCLUSION.source` already agreed between the two tables.** The four
+  slots that disagreed are the three `containment` flags and
+  `ORIENTATION_CONTINUITY.polarity_rel`.
+- **A1: filling the scale per channel is not an honest fix for CO_LOCATED**
+  (one anchor, one ruler). The route taken leaves `Detection.scale` alone
+  and has the containment writer read footprint extents.
+- **A5 is as stated** (three axes written against four), with the addition
+  that closure is 0 on every chain of this data.
+
+### 6. The earlier figures — what was re-measured, what is PROVISIONAL
+
+The declared defaults were measured on both trees in this session
+(`eth80_benchmark.py`; before = `48a4c5c`, library identical to `main`):
+
+| window | before | after | paired | stored values |
+|---|---|---|---|---|
+| full | 37 | 38 | +1 / −0, p = 1.000; 2 answers changed | the score differs on 270 of 300 pairs |
+| v1 | 39 | 39 | +0 / −0 | 0 of 10,200 values differ |
+
+The stage-4 figure (37 \| 39) reproduces on this checkout, and the writer
+fixes move the full-window score on nine pairs in ten and accuracy by one
+query, which at n = 75 (one standard error 4.3) is nothing. This comparison
+was not registered; it is descriptive and in-sample.
+
+**PROVISIONAL from here on:** every other full-window figure of stages
+1–4. They were measured on the old graphs and none was re-measured. That
+includes the measures on which D3 and P4b were left off (a variance share
+of 10.1 against 10.5 %; one comparison of 225), both small enough that
+they could fall the other way on the new graphs. On the v1 window no
+stored value moved at the declared defaults — the only relation inside
+that window that changed is `CURVATURE` (87 edges) — but the other settings
+were not re-run there either. The stored records of stages 1–4
+(`results/p1_*`, `p2*`, `p3_*`) do not match this tree and were not
+regenerated.
+
+### 7. Shared code — what this changes outside the harness
+
+Library files: `orchestration/binder.py` (+183 / −77), `core/schema.py`
+(+102 / −11), `lenses/chain_lens.py` (+18 / −3), and a new
+`matching/relation_frame.py` (+129) that nothing imports. Patches
+0017–0019 carry the final form of each change (`patches/README.md`); pins
+after each: 410, 414, 419.
+
+What a caller outside this harness sees:
+
+- **The parameters of four edge classes change, so anything keyed on them
+  changes**: `CURVE_CONTAINMENT` (0, 0, UNKNOWN) → all UNKNOWN on
+  single-member wholes, and measured from a different centre on
+  multi-member wholes (which a multi-step run may have); `RADIALITY` slot
+  `alignment`, `SPIRALITY` slot `expansion`, `CURVATURE` slots `chord_len`
+  and `curv_rate` → UNKNOWN. WL coarsening keeps UNKNOWN and halves graded
+  bins, so the WL hashes of those edges change, and stored memory that
+  holds the old parameters will not equal new edges.
+- **`PEAK_CHAIN` populations have four axes.** A stored three-axis chain
+  compared with a new one takes the aligned path that skips the missing
+  axis and scores what two three-axis chains did (checked on a pair); two
+  new chains take the strict path and, when both are open, score
+  (3 s + 1) / 4.
+- **A4 changes no value** (§2). The level counts are untouched.
+- **Not checkable here:** the 329-test figground bar (103 exist in this
+  checkout, and they do not run the binder), U20 WRONG = 0, `_u24_*`, the
+  per-class L0 / L1 thresholds, anything that runs `Binder.step` over
+  several steps. Those are the bars that would see these changes.
+
+### 8. What I would do next — the decision is yours
+
+The census says the relations a correspondence would have to grow along
+are mostly not there. In order of what the numbers point at:
+
+1. **Join the Orientation lattice to the contours with a measurement**
+   (where along the contour, at what angle to its tangent) instead of a
+   flag. Of everything that needs no new relation this is nearly the whole
+   gain: the what-if of §1 puts the median at 0.29 against a ceiling of
+   0.30. It is a what-if — a real writer may not be able to measure every
+   edge the flag covers.
+2. **Connect the peaks and chains to the rest.** They are 42 % of the frame
+   and an island; measuring their own flag moves nothing. Getting past 0.30
+   needs a relation that does not exist yet, between a chain or a peak and
+   a contour, a junction or an orientation element. The same holds for
+   EndStopped, RegionShape and most Corners, which have no structural edge
+   at all.
+3. **Decide the CurveComplex link rule** (§2); until then the lens adds a
+   copy of each Contour.
+4. **Rescale the distance slots** (§4), or the continuity relations agree
+   on "far" for three edges in four.
+5. Re-run Phase B afterwards, on HELDOUT: the restricted figure and the
+   what-ifs of §1 have been seen on EVAL, so a rule re-registered around
+   them cannot be tested there.
+
+What I would not do: build the matcher against the present graphs on the
+strength of the restricted figure or of a what-if, or narrow the frame
+until the rule passes.
 
 ---
 
@@ -771,6 +1220,18 @@ Null calibration is the code base's own answer to section 5 (a similarity of
 0.89 that every reference reaches is not evidence). It is not on the
 authorized list, so I have not touched it. It is the first thing I would ask
 you about.
+
+---
+
+## Pre-registration — stage 5 (written before any library edit of the stage)
+
+Kept as its own file, `results/phase5_preregistration.md`, committed in
+`48a4c5c` — one commit before the first library edit of the stage
+(`66e6457`) — together with the baseline graph census. It fixes, for each
+Phase A fix, what the rebuilt graphs should show and what would count as
+failure, and for Phase B the frame list, the five quantities and the stop
+rule. It has not been edited since; what was done differently is listed in
+stage 5 §3.
 
 ---
 
@@ -1458,6 +1919,26 @@ that carries the change together with its switch and its pin.
 | `memory/cores.py` | D2 prerequisites: `_global_correspondence` hands over the block matrix; optional anchor prior | +25 | `MATCH_GLOBAL_ANCHOR_PRIOR` (`False`) | 0015 |
 | `core/schema.py` | the specificity cap in the same-schema branch of `polymorphic_edge_similarity` | +14 / −1 | `EDGE_SPECIFICITY_CAP_SAME_SCHEMA` (`False`) | 0016 |
 
+**Stage 5, against `main` (`9315d24`): three files changed and one new,
++432 / −91. These changes have no switch** — they change what the writers
+put into a graph (stage 5 §3, departure 7; §7 for what a caller sees).
+
+| file | change | +/− | switch | patch |
+|---|---|---|---|---|
+| `orchestration/binder.py` | A1–A3: containment geometry measured from the two footprints or ABSENT (`_footprint`, `_size_ratio`, `_containment_values`, `_containment_geometry`); the discarded neutral call removed; the reason `CO_LOCATED.scale_ratio` stays ABSENT | +141 / −64 | **none** | 0017 |
+| `core/schema.py` | A4: four slots categorical in both tables; `edge_table_disagreements` (in `verify_schema_consistency`), `edge_table_level_mismatches`; the comment in `edge_measured_axes` | +102 / −11 | none — no value changes | 0017 |
+| `lenses/chain_lens.py` | A5: the closure axis of the `PEAK_CHAIN` population | +18 / −3 | **none** | 0017 |
+| `orchestration/binder.py` | `RADIALITY.alignment`, `SPIRALITY.expansion`, `CURVATURE.chord_len` / `curv_rate`: ABSENT instead of a constant | +42 / −13 | **none** | 0018 |
+| `matching/relation_frame.py` (**new**) | the FRAME / ATTRIBUTE partition and three readers; imported by nothing in the library; optional | +129 | – | 0019 |
+
+Pins that travel with stage 5: `tests_matcher/test_stage5_writer_truth.py`
+(24 tests) and `tests_matcher/test_relation_frame_partition.py` (5); 419
+in all. Fifteen of the 24 writer pins fail on `main`'s writers (one of
+them only because the function it calls is new); the other nine hold
+behaviour that did not change (why `CO_LOCATED` stays ABSENT, the flags'
+populations, the existing lookup-key switch, the overlap of two one-hot
+activities).
+
 Pins that travel with (b): `tests_matcher/`, 20 files, 390 tests — patches
 0001–0016 (0006, 0009 and 0012 are tests only). Dependencies: numpy was
 already imported by `matching/structural_similarity.py`; scipy
@@ -1483,6 +1964,14 @@ neither; every stored result records the versions it was computed under.
 - *Off; nothing changes unless switched on.* D3, the null calibration,
   P4b (both switches), the anchor prior, the specificity cap.
 
+**Decisions that are yours, stage 5.** Whether to go on at all after the
+stop (stage 5 §8); the CurveComplex link rule (stage 5 §2: one reader joins
+nothing, the other everything); switches for the stage-5 writers, or none;
+the level count of the three membership flags (8 in the schema, 2 in the
+unit table: closing it changes `shadow_mdl`); whether `PEAK_CHAIN`'s
+closure axis should weigh as much as the other three while it is constant;
+the distance spans of stage 5 §4; the frame list.
+
 **Decisions that are yours.** `EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS`
 (moves `mcs_score` only; unmeasurable here); `EDGE_SPECIFICITY_CAP_SAME_SCHEMA`
 (which of the library's two texts stands; stage 4 §6); the D2 gate; the
@@ -1504,6 +1993,18 @@ uploaded figground files, the harness, the stored results and this report,
 and touch no library file. (Earlier in the session local commits were lost
 when the sandbox was rebuilt; the hashes quoted in earlier reports name
 nothing any more.)
+
+**Commits, stage 5.** Branch `arena/dea2ca5a-percept4`, on `main`
+(`9315d24`), in the order things were run: `48a4c5c` the pre-registration
+and the baseline census; `66e6457` A1–A5 and the first Phase B census
+(front-end digest `e12a5a4ca862`); `c0fc274` the three further writers
+(`f2461c926fd2`); `eb980d2` the A2 trial's patch and censuses
+(`6e9d9615aef4`, not a state of the tree); and the stage's last commit:
+the corrections of stage 5 §3 (departure 5 and comment wording; no graph
+changes), the rebuilt results (`1484aec90b48`), the before/after records,
+patches 0017–0019 and this section. The patches are cut from the final
+tree, not exported from these commits, so that a port does not replay the
+change that was taken back.
 
 ### (a) Diagnostics / harness — not library
 
@@ -1754,7 +2255,14 @@ reported figure, because each was explained before the figure was written):
 | numpy kernels | nothing; a call is 4 to 8 times faster | every entry point |
 | alignment budget | nothing while `MATCH_GLOBAL_CONSISTENCY_ENABLED` is off; with it on, the alignment refines | dark path |
 
-Each is one parameter from the historical behaviour, and
+Stage 5 adds two that are **not** one parameter away (no switch):
+
+| change | what a caller sees | reach |
+|---|---|---|
+| stage 5 writers | `CURVE_CONTAINMENT` (single-member wholes), `RADIALITY.alignment`, `SPIRALITY.expansion`, `CURVATURE.chord_len` / `curv_rate` are UNKNOWN where they were a constant; multi-member containment is measured from the footprint centroid | every graph the binder writes; the WL hashes and stored parameters of those edges |
+| `PEAK_CHAIN` closure axis | chain populations have four axes; two chains compare on the strict path, and where every chain is open their node similarity is (3 s + 1) / 4 of what it was | every chain the lens writes; node identity unchanged |
+
+Each of the first seven is one parameter from the historical behaviour, and
 `tests_matcher/test_declared_defaults.py` reddens when one is flipped. The
 first, the third, the fourth and the fifth move scores that feed gates
 outside this harness; that is the part of the port I cannot check for you.
@@ -1776,3 +2284,22 @@ outside this harness; that is the part of the port I cannot check for you.
   what it will not equal is a record computed elsewhere.
 - **HELDOUT-75 has not been opened.** Which configurations to score on it,
   once, is yours to say.
+- **Stage 5: the writer corrections have no switch.** Stages 1–4 put every
+  behaviour change behind a parameter. I did not here, because a switch
+  would keep a writer that states an unmeasured number alive next to the
+  one that does not. It is mechanical to add them.
+- **Stage 5: a rule was added after the registration** (a whole with one
+  member has no internal geometry), and it is what keeps A1 from meeting
+  its own registered failure on these graphs (stage 5 §3, departure 2).
+- **Stage 5: nothing replaces the A2 fix.** The lens still emits one
+  complex per Contour on a single step. I did not design a new link rule.
+- **Stage 5: A5 is in although its axis is constant here.** It is what the
+  layout declares and what the brief asked for; on this data it only makes
+  every pair of chains more alike (stage 5 §2).
+- **Stage 5: three writers the brief did not name were changed**, and the
+  seven slots that are still frozen were left (stage 5 §4). The three I
+  changed are zero by construction; of the rest, three need a decision
+  about a table's span or binning, two I did not diagnose, and two sit on
+  a single edge.
+- **Stage 5: the level counts of the three flags were left at 8** after I
+  had first written 2 (stage 5 §3, departure 5).

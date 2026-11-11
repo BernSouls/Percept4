@@ -1,0 +1,12 @@
+PHASE 5 / A2 -- CurveComplex membership, 79 EVAL graphs, front-end digest 1484aec90b48
+
+  Contour nodes                                        median 18.000   p10 11.000   min 10.000   max 40.000
+  CurveComplex nodes                                   median 13.000   p10  9.000   min  7.000   max 25.000
+  complexes with more than one Contour                 median  0.000   p10  0.000   min  0.000   max  0.000
+  largest complex / Contour nodes                      median  0.056   p10  0.037   min  0.025   max  0.100
+
+graphs whose largest complex holds more than half of the Contour nodes: 0 of 79
+graphs whose largest complex holds every Contour node: 0 of 79
+
+PRE-REGISTERED A2 EXPECTED EFFECT (complexes with more than one member appear): False (in 0 of 79 graphs)
+PRE-REGISTERED A2 FAILURE (median graph: one complex holds > 1/2 of the Contour nodes): False (median 0.056)

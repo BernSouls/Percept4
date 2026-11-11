@@ -89,11 +89,23 @@ configurations re-run on both windows give 0 of 112,200 values differing —
 | a bar under explicit switch values, with reach | `PERCEPT_PARAMS='NAME=VALUE;…' PERCEPT_REACH=1 PYTHONPATH=.:diagnostics:diagnostics/_export_shims python -m pytest <dir> -p _param_overrides_plugin -q` |
 | do two front-end states build the same graphs | `python diagnostics/eth80_frontend_compare.py --old <digest>` (a prefix is resolved from the stored records) |
 | the whole measurement of the last session, in order | `results/logs/measurement_chain_stage4.sh` (stage 3: `measurement_chain_final.sh`) |
+| stage 5: what the graphs are made of (nodes, edges, slots measured) | `python diagnostics/phase5_graph_census.py --out phase5_graph_census_after` |
+| stage 5: which slots hold a measurement that varies (ABSENT / FROZEN / SATURATED / NARROW / varies) | `python diagnostics/phase5_slot_truth.py` |
+| stage 5: Phase B, the static feasibility of relation growth against its pre-registered stop rule (no matcher is run) | `python diagnostics/phase5_feasibility.py` |
+| stage 5: the pre-registered CurveComplex statistic (A2) | `python diagnostics/phase5_a2_statistic.py` |
+| stage 5: what-ifs computed after the stop (post hoc, descriptive) | `python diagnostics/phase5_whatif.py` |
+| stage 5: which stage-5 writers a bar calls | add `-p _stage5_reach_plugin` to a pytest run with `diagnostics` on `PYTHONPATH` |
+| stage 5: the A2 lens fix that was not kept, reproduced | `git apply diagnostics/results/phase5_a2_trial.patch`, rebuild the cache, then the four scripts above with `--out phase5_a2_trial_…` |
+| stage 5: the declared defaults before and after the writer fixes (reads stored records) | `python diagnostics/eth80_benchmark.py --tag p5_after` in this tree, `--tag p5_before` in a checkout of `48a4c5c`, then `python diagnostics/phase5_defaults_before_after.py` |
 | selftest | `PYTHONPATH=.:diagnostics/_export_shims python _u27_selftest.py` — the script exists on the branch this work was done on; `main` deleted it afterwards (`5be15a1`) |
 
-`--set` writes `parameters.NAME` before the run. Every library change made in
-this work sits behind one such general parameter, so "before" and "after" are
-measured in one tree.
+`--set` writes `parameters.NAME` before the run. Every library change of
+stages 1–4 sits behind one such general parameter, so "before" and "after"
+are measured in one tree. **Stage 5 is the exception:** its writer
+corrections have no switch (they change what a graph contains), so its
+"before" is a checkout of the commit before them (`48a4c5c`, library
+identical to `main` `9315d24`) and its "after" is this tree; both read the
+same images through their own cached graphs.
 
 ## Files
 
@@ -115,12 +127,18 @@ measured in one tree.
 | `phase3_blocks_p4b.py` | stage 4: the declared defaults measured with the Python loops and with the numpy kernels, stored against stored; P4b's registered measures and default rule; the specificity cap, descriptive |
 | `phase3_d2_mechanism.py` | stage 4: the dark alignment under both budget accountings — sweeps run, budget state, seconds; no score |
 | `phase3_speed.py` | stage 4: one `evidence_score` call timed both ways on every EVAL pair, results compared with `==` |
+| `phase5_graph_census.py`, `phase5_slot_truth.py` | stage 5: per lens type and edge type, what a graph holds; per slot, whether it is measured and whether the measurement varies |
+| `phase5_feasibility.py` | stage 5, Phase B: FRAME nodes, structural edges, the largest structural component and the reachable set, against the stop rule fixed in `results/phase5_preregistration.md` |
+| `phase5_a2_statistic.py` | stage 5: CurveComplex membership per graph, against the pre-registered A2 failure criterion |
+| `phase5_whatif.py` | stage 5, after the verdict: the reachable set if some of the existing flags were measurements; the make-up of the largest structural component. Post hoc; decides nothing |
+| `_stage5_reach_plugin.py` | pytest plugin: call counts of the binder writers, the chain lens and the CurveComplex lens over a session |
+| `phase5_defaults_before_after.py` | stage 5: hits, paired changes and stored values of the declared defaults, before against after the writer fixes |
 | `phase2_bug_hunt.py` | A ledger of every stored pair, B switch independence, C graph storage, D walk on real pairs, E order dependence, F the numpy kernels against the Python loops on every pair and graph |
 | `phase2_pin_triage.py`, `phase2_pin_triage_classes.json` | soft-assert triage of the matcher pins and its classification |
 | `phase2_continuity.py` | re-run a stored configuration (new environment, other hash seed) or compare two stored sets |
 | `eth80_frontend_compare.py` | graph content under two front-end digests |
 | `_param_overrides_plugin.py` | pytest plugin: switch values before collection, call counts of the edited functions |
-| `patches/` | the library changes as an ordered series of 16, one change per patch — see `patches/README.md` |
+| `patches/` | the library changes as an ordered series: 0001–0016 (stages 1–4, on the upload) and 0017–0019 (stage 5, on `main`), one change per patch — see `patches/README.md` |
 | `results/phase0/` | Phase 0 as measured on the pre-fix source — **frozen** |
 | `results/*.txt` | the tables each script prints |
 | `results/*.json` | per-pair records (10 significant digits) |

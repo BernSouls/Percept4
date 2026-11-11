@@ -1,0 +1,30 @@
+diff --git a/lenses/v4.py b/lenses/v4.py
+index 27a82cf..39acd1d 100644
+--- a/lenses/v4.py
++++ b/lenses/v4.py
+@@ -65,6 +65,7 @@ from lenses.derived_common import (  # noqa: F401
+     qi_circ,
+     sample_curvature_profile,
+ )
++from lenses.v2 import edge_association_strength  # A2 TRIAL (scratch only)
+ from lenses.derived_base import (  # noqa: F401
+     HigherLens,
+ )
+@@ -1017,7 +1018,7 @@ class CurveComplexLens(HigherLens):
+                     EdgeType.CONTOUR_CONTINUITY, EdgeType.JUNCTION_CONTOUR
+                 ):
+                     continue
+-                if edge.weight < P.THETA_CONTOUR_EDGE:
++                if edge_association_strength(edge, t) < P.THETA_CONTOUR_EDGE:
+                     continue
+                 if edge.child not in node_id_to_detection:
+                     continue
+@@ -1028,7 +1029,7 @@ class CurveComplexLens(HigherLens):
+                     EdgeType.CONTOUR_CONTINUITY, EdgeType.JUNCTION_CONTOUR
+                 ):
+                     continue
+-                if edge.weight < P.THETA_CONTOUR_EDGE:
++                if edge_association_strength(edge, t) < P.THETA_CONTOUR_EDGE:
+                     continue
+                 if edge.parent not in node_id_to_detection:
+                     continue

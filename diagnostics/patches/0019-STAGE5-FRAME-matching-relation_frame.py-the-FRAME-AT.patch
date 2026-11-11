@@ -1,0 +1,251 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BernSouls <256335293+BernSouls@users.noreply.github.com>
+Date: Wed, 11 Nov 2026 17:51:31 +0000
+Subject: [STAGE5 FRAME] matching/relation_frame.py: the FRAME / ATTRIBUTE
+ partition
+
+A declaration (two pinned lists of lens types) and three small readers
+(is_frame, measured_axes, has_measured_axis).  Its only user is the static
+feasibility census, diagnostics/phase5_feasibility.py.  Nothing in the
+library imports it and no matcher reads it: the census fired its
+pre-registered stop rule, so no relation-grown matcher was built.
+
+Optional to port.  Pins: tests_matcher/test_relation_frame_partition.py.
+---
+ matching/relation_frame.py                    | 129 ++++++++++++++++++
+ .../test_relation_frame_partition.py          |  87 ++++++++++++
+ 2 files changed, 216 insertions(+)
+ create mode 100644 matching/relation_frame.py
+ create mode 100644 tests_matcher/test_relation_frame_partition.py
+
+diff --git a/matching/relation_frame.py b/matching/relation_frame.py
+new file mode 100644
+index 0000000..4c89f59
+--- /dev/null
++++ b/matching/relation_frame.py
+@@ -0,0 +1,129 @@
++"""matching/relation_frame.py -- the FRAME / ATTRIBUTE partition of a graph.
++
++[STAGE 5 / C1]  A graph is read in two parts.
++
++  FRAME      nodes that are pieces of SHAPE: a contour, a corner, a junction,
++             an oriented edge element, a curvature peak.  Their relations
++             join two different places (continuity, co-circularity, a
++             junction and its arms, a chain and its peaks).  In the design
++             this partition was written for, correspondence would be
++             decided here, by relations.
++
++  ATTRIBUTE  nodes that say what a place IS LIKE: its colour, its texture,
++             its position, its boundary statistics, its polarity.  In that
++             design they would attach to the frame after it is matched and
++             never decide a correspondence.
++
++WHY AN EXPLICIT LIST AND NOT `source_layer`.  `Detection.source_layer` is the
++tier that PRODUCED a detection (0 = the V1 floor, 2 = a higher lens), not the
++kind of thing it describes, and the two cut across each other on both sides:
++
++  * Orientation and ContourFragment are tier 0 and are shape: Orientation
++    carries the ORIENTATION_CONTINUITY / BEND / JUNCTION relations, which are
++    the densest structural relations in a graph.
++  * Polarity, Surface, TextureBoundary and BorderOwnership are higher-tier
++    lenses and are attributes: a contrast sign, a surface's colour and
++    texture, a texture step, a side assignment.
++
++Splitting on the tier would put the first group among the attributes and the
++second in the frame.  The list below is therefore written out, by lens type,
++and pinned (tests_matcher/test_relation_frame_partition.py): adding a lens
++type to the front end reddens the pin until someone decides which side it is
++on.  A lens type in neither list is treated as ATTRIBUTE -- it can then never
++drive growth, which is the safe side to be wrong on.
++
++Nothing here reads a switch or a matcher; the module is a declaration plus
++three small readers.  Its ONLY user is the Phase B feasibility census
++(diagnostics/phase5_feasibility.py).  NO RELATION-GROWN MATCHER EXISTS: the
++census fired its pre-registered stop rule (the reachable set is 16 % of the
++frame at the median, against a floor of 25 %), so none was built.  See
++diagnostics/REPORT.md, stage 5.
++"""
++from __future__ import annotations
++
++from typing import Any, FrozenSet, Tuple
++
++from core.schema import (
++    EDGE_IDENTITY_SLOTS,
++    EDGE_UNIT_TABLE,
++    UNKNOWN,
++    U30_EDGE_IDENTITY_SLOTS,
++    U30_EDGE_UNIT_TABLE,
++    EdgeParamsMixture,
++    _is_u30_edge_params,
++)
++
++#: lens types whose nodes are pieces of shape
++FRAME_LENS_TYPES: FrozenSet[str] = frozenset({
++    "Contour",            # a chain of rim elements, with its curvature profile
++    "ContourFragment",    # a curved fragment: curvature, tangent, radius
++    "Corner",             # a turn between two arms
++    "Junction",           # a meeting of arms (also the L / T / Y aliases)
++    "T",
++    "Y",
++    "CurveComplex",       # a bundle of contours and junctions
++    "Orientation",        # an oriented edge element
++    "CONTOUR_PEAK",       # a peak of the contour field
++    "PEAK_CHAIN",         # a chain of field peaks
++    "EndStopped",         # a line end
++    "IllusoryContour",    # a completed contour between two inducers
++    "RegionShape",        # the outline shape of a region
++})
++
++#: lens types whose nodes say what a place is like
++ATTRIBUTE_LENS_TYPES: FrozenSet[str] = frozenset({
++    "Color",
++    "Texture",
++    "Position",
++    "Boundary",
++    "Polarity",
++    "TextureBoundary",    # a texture step: an attribute contrast, not a shape
++    "BorderOwnership",    # which side owns a border
++    "Surface",            # a surface patch's colour / texture summary
++    "Onset",              # a temporal event
++})
++
++
++def is_frame(lens_type: str) -> bool:
++    """True when `lens_type` is a piece of shape.  Unknown types are not."""
++    return lens_type in FRAME_LENS_TYPES
++
++
++def measured_axes(ep: Any) -> Tuple[int, ...]:
++    """Slot indices of ONE edge's parameters that hold a graded measurement.
++
++    A slot counts when it is not UNKNOWN, not an identity (NAP) slot and not
++    a lookup key: the same three exclusions `core.schema.edge_graded_axes`
++    applies to a pair, applied to one side.  A mixture is read through its
++    DOMINANT prototype (`EdgeParamsMixture.dominant`: the heaviest, ties to
++    the earliest).
++    """
++    if ep is None:
++        return ()
++    if isinstance(ep, EdgeParamsMixture):
++        if not ep.protos:
++            return ()
++        ep = ep.dominant
++    quantized = getattr(ep, "quantized", None)
++    if not quantized:
++        return ()
++    u30 = _is_u30_edge_params(ep)
++    if u30:
++        categorical = set(U30_EDGE_IDENTITY_SLOTS.get(ep.class_, ()))
++        specs = U30_EDGE_UNIT_TABLE.get(ep.class_, ())
++    else:
++        ids = getattr(ep, "identity_slots", None)
++        categorical = set(ids if ids is not None
++                          else EDGE_IDENTITY_SLOTS.get(ep.class_, ()))
++        specs = EDGE_UNIT_TABLE.get(ep.class_, ())
++    if len(specs) == len(quantized):
++        categorical.update(
++            i for i, s in enumerate(specs) if s.quantiser == "lookup_key")
++    return tuple(
++        i for i, v in enumerate(quantized)
++        if v != UNKNOWN and i not in categorical)
++
++
++def has_measured_axis(ep: Any) -> bool:
++    """True when the edge carries at least one graded measurement."""
++    return bool(measured_axes(ep))
+diff --git a/tests_matcher/test_relation_frame_partition.py b/tests_matcher/test_relation_frame_partition.py
+new file mode 100644
+index 0000000..af07486
+--- /dev/null
++++ b/tests_matcher/test_relation_frame_partition.py
+@@ -0,0 +1,87 @@
++"""[STAGE 5 / C1] The FRAME / ATTRIBUTE partition is an explicit list.
++
++The partition decides which nodes may ever carry a correspondence, so it is
++pinned literally: a lens type added to the front end, or moved from one side
++to the other, reddens this file until someone decides it.
++"""
++from __future__ import annotations
++
++import core.schema as S
++from core.schema import UNKNOWN, EdgeParamsMixture
++from matching.relation_frame import (ATTRIBUTE_LENS_TYPES, FRAME_LENS_TYPES,
++                                     has_measured_axis, is_frame,
++                                     measured_axes)
++
++#: the lens types of the two tiers, as the ETH-80 front end emits them
++#: (diagnostics/eth80_frontend.py, `det_counts`): the V1 floor and the higher
++#: lenses.  Node lens types of the higher tier, not lens names: the Peak lens
++#: emits CONTOUR_PEAK nodes, the Chain lens PEAK_CHAIN nodes, the Junction
++#: lens Junction / T / Y nodes.
++V1_TIER = {"Boundary", "Color", "ContourFragment", "Onset", "Orientation",
++           "Position", "Texture"}
++HIGHER_TIER = {"BorderOwnership", "PEAK_CHAIN", "Contour", "Corner",
++               "CurveComplex", "EndStopped", "IllusoryContour", "Junction",
++               "T", "Y", "CONTOUR_PEAK", "Polarity", "RegionShape", "Surface",
++               "TextureBoundary"}
++
++
++def test_the_partition_is_the_pinned_list():
++    assert FRAME_LENS_TYPES == {
++        "Contour", "ContourFragment", "Corner", "Junction", "T", "Y",
++        "CurveComplex", "Orientation", "CONTOUR_PEAK", "PEAK_CHAIN",
++        "EndStopped", "IllusoryContour", "RegionShape"}
++    assert ATTRIBUTE_LENS_TYPES == {
++        "Color", "Texture", "Position", "Boundary", "Polarity",
++        "TextureBoundary", "BorderOwnership", "Surface", "Onset"}
++    assert not (FRAME_LENS_TYPES & ATTRIBUTE_LENS_TYPES)
++    # every lens type the front end emits is on exactly one side
++    assert V1_TIER | HIGHER_TIER == FRAME_LENS_TYPES | ATTRIBUTE_LENS_TYPES
++
++
++def test_the_tier_does_not_decide_the_side():
++    """WHY NOT `source_layer`: the producing tier cuts across the partition
++    in both directions.  Splitting on it would move these six lens types to
++    the wrong side."""
++    assert V1_TIER & FRAME_LENS_TYPES == {"Orientation", "ContourFragment"}
++    assert HIGHER_TIER & ATTRIBUTE_LENS_TYPES == {
++        "Polarity", "Surface", "TextureBoundary", "BorderOwnership"}
++
++
++def test_an_unknown_lens_type_is_not_frame():
++    """The safe side to be wrong on: it can then never drive growth."""
++    assert not is_frame("SomethingNew")
++    assert is_frame("Contour") and not is_frame("Color")
++
++
++def test_measured_axes_are_the_graded_slots_that_were_measured():
++    """A slot counts when it is not UNKNOWN, not an identity slot and not a
++    lookup key."""
++    # a membership flag: an index, nothing graded
++    flag = S.edge_params("EDGE_CONTOUR_ORIENTATION", {"containment": 1.0})
++    assert measured_axes(flag) == () and not has_measured_axis(flag)
++    # containment with no geometry: nothing measured
++    absent = S.edge_params("EDGE_CURVE_CONTAINMENT", {
++        "rel_dist": None, "polar_angle": None, "scale_ratio": None})
++    assert measured_axes(absent) == ()
++    # two of three measured
++    part = S.edge_params("EDGE_CURVE_CONTAINMENT", {
++        "rel_dist": 1.0, "polar_angle": None, "scale_ratio": -1.0})
++    assert measured_axes(part) == (0, 2)
++    # identity slots and lookup keys are never graded axes
++    names = [s.name for s in S.EDGE_UNIT_TABLE["EDGE_JUNCTION_CONTOUR"]]
++    jc = S.edge_params("EDGE_JUNCTION_CONTOUR", {
++        "dist": 1.0, "incidence": 0.5, "topology_class": 2.0})
++    assert measured_axes(jc) == (names.index("dist"), names.index("incidence"))
++    assert measured_axes(None) == ()
++
++
++def test_a_mixture_is_read_through_its_dominant_prototype():
++    light = S.edge_params("EDGE_CURVE_CONTAINMENT", {
++        "rel_dist": 1.0, "polar_angle": 1.0, "scale_ratio": -1.0})
++    heavy = S.edge_params("EDGE_CURVE_CONTAINMENT", {
++        "rel_dist": None, "polar_angle": None, "scale_ratio": None})
++    mix = EdgeParamsMixture([light, heavy], [1.0, 3.0], 0)
++    assert mix.dominant is heavy
++    assert measured_axes(mix) == ()
++    assert measured_axes(EdgeParamsMixture([light, heavy], [3.0, 1.0], 0)) == (0, 1, 2)
++    assert heavy.quantized == (UNKNOWN,) * 3
+-- 
+2.39.5
+
