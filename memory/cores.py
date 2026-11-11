@@ -1099,7 +1099,7 @@ def _mcs_accumulate(
     """
     from core.schema import (
         polymorphic_edge_similarity, reverse_edge_params,
-        edge_measured_axes,
+        edge_measured_axes, edge_graded_axes,
     )
     from orchestration.binder import UNDIRECTED_EDGE_TYPES
 
@@ -1510,6 +1510,12 @@ def _mcs_accumulate(
     q_matched_em_terms: List[float] = []
     c_matched_em_terms: List[float] = []
     matched_rel_sim_sum = 0.0
+    # [P4b] trace only: how many verifiable core edges have a counterpart
+    # (best similarity > 0), how many of those pairs have a GRADED axis
+    # measured on both sides, and the similarity sum over the latter.
+    _rel_present = 0
+    _rel_physical = 0
+    _rel_physical_sum = 0.0
 
     for cs, cd, cet in verifiable_core_edges:
         qs = inv_corr[cs]
@@ -1541,6 +1547,12 @@ def _mcs_accumulate(
 
         matched_rel_sim_sum += best_sim
 
+        if trace is not None and best_sim > 0.0:
+            _rel_present += 1
+            if edge_graded_axes(best_qp, cp) > 0:
+                _rel_physical += 1
+                _rel_physical_sum += best_sim
+
         if best_sim > 0.0:
             q_w = float(q_edge_weights.get(best_q_key,
                                            q_edge_weights.get(_canon(best_q_key), 0.0)))
@@ -1571,6 +1583,9 @@ def _mcs_accumulate(
         trace["c_node_total"] = c_node_total
         trace["verifiable_core_edges_count"] = len(verifiable_core_edges)
         trace["matched_rel_sim_sum"] = matched_rel_sim_sum
+        trace["rel_present"] = _rel_present
+        trace["rel_physical"] = _rel_physical
+        trace["rel_physical_sim_sum"] = _rel_physical_sum
         trace["n_core_edges"] = len(C.edges)
         # [D1] Which credit rule produced q/c_matched_nm, and the binary
         # mass of the same correspondence (equal to it in binary mode).
@@ -1676,9 +1691,15 @@ def _edge_side_evidence(
     A: Subgraph,
     B: Subgraph,
     a_to_b: Dict[int, int],
+    detail: Optional[Dict[str, Any]] = None,
 ) -> Tuple[int, int, float]:
     """[D3] Edge evidence read from ONE side: the edges of `A` under the node
     map `a_to_b`, searched in `B`.
+
+    [P4b] `detail`, when given, receives `present` (verifiable edges with a
+    counterpart, best similarity > 0), `physical` (those whose best pair has
+    a graded axis measured on both sides, core/schema.py edge_graded_axes)
+    and `physical_sim_sum`. The returned triple is unchanged.
 
     Returns (n_edges, n_verifiable, sim_sum):
       n_edges       edges of A
@@ -1694,7 +1715,9 @@ def _edge_side_evidence(
     round, `(Q, C, correspondence)`, for the query-side terms. Kept as a
     separate function so the historical loop is not touched.
     """
-    from core.schema import polymorphic_edge_similarity, reverse_edge_params
+    from core.schema import (
+        polymorphic_edge_similarity, reverse_edge_params, edge_graded_axes,
+    )
     from orchestration.binder import UNDIRECTED_EDGE_TYPES
 
     def _canon(e):
@@ -1721,6 +1744,9 @@ def _edge_side_evidence(
 
     n_verifiable = 0
     sim_sum = 0.0
+    n_present = 0
+    n_physical = 0
+    physical_sum = 0.0
     for a_s, a_d, aet in A.edges:
         if a_s not in a_to_b or a_d not in a_to_b:
             continue
@@ -1738,12 +1764,24 @@ def _edge_side_evidence(
                     cand_list.append((bet_r, bp_r, bk_r))
 
         best_sim = 0.0
+        best_bp = None
         for bet, bp, _bk in cand_list:
             sim = polymorphic_edge_similarity(
                 bp, ap, use_confidence=False, edge_types=(bet, aet))
             if sim > best_sim:
                 best_sim = sim
+                best_bp = bp
         sim_sum += best_sim
+        if detail is not None and best_sim > 0.0:
+            n_present += 1
+            if edge_graded_axes(best_bp, ap) > 0:
+                n_physical += 1
+                physical_sum += best_sim
+    if detail is not None:
+        # [P4b] the same three figures `_mcs_accumulate` traces for its side
+        detail["present"] = n_present
+        detail["physical"] = n_physical
+        detail["physical_sim_sum"] = physical_sum
     return len(A.edges), n_verifiable, sim_sum
 
 
@@ -1889,8 +1927,12 @@ def evidence_score(
     `node_coverage_raw` the same term before calibration;
     `node_coverage_binary` its binary twin (same form, every kept pair
     credited in full, never calibrated); `core_node_coverage` and
-    `query_node_coverage` the two one-sided graded fractions. On the early
-    exits (an empty side, no lens type in common) none of them is written.
+    `query_node_coverage` the two one-sided graded fractions;
+    `relation_presence` and `relation_physics` the two factors of the
+    relational term kept apart ([P4b]; the term is their product only under
+    P.EVIDENCE_RELATION_COUNT_APART, see `relation_count_apart`). On the
+    early exits (an empty side, no lens type in common) none of them is
+    written.
     """
     internal_trace = trace if trace is not None else {}
     null_calibrated = bool(getattr(P, "EVIDENCE_NODE_NULL_CALIBRATED", False))
@@ -1964,10 +2006,11 @@ def evidence_score(
     n_query_edges = len(Q.edges)
     q_verifiable = 0
     q_rel_sim_sum = 0.0
+    _q_detail: Dict[str, Any] = {}
     _edge_terms = bool(qs_terms & {"relation", "absence"}) and n_core_edges > 0
     if _edge_terms:
         n_query_edges, q_verifiable, q_rel_sim_sum = _edge_side_evidence(
-            Q, C, corr)
+            Q, C, corr, detail=_q_detail)
 
     if n_core_edges == 0:
         relational_consistency = 1.0  # Edgeless core: relations vacuously satisfied
@@ -1980,6 +2023,49 @@ def evidence_score(
         relational_consistency = 0.0  # Relations exist in C, but none were verifiable under M
     else:
         relational_consistency = clamp(matched_rel_sim_sum / float(n_verifiable), 0.0, 1.0)
+
+    # [P4b] THE COUNT KEPT APART FROM THE PHYSICS. The mean above credits a
+    # matched pair with its similarity whatever that similarity is made of.
+    # A pair with no graded axis measured on both sides (a membership flag,
+    # a parameter-less predicate, a categorical agreement) reads exactly 1.0
+    # there: the fact that the relation EXISTS on both sides, entered as a
+    # perfect MEASUREMENT. Kept apart:
+    #     presence = verifiable edges with a counterpart / verifiable edges
+    #     physics  = mean similarity of the pairs that measured something
+    #                (1.0 when none did: nothing measured, nothing
+    #                contradicted -- matching/fuzzy.py's convention)
+    #     term     = presence * physics
+    # With t count-only pairs READING 1.0 and p physical pairs of mean
+    # similarity m among v verifiable edges the term goes from (t + p*m)/v
+    # to (t + p)*m/v: it can only stay or fall. (A count-only pair reads 1.0
+    # when it is a flag, a parameter-less pair or a categorical agreement.
+    # With the Phase-4 floors restored an all-UNKNOWN pair reads 0.2 and
+    # becomes a full count here, so the term can rise in that setting.)
+    # "Present" is a best similarity > 0, exactly the pairs the mean
+    # credits: nothing is newly credited. The two factors read the side(s)
+    # the term reads
+    # (both under D3 "relation"). Always traced; they replace the mean only
+    # under P.EVIDENCE_RELATION_COUNT_APART (default False), and never in the
+    # EVIDENCE_ONLY_EDGES branch, whose reading RULE B16 fixes.
+    _rel_v = n_verifiable
+    _rel_present = float(internal_trace.get("rel_present", 0))
+    _rel_phys_n = float(internal_trace.get("rel_physical", 0))
+    _rel_phys_sum = float(internal_trace.get("rel_physical_sim_sum", 0.0))
+    if "relation" in qs_terms and n_core_edges > 0:
+        _rel_v = n_verifiable + q_verifiable
+        _rel_present += float(_q_detail.get("present", 0))
+        _rel_phys_n += float(_q_detail.get("physical", 0))
+        _rel_phys_sum += float(_q_detail.get("physical_sim_sum", 0.0))
+    relation_presence = (_rel_present / float(_rel_v)) if _rel_v > 0 else 0.0
+    relation_physics = (
+        (_rel_phys_sum / _rel_phys_n) if _rel_phys_n > 0 else 1.0)
+    count_apart = (
+        bool(getattr(P, "EVIDENCE_RELATION_COUNT_APART", False))
+        and not getattr(P, "EVIDENCE_ONLY_EDGES", False))
+    if count_apart and n_core_edges > 0:
+        relational_consistency = (
+            clamp(relation_presence * relation_physics, 0.0, 1.0)
+            if _rel_v > 0 else 0.0)
 
     # 3. Conjunctive Relational Multiplier
     if getattr(P, "EVIDENCE_ONLY_EDGES", False):
@@ -2077,6 +2163,10 @@ def evidence_score(
                 (_c_nm_bin / (c_node_total + P.EPSILON))
                 if c_node_total > 0 else 0.0)
         trace["relational_consistency"] = relational_consistency
+        # [P4b] the two factors (always), and whether the score used them
+        trace["relation_presence"] = relation_presence
+        trace["relation_physics"] = relation_physics
+        trace["relation_count_apart"] = count_apart
         trace["relational_multiplier"] = relational_multiplier
         trace["edge_absence"] = edge_absence
         trace["total_absence"] = absence
@@ -2096,6 +2186,11 @@ def evidence_score(
             trace["n_query_edges"] = n_query_edges
             trace["q_verifiable_edges_count"] = q_verifiable
             trace["q_matched_rel_sim_sum"] = q_rel_sim_sum
+            # [P4b] the query side's present / physical pairs
+            trace["q_rel_present"] = _q_detail.get("present", 0)
+            trace["q_rel_physical"] = _q_detail.get("physical", 0)
+            trace["q_rel_physical_sim_sum"] = _q_detail.get(
+                "physical_sim_sum", 0.0)
 
     return float(score), corr
 

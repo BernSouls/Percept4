@@ -28,4 +28,8 @@ def test_declared_defaults(declared_defaults):
         "MATCH_ASSIGNMENT_EXACT": True,
         # signature matrix in blocks -- on: the same floats, faster
         "MATCH_SIGNATURE_MATRIX_BLOCKS": True,
+        # P4b, presence x physics -- in the tree; default by its rule
+        "EVIDENCE_RELATION_COUNT_APART": False,
+        # P4b, the flag in f(n) -- OFF: nothing here can measure it
+        "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS": False,
     }

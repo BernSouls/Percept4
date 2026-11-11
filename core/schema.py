@@ -1675,14 +1675,116 @@ def edge_measured_axes(qp: "EdgeParams", cp: "EdgeParams") -> int:
         id_slots = set(EDGE_IDENTITY_SLOTS.get(qp.class_, ()))
     if _is_u30_edge_params(qp):
         id_slots = set(U30_EDGE_IDENTITY_SLOTS.get(qp.class_, ()))
+    # [P4b] A slot the unit table declares a categorical LOOKUP KEY is not a
+    # graded axis either. EDGE_SCHEMAS (which derives the identity slots
+    # above) agrees with the unit table on 8 of its 12 lookup keys and
+    # declares the other four linear or ungated: the membership flag of
+    # CONTOUR_ORIENTATION / JUNCTION_ORIENTATION / REGION_CONTENT (a literal
+    # containment = 1.0, EDGE_INDEX_ONLY) and OCCLUSION.source. Those four
+    # were counted as a measured axis, so a bare membership flag earned
+    # f(1) = 2 of edge mass. P.EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS
+    # (default False = the historical count) leaves them out.
+    key_slots: FrozenSet[int] = frozenset()
+    if getattr(P, "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS", False):
+        key_slots = _edge_lookup_key_slots(qp) | _edge_lookup_key_slots(cp)
     n = 0
     for i, (a, b) in enumerate(zip(qp.quantized, cp.quantized)):
         if a == UNKNOWN or b == UNKNOWN:
             continue                      # unmeasured axes never penalize
         if i in id_slots:
             continue                      # categorical gates are not graded axes
+        if i in key_slots:
+            continue                      # nor are lookup keys [P4b]
         n += 1
     return n
+
+
+def _edge_lookup_key_slots(ep: Any) -> FrozenSet[int]:
+    """[P4b] Slot indices of `ep` that its unit table declares a categorical
+    LOOKUP KEY (`quantiser == "lookup_key"`): an index, not a graded
+    quantity. The table is chosen as `_is_u30_edge_params` chooses the
+    layout; an arity the table does not describe yields none."""
+    table = U30_EDGE_UNIT_TABLE if _is_u30_edge_params(ep) else EDGE_UNIT_TABLE
+    specs = table.get(ep.class_, ())
+    if len(specs) != len(ep.quantized):
+        return frozenset()
+    return frozenset(
+        i for i, s in enumerate(specs) if s.quantiser == "lookup_key")
+
+
+def _edge_categorical_slots(ep: "EdgeParams") -> FrozenSet[int]:
+    """[P4b] Every slot of `ep` that is categorical: its identity (NAP)
+    slots, resolved as `EdgeParams.similarity` resolves them, and its lookup
+    keys."""
+    if ep.identity_slots is not None:
+        ids = set(ep.identity_slots)
+    else:
+        ids = set(EDGE_IDENTITY_SLOTS.get(ep.class_, ()))
+    if _is_u30_edge_params(ep):
+        ids = set(U30_EDGE_IDENTITY_SLOTS.get(ep.class_, ()))
+    ids.update(_edge_lookup_key_slots(ep))
+    return frozenset(ids)
+
+
+def _graded_axes_plain(a: "EdgeParams", b: "EdgeParams") -> int:
+    if not isinstance(a, EdgeParams) or not isinstance(b, EdgeParams):
+        return 0
+    cat_a = _edge_categorical_slots(a)
+    cat_b = _edge_categorical_slots(b)
+    if a.class_ == b.class_:
+        if len(a.quantized) != len(b.quantized):
+            return 0
+        n = 0
+        for i, (x, y) in enumerate(zip(a.quantized, b.quantized)):
+            if x == UNKNOWN or y == UNKNOWN:
+                continue
+            if i in cat_a or i in cat_b:
+                continue
+            n += 1
+        return n
+    # cross-schema: the shared axes polymorphic_edge_similarity compares
+    if b.class_ not in get_compatible_types(a.class_):
+        return 0
+    n = 0
+    for idx_a, idx_b, _tag in get_shared_subspace(a.class_, b.class_):
+        if idx_a >= len(a.quantized) or idx_b >= len(b.quantized):
+            continue
+        if a.quantized[idx_a] == UNKNOWN or b.quantized[idx_b] == UNKNOWN:
+            continue
+        if idx_a in cat_a or idx_b in cat_b:
+            continue
+        n += 1
+    return n
+
+
+def edge_graded_axes(ep1: Any, ep2: Any) -> int:
+    """[P4b] Number of GRADED axes measured on BOTH sides of an edge pair:
+    the quantities a similarity of the two can be a PHYSICAL reading of.
+
+    A slot counts when neither side holds UNKNOWN in it and it is neither an
+    identity (NAP) slot nor a lookup key of the unit table. Same schema: the
+    slots themselves. Cross-schema (a compatible family): the shared axes
+    `polymorphic_edge_similarity` compares, under the same conditions. A
+    mixture: the best over its prototypes. No parameters on either side: 0.
+
+    0 means the pair has no physics to read: whatever similarity it earned
+    is the TOPOLOGICAL fact that the relation exists on both sides (a
+    membership flag, a parameter-less predicate, a categorical agreement) --
+    a count. `evidence_score` uses this to keep the count apart from the
+    physics (P.EVIDENCE_RELATION_COUNT_APART). Unlike `edge_measured_axes`
+    it does not depend on any switch and it reads cross-schema pairs.
+    """
+    if ep1 is None or ep2 is None:
+        return 0
+    protos1 = ep1.protos if isinstance(ep1, EdgeParamsMixture) else (ep1,)
+    protos2 = ep2.protos if isinstance(ep2, EdgeParamsMixture) else (ep2,)
+    best = 0
+    for a in protos1:
+        for b in protos2:
+            n = _graded_axes_plain(a, b)
+            if n > best:
+                best = n
+    return best
 
 
 #: [U31 / M2] Endpoint reversal for the U30 categories.  The legacy spec

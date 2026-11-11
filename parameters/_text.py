@@ -2014,6 +2014,32 @@ MATCH_ASSIGNMENT_EXACT: bool = True
 # (pinned), so no weight, correspondence or score moves. Blocks too small
 # to pay for the numpy calls are left to the loops. False = the loops.
 MATCH_SIGNATURE_MATRIX_BLOCKS: bool = True
+# [P4b / THE COUNT KEPT APART FROM THE PHYSICS] evidence_score: the
+# relational term reads PRESENCE x PHYSICS instead of one mean similarity.
+#   presence  verifiable edges that have a counterpart / verifiable edges --
+#             a count; every relation is in it, the membership flags and
+#             the parameter-less relations included
+#   physics   mean similarity over the present pairs that have a GRADED axis
+#             measured on both sides (core/schema.py edge_graded_axes); 1.0
+#             when none has (nothing measured, nothing contradicted)
+# Today a membership flag (CONTOUR_ORIENTATION, REGION_CONTENT,
+# JUNCTION_ORIENTATION: a literal containment = 1.0 the unit table declares
+# an index-only lookup key) and a parameter-less pair enter the mean at
+# exactly 1.0 -- a count read as a perfect measurement. Where every such
+# pair reads 1.0 (always, under EDGE_UNMEASURED_IS_NOT_EVIDENCE) the term
+# can only stay or fall. Under EVIDENCE_QUERY_SIDE_TERMS "relation" both factors are
+# summed over the two sides; the EVIDENCE_ONLY_EDGES branch (RULE B16) is
+# untouched. False = the historical mean.
+EVIDENCE_RELATION_COUNT_APART: bool = False
+# [P4b] core/schema.py edge_measured_axes (the n of the edge-mass
+# facilitation f(n) = 1 + log2(n + 1) in mcs_score / mcs_similarity): a slot
+# the unit table declares a categorical LOOKUP KEY is not a measured axis.
+# Today the three membership flags and OCCLUSION.source count as one,
+# against the function's own contract ("categorical gates are not graded
+# axes"), because EDGE_SCHEMAS declares them linear. False = the historical
+# count. evidence_score does not read this mass: it moves the containment
+# and fusion scores only -- re-read their gates before turning it on.
+EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS: bool = False
 
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK

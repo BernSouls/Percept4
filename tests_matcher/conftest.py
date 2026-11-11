@@ -40,6 +40,8 @@ PIN_BASELINE = {
     "EDGE_REVERSE_FLIPS_MIXTURE": True,                # mixture reversal
     "MATCH_ASSIGNMENT_EXACT": True,                    # exact assignment
     "MATCH_SIGNATURE_MATRIX_BLOCKS": True,             # performance only
+    "EVIDENCE_RELATION_COUNT_APART": False,            # P4b, evidence_score
+    "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS": False,   # P4b, edge mass
 }
 
 #: the tree's own values, read once before any pin touches them
