@@ -843,3 +843,15 @@ hash seeds.  M3-6 stays the verdict.  Accuracy is reported, never selected on.
 4. Only then, if M3-6 is green, the single final measurement, once.
 5. If M3-6 stays red after D0-D5: report which defect's fix moved which
    number and stop.  No constant is tuned to turn the pin.
+
+### 7.8 A CORRECTION TO 7.0, made the same day after the first T2 run
+
+7.0 wrote the objective's denominator as `|M|` plus relations only, and said
+the result lies in [0, 1].  It does not: the attribute mass `A` is in the
+numerator and nothing in the denominator bounds it, so a mapping whose pairs
+carry many shared attributes can score above 1 (a full identity on the
+hand-built pin graph gives 36/33).  THE DENOMINATOR NOW INCLUDES THE
+ATTRIBUTE UNITS: `W_R * (R + G)`, where `G` is the number of (mapped pair,
+attribute lens type) units `A` is summed over.  Then `A <= G`, `P <= R` and
+`S <= |M|`, and Q is in [0, 1].  T2 is re-run with this denominator; both
+runs are reported, the first one labelled as written under 7.0.

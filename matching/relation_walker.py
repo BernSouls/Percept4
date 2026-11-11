@@ -56,6 +56,24 @@ RARE_TOKEN_MAX_NODES: int = 2
 SEED_MIN_SHARED_TOKENS: int = 2
 #: two measured values agree when their bins differ by at most this
 BIN_TOLERANCE: float = 1.0
+#: ---------------------------------------------------------------------------
+#: [Amendment 7 / D0-D5] the constants fixed BEFORE any of them was measured
+#: ---------------------------------------------------------------------------
+#: D0: the weight of each half of the objective (equal; see the pre-registration)
+W_NODE: float = 1.0
+W_RELATION: float = 1.0
+#: D2: a shared axis further apart than this (in bins) contradicts; less only
+#: lowers the agreement.  A quarter of a turn on an 8-bin axis.
+CONTRADICTION_MARGIN: float = 4.0
+#: D3: the node gate is relative: above an absolute floor, and within a margin
+#: of the node's best similarity in the other graph
+NODE_FLOOR: float = 0.30
+NODE_MARGIN: float = 0.25
+#: D4: how many already admitted features on a pair of boundaries must keep
+#: their order with a pair before the order itself proposes it
+ORDER_PROPOSAL_MIN: int = 3
+#: D5: beam width, in seed sets
+BEAM_WIDTH: int = 4
 #: pairs examined (signature similarities computed) <= this share of
 #: |FRAME_q| x |FRAME_r| ...
 BUDGET_FRACTION: float = 0.05
@@ -132,6 +150,44 @@ def _slack(a: _Half, b: _Half) -> Optional[int]:
         if d > 1e-9:
             slack += 1
     return slack if shared else None
+
+
+def _agreement(a: _Half, b: _Half) -> Optional[float]:
+    """Graded agreement of two relations, or None when no axis is shared.
+
+    Agreement of ONE shared axis = max(0, 1 - |difference in bins| /
+    CONTRADICTION_MARGIN), circular axes wrapped.  The relation's value is the
+    mean over its shared axes.  (D0 / 7.0.)"""
+    da = dict(a.bins)
+    cyc = dict(a.cycles)
+    vals = []
+    for ax, vb in b.bins:
+        va = da.get(ax)
+        if va is None:
+            continue
+        d = abs(va - vb)
+        c = cyc.get(ax)
+        if c:
+            d = min(d, c - d)
+        vals.append(max(0.0, 1.0 - d / CONTRADICTION_MARGIN))
+    return (sum(vals) / len(vals)) if vals else None
+
+
+def _contradicts(a: _Half, b: _Half) -> bool:
+    """D2: does any axis measured on BOTH disagree by more than the margin?"""
+    da = dict(a.bins)
+    cyc = dict(a.cycles)
+    for ax, vb in b.bins:
+        va = da.get(ax)
+        if va is None:
+            continue
+        d = abs(va - vb)
+        c = cyc.get(ax)
+        if c:
+            d = min(d, c - d)
+        if d > CONTRADICTION_MARGIN + 1e-9:
+            return True
+    return False
 
 
 def _dominant(ep: Any) -> Any:
@@ -453,63 +509,136 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
     return res
 
 
-def _score(res: WalkResult, gq: _Index, gr: _Index, similarity: Any) -> None:
-    """Jaccard on preserved relations over the mapped part, and the support.
+def objective(mapping: Dict[int, int], gq: "_Index", gr: "_Index",
+              similarity: Any) -> Dict[str, Any]:
+    """The Amendment-7 objective of ANY one-to-one mapping of frame nodes.
 
-    A relation is (i) a measured growth edge between two mapped frame nodes:
-    preserved when its image exists in the same class and agrees; a pair of
-    edges with no axis measured on BOTH weighs nothing (it is counted on
-    neither side); or (ii) an attribute type attached to a mapped frame node
-    through CO_LOCATED: preserved when both nodes carry that type and two of
-    the attributes pass the signature gate."""
+    Q = (W_NODE * S + W_RELATION * (P + A))
+        / (W_NODE * |M| + W_RELATION * (R + G)),
+    the terms as stated in 7.0, G being the number of (mapped pair, attribute
+    lens type) units A is summed over (Amendment 7.8: without it a mapping
+    with many attributes could score above 1).  `similarity(u, v)` supplies the graded
+    signature similarity of a pair (it may be cached, budgeted or unbounded;
+    the OBJECTIVE never gates)."""
+    m = dict(mapping)
+    inv = {v: u for u, v in m.items()}
+    s_node = 0.0
+    for u, v in sorted(m.items()):
+        if gq.lens[u] != gr.lens[v]:
+            return {"q": 0.0, "mapped": len(m), "S": 0.0, "P": 0.0, "A": 0.0, "R": 0,
+                    "jaccard": 0.0}
+        s_node += float(similarity(u, v))
+
+    def edge_id(g: "_Index", s_: int, d_: int, name: str) -> Tuple:
+        und = g.pair[(s_, d_, name)].cls[1] == "u"
+        return (min(s_, d_), max(s_, d_), name) if und else (s_, d_, name)
+
+    p_mass = 0.0
+    p_candidates = 0
+    relation_ids_q = set()
+    relation_ids_r = set()
+    for s_, d_, name in gq.edges:
+        if s_ in m and d_ in m:
+            p_candidates += 1
+            relation_ids_q.add(edge_id(gq, s_, d_, name))
+            hr = gr.pair.get((m[s_], m[d_], name))
+            if hr is None:
+                continue
+            g = _agreement(gq.pair[(s_, d_, name)], hr)
+            if g is not None:
+                p_mass += g
+        elif s_ in m or d_ in m:
+            relation_ids_q.add(edge_id(gq, s_, d_, name))
+    for s_, d_, name in gr.edges:
+        if s_ in inv and d_ in inv:
+            relation_ids_r.add(edge_id(gr, s_, d_, name))
+        elif s_ in inv or d_ in inv:
+            relation_ids_r.add(edge_id(gr, s_, d_, name))
+    r_union = len(relation_ids_q | relation_ids_r)
+
+    a_mass = 0.0
+    a_units = 0
+    for u, v in sorted(m.items()):
+        aq, ar = gq.attrs.get(u, {}), gr.attrs.get(v, {})
+        for lt in sorted(set(aq) | set(ar)):
+            a_units += 1
+            mine, theirs = aq.get(lt, []), ar.get(lt, [])
+            if not mine or not theirs:
+                continue
+            finer = mine if len(mine) <= len(theirs) else theirs
+            coarse = theirs if finer is mine else mine
+            hits = 0
+            for x in finer:
+                best = 0.0
+                for y in coarse:
+                    sim = _attr_similarity(gq if finer is mine else gr,
+                                           gr if finer is mine else gq, x, y)
+                    best = max(best, sim)
+                if best >= NODE_FLOOR:
+                    hits += 1
+            a_mass += hits / len(finer)
+
+    num = W_NODE * s_node + W_RELATION * (p_mass + a_mass)
+    # Amendment 7.8: the attribute units are in the denominator too, the same
+    # (mapped pair, lens type) units the attribute mass is summed over, so the
+    # objective stays in [0, 1].
+    den = W_NODE * len(m) + W_RELATION * (r_union + a_units)
+    jac = (p_mass / (len(relation_ids_q) + len(relation_ids_r) - len(relation_ids_q & relation_ids_r))
+           if (relation_ids_q or relation_ids_r) else 0.0)
+    return {"q": (num / den) if den > 0 else 0.0, "mapped": len(m),
+            "S": s_node, "P": p_mass, "A": a_mass, "R": r_union,
+            "A_units": a_units, "p_candidates": p_candidates, "jaccard": jac}
+
+
+def _score(res: WalkResult, gq: "_Index", gr: "_Index", similarity: Any) -> None:
+    """The walk's own score: the 7.0 objective of the mapping it produced, and
+    the support floor.  (Kept beside the walker's terms for the report: the
+    preserved mass, the relation counts it was computed from.)"""
     m = res.mapping
     inv = {v: u for u, v in m.items()}
-
-    def edge_id(g: _Index, s: int, d: int, name: str) -> Tuple:
-        und = g.pair[(s, d, name)].cls[1] == "u"
-        return (min(s, d), max(s, d), name) if und else (s, d, name)
-
     preserved = n_q = n_r = 0
-    void_r = set()                     # reference edges whose pair shares no measured axis
-    for s, d, name in gq.edges:
-        if s not in m or d not in m:
+    void_r = set()
+    for s_, d_, name in gq.edges:
+        if s_ not in m or d_ not in m:
             continue
-        hq = gq.pair[(s, d, name)]
-        hr = gr.pair.get((m[s], m[d], name))
+        hq = gq.pair[(s_, d_, name)]
+        hr = gr.pair.get((m[s_], m[d_], name))
         if hr is None:
             n_q += 1
             continue
         sl = _slack(hq, hr)
         if sl is None and not ({i for i, _v in hq.bins} & {i for i, _v in hr.bins}):
-            void_r.add(edge_id(gr, m[s], m[d], name))
-            continue                   # nothing measured on both: weighs nothing
+            und = hq.cls[1] == "u"
+            void_r.add((min(m[s_], m[d_]), max(m[s_], m[d_]), name) if und
+                       else (m[s_], m[d_], name))
+            continue
         n_q += 1
         if sl is not None:
             preserved += 1
-    for s, d, name in gr.edges:
-        if s not in inv or d not in inv:
+    for s_, d_, name in gr.edges:
+        if s_ not in inv or d_ not in inv:
             continue
-        if edge_id(gr, s, d, name) in void_r:
+        und = gr.pair[(s_, d_, name)].cls[1] == "u"
+        key = (min(s_, d_), max(s_, d_), name) if und else (s_, d_, name)
+        if key in void_r:
             continue
         n_r += 1
     shared_attr = 0
     for u, v in m.items():
         aq, ar = gq.attrs.get(u, {}), gr.attrs.get(v, {})
         for lt in sorted(set(aq) | set(ar)):
-            n_q += int(lt in aq)
-            n_r += int(lt in ar)
             if lt in aq and lt in ar and any(
                     _attr_similarity(gq, gr, a, b) >= SIGNATURE_GATE
                     for a in aq[lt] for b in ar[lt]):
                 shared_attr += 1
-    preserved += shared_attr
     res.preserved, res.relations_q, res.relations_r = preserved, n_q, n_r
     res.attributes_shared = shared_attr
     smaller = min(res.frame_q, res.frame_r)
     res.supported = (len(m) >= MIN_SUPPORT_PAIRS
                      and len(m) >= MIN_SUPPORT_FRACTION * smaller)
-    denom = n_q + n_r - preserved
-    res.score = (preserved / denom if denom > 0 else 0.0) if res.supported else None
+    terms = objective(m, gq, gr, similarity)
+    res.terms = terms
+    res.score = float(terms["q"]) if res.supported else None
 
 
 def _attr_similarity(gq: _Index, gr: _Index, a: int, b: int) -> float:
