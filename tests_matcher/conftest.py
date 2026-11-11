@@ -42,6 +42,8 @@ PIN_BASELINE = {
     "MATCH_SIGNATURE_MATRIX_BLOCKS": True,             # performance only
     "EVIDENCE_RELATION_COUNT_APART": False,            # P4b, evidence_score
     "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS": False,   # P4b, edge mass
+    "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY": True,        # D2 prerequisites
+    "MATCH_GLOBAL_ANCHOR_PRIOR": False,                # D2 prerequisites
 }
 
 #: the tree's own values, read once before any pin touches them

@@ -32,4 +32,7 @@ def test_declared_defaults(declared_defaults):
         "EVIDENCE_RELATION_COUNT_APART": False,
         # P4b, the flag in f(n) -- OFF: nothing here can measure it
         "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS": False,
+        # D2 prerequisites -- dark path only
+        "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY": True,
+        "MATCH_GLOBAL_ANCHOR_PRIOR": False,
     }

@@ -740,6 +740,26 @@ def _global_correspondence(
     nodes_c = sorted(n for n in C.nodes if n in c_sigs)
     if not nodes_q or not nodes_c:
         return {}
+    # [D2 PREREQUISITES] The candidate matrix. In blocks
+    # (P.MATCH_SIGNATURE_MATRIX_BLOCKS) it holds the values `_sim` returns,
+    # bit for bit, and is handed over as `sim=`; the evaluations the
+    # historical accounting charged for building it are passed along so that
+    # accounting is reproduced exactly. P.MATCH_GLOBAL_ANCHOR_PRIOR (default
+    # False = as built) multiplies in the anchor-position factor of the live
+    # correspondence, so the seed is the live weight matrix.
+    sim_matrix = None
+    anchor_prior = bool(getattr(P, "MATCH_GLOBAL_ANCHOR_PRIOR", False))
+    if getattr(P, "MATCH_SIGNATURE_MATRIX_BLOCKS", True):
+        from matching.signature_matrix import signature_similarity_matrix
+        sim_matrix = signature_similarity_matrix(
+            [q_sigs[u][1] for u in nodes_q],
+            [c_sigs[v][1] for v in nodes_c], _sig_similarity)
+    elif anchor_prior:
+        sim_matrix = [[_sim(u, v) for v in nodes_c] for u in nodes_q]
+    if anchor_prior:
+        sim_matrix = _anchor_weights(
+            sim_matrix, nodes_q, nodes_c,
+            _normalised_anchors(Q), _normalised_anchors(C))
     al = global_consistency_alignment(
         nodes_q,
         nodes_c,
@@ -750,6 +770,11 @@ def _global_correspondence(
         systematicity_weight=float(getattr(P, "MATCH_SYSTEMATICITY_WEIGHT", 0.5)),
         rounds=int(getattr(P, "MATCH_ALIGN_ROUNDS", 4)),
         max_pair_evals=getattr(P, "MATCH_ALIGN_MAX_PAIR_EVALS", 200000),
+        sim=sim_matrix,
+        budget_refinement_only=bool(
+            getattr(P, "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY", True)),
+        seed_evals_charged=(
+            len(nodes_q) * len(nodes_c) if sim_matrix is not None else 0),
     )
     return dict(al.mapping)
 

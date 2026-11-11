@@ -2040,6 +2040,23 @@ EVIDENCE_RELATION_COUNT_APART: bool = False
 # count. evidence_score does not read this mass: it moves the containment
 # and fusion scores only -- re-read their gates before turning it on.
 EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS: bool = False
+# [D2 PREREQUISITES] matching/alignment.py global_consistency_alignment:
+# MATCH_ALIGN_MAX_PAIR_EVALS is the budget "for the refinement". The seed's
+# similarity matrix was charged to it when the function built the matrix and
+# not when the caller supplied it, so the route the matcher uses returned
+# the UNREFINED seed on any pair with more candidate pairs than the budget.
+# True: the seed is never charged, and a candidate of similarity 0 (whose
+# weight is 0 whatever its relational agreement) is neither evaluated nor
+# charged. False = the historical accounting. Dark path only
+# (MATCH_GLOBAL_CONSISTENCY_ENABLED).
+MATCH_ALIGN_BUDGET_REFINEMENT_ONLY: bool = True
+# [D2 PREREQUISITES] memory/cores.py _global_correspondence: weigh the
+# candidates of the global alignment by signature similarity x the
+# anchor-position factor -- the weight of the live per-lens-type
+# correspondence -- instead of signature similarity alone. False = as built.
+# Dark path only; exists so that turning the global alignment on can change
+# ONE thing (the relational refinement) instead of two.
+MATCH_GLOBAL_ANCHOR_PRIOR: bool = False
 
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK

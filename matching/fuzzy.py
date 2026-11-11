@@ -156,6 +156,8 @@ def fuzzy_match(
         rounds=rounds,
         max_pair_evals=max_pair_evals,
         sim=matrix,
+        budget_refinement_only=bool(
+            getattr(P, "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY", True)),
     )
 
     ntot = len(nodes_a) + len(nodes_b)
