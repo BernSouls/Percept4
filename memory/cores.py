@@ -740,6 +740,26 @@ def _global_correspondence(
     nodes_c = sorted(n for n in C.nodes if n in c_sigs)
     if not nodes_q or not nodes_c:
         return {}
+    # [D2 PREREQUISITES] The candidate matrix. In blocks
+    # (P.MATCH_SIGNATURE_MATRIX_BLOCKS) it holds the values `_sim` returns,
+    # bit for bit, and is handed over as `sim=`; the evaluations the
+    # historical accounting charged for building it are passed along so that
+    # accounting is reproduced exactly. P.MATCH_GLOBAL_ANCHOR_PRIOR (default
+    # False = as built) multiplies in the anchor-position factor of the live
+    # correspondence, so the seed is the live weight matrix.
+    sim_matrix = None
+    anchor_prior = bool(getattr(P, "MATCH_GLOBAL_ANCHOR_PRIOR", False))
+    if getattr(P, "MATCH_SIGNATURE_MATRIX_BLOCKS", True):
+        from matching.signature_matrix import signature_similarity_matrix
+        sim_matrix = signature_similarity_matrix(
+            [q_sigs[u][1] for u in nodes_q],
+            [c_sigs[v][1] for v in nodes_c], _sig_similarity)
+    elif anchor_prior:
+        sim_matrix = [[_sim(u, v) for v in nodes_c] for u in nodes_q]
+    if anchor_prior:
+        sim_matrix = _anchor_weights(
+            sim_matrix, nodes_q, nodes_c,
+            _normalised_anchors(Q), _normalised_anchors(C))
     al = global_consistency_alignment(
         nodes_q,
         nodes_c,
@@ -750,8 +770,78 @@ def _global_correspondence(
         systematicity_weight=float(getattr(P, "MATCH_SYSTEMATICITY_WEIGHT", 0.5)),
         rounds=int(getattr(P, "MATCH_ALIGN_ROUNDS", 4)),
         max_pair_evals=getattr(P, "MATCH_ALIGN_MAX_PAIR_EVALS", 200000),
+        sim=sim_matrix,
+        budget_refinement_only=bool(
+            getattr(P, "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY", True)),
+        seed_evals_charged=(
+            len(nodes_q) * len(nodes_c) if sim_matrix is not None else 0),
     )
     return dict(al.mapping)
+
+
+def _normalised_anchors(sg: Any) -> Optional[Dict[int, Tuple[float, float]]]:
+    """Each anchored node's position inside the bounding box of its
+    subgraph's anchors, or None when the subgraph has no usable box.
+
+    The arithmetic of the `_bbox` / `_anchor_similarity` closures of
+    `_mcs_accumulate`, expression for expression, done once per node instead
+    of once per candidate pair. A node without an anchor (or with fewer than
+    two coordinates) is absent from the result.
+    """
+    anchor_map = getattr(sg, "anchor_of_node", None) or {}
+    if not anchor_map:
+        return None
+    xs = [float(p[0]) for p in anchor_map.values() if p and len(p) >= 2]
+    ys = [float(p[1]) for p in anchor_map.values() if p and len(p) >= 2]
+    if len(xs) < 2:
+        return None
+    x0, x1 = min(xs), max(xs)
+    y0, y1 = min(ys), max(ys)
+    w = max(x1 - x0, 1e-9)
+    h = max(y1 - y0, 1e-9)
+    out: Dict[int, Tuple[float, float]] = {}
+    for nid, p in anchor_map.items():
+        if p is None or len(p) < 2:
+            continue
+        out[nid] = ((float(p[0]) - x0) / w, (float(p[1]) - y0) / h)
+    return out
+
+
+def _anchor_weights(
+    sims: Sequence[Sequence[float]],
+    q_ids: Sequence[int],
+    c_ids: Sequence[int],
+    q_norm: Optional[Dict[int, Tuple[float, float]]],
+    c_norm: Optional[Dict[int, Tuple[float, float]]],
+) -> List[List[float]]:
+    """The weight matrix of the correspondence for one block:
+    `sims[i][j] * anchor_similarity(q_ids[i], c_ids[j])`.
+
+    Bit for bit what the per-pair closure of `_mcs_accumulate` produces: the
+    factor is `exp(-2.5 * hypot(dx, dy))` on the normalised positions, and
+    1.0 when either subgraph has no box or either node has no anchor. It is
+    computed for EVERY pair, a similarity of 0 included, exactly as the
+    closure does (math.hypot and math.exp have no bit-identical array form,
+    so this stays one call per pair).
+    """
+    if q_norm is None or c_norm is None:
+        return [[s * 1.0 for s in row] for row in sims]
+    _hypot = math.hypot
+    _exp = math.exp
+    c_pos = [c_norm.get(c) for c in c_ids]
+    weights: List[List[float]] = []
+    for i, q in enumerate(q_ids):
+        row = sims[i]
+        a = q_norm.get(q)
+        if a is None:
+            weights.append([s * 1.0 for s in row])
+            continue
+        ax, ay = a
+        weights.append([
+            (row[j] * 1.0) if b is None
+            else row[j] * _exp(-2.5 * _hypot(ax - b[0], ay - b[1]))
+            for j, b in enumerate(c_pos)])
+    return weights
 
 #: [U32 / Layer 3] Producer classes whose edges are SPATIAL PROXIMITY, not
 #: structural evidence.  They are dense by construction (a contact graph is
@@ -778,22 +868,114 @@ def _median_positive_nn(points: Any) -> float:
     })
     if len(pts) < 2:
         return 0.0
-    nn: List[float] = []
-    for i, (x, y) in enumerate(pts):
-        best = math.inf
-        for j, (u, v) in enumerate(pts):
-            if i == j:
-                continue
-            d = math.hypot(x - u, y - v)
-            if 1e-12 < d < best:
-                best = d
-        if math.isfinite(best):
-            nn.append(best)
+    # [SIGNATURE MATRIX IN BLOCKS] the same switch governs this kernel: the
+    # nearest neighbours are found with numpy and the distance itself is
+    # still `math.hypot` -- the same floats as the double loop, bit for bit
+    # (pinned). False = the double loop, untouched.
+    if (len(pts) >= _NN_BLOCK_MIN_POINTS
+            and getattr(P, "MATCH_SIGNATURE_MATRIX_BLOCKS", True)):
+        nn = _nearest_positive_distances(pts)
+    else:
+        nn = []
+        for i in range(len(pts)):
+            best = _nearest_positive_distance_of(pts, i)
+            if math.isfinite(best):
+                nn.append(best)
     if not nn:
         return 0.0
     nn.sort()
     mid = len(nn) // 2
     return nn[mid] if len(nn) % 2 else 0.5 * (nn[mid - 1] + nn[mid])
+
+
+#: Below this many points the double loop is cheaper than the numpy calls.
+#: Both return the same floats; the number is a matter of speed only.
+_NN_BLOCK_MIN_POINTS = 24
+#: No square of a coordinate difference can overflow below this magnitude.
+_NN_MAX_ABS = 1e150
+#: A candidate is kept when its squared distance, computed in floating
+#: point, is within this relative margin of the row's smallest. The floats
+#: involved are accurate to a few 1e-16; the margin is a million times that.
+_NN_MARGIN = 1e-9
+
+
+def _nearest_positive_distance_of(pts: List[Tuple[float, float]], i: int) -> float:
+    """The smallest distance above 1e-12 from point `i` to another point of
+    `pts`; `math.inf` when there is none.  The reference loop."""
+    x, y = pts[i]
+    best = math.inf
+    for j, (u, v) in enumerate(pts):
+        if i == j:
+            continue
+        d = math.hypot(x - u, y - v)
+        if 1e-12 < d < best:
+            best = d
+    return best
+
+
+def _nearest_positive_distances(pts: List[Tuple[float, float]]) -> List[float]:
+    """`_nearest_positive_distance_of(pts, i)` for every i where it is
+    finite, in order -- the same floats, without the O(n^2) Python loop.
+
+    For each point numpy finds the CANDIDATES for the minimum: every other
+    point whose squared distance (computed in floating point, so only
+    approximately) is within a relative `_NN_MARGIN` of the row's smallest
+    one that can exceed 1e-12.  The distance of each candidate is then
+    computed by `math.hypot` on the same two differences the loop forms,
+    and the minimum of those is returned.  A minimum does not depend on the
+    points that were dropped as long as a point attaining it is kept, and a
+    point attaining it cannot lie outside the margin: `math.hypot` and the
+    squared distances are each accurate to a few units in the last place.
+    The one case in which that argument needs more than the candidates --
+    a candidate that turns out to be at 1e-12 or closer -- is handed to the
+    reference loop for that point.  So is everything when a coordinate is
+    large enough for a square to overflow.
+    """
+    import numpy as np
+
+    n = len(pts)
+    X = np.array([p[0] for p in pts], dtype=np.float64)
+    Y = np.array([p[1] for p in pts], dtype=np.float64)
+    if not (float(np.abs(X).max()) <= _NN_MAX_ABS
+            and float(np.abs(Y).max()) <= _NN_MAX_ABS):
+        out = []
+        for i in range(n):
+            best = _nearest_positive_distance_of(pts, i)
+            if math.isfinite(best):
+                out.append(best)
+        return out
+    floor = 1e-24 * (1.0 - _NN_MARGIN)       # below it, d <= 1e-12 for sure
+    out: List[float] = []
+    step = max(1, 2_000_000 // n)            # bounds every temporary
+    for start in range(0, n, step):
+        stop = min(n, start + step)
+        DX = X[start:stop, None] - X[None, :]        # x - u, as the loop
+        DY = Y[start:stop, None] - Y[None, :]        # y - v
+        D2 = DX * DX
+        D2 += DY * DY
+        D2[np.arange(stop - start), np.arange(start, stop)] = np.inf   # i == j
+        D2[D2 < floor] = np.inf
+        m = D2.min(axis=1)
+        cand = D2 <= (m * (1.0 + _NN_MARGIN))[:, None]
+        cand &= np.isfinite(D2)
+        rows, cols = np.nonzero(cand)                # grouped by row
+        dist = list(map(math.hypot, DX[rows, cols].tolist(),
+                        DY[rows, cols].tolist()))
+        best_of: Dict[int, float] = {}
+        redo = set()
+        for r, d in zip(rows.tolist(), dist):
+            if not 1e-12 < d:
+                redo.add(r)
+            elif d < best_of.get(r, math.inf):
+                best_of[r] = d
+        for r in range(stop - start):
+            if r in redo or r not in best_of:
+                best = _nearest_positive_distance_of(pts, start + r)
+            else:
+                best = best_of[r]
+            if math.isfinite(best):
+                out.append(best)
+    return out
 
 
 def _effective_edge_weights(sg: Subgraph) -> Dict[Any, float]:
@@ -904,6 +1086,8 @@ def _mcs_accumulate(
     q_sigs: Dict[int, Tuple[str, TypedSignature]],
     c_sigs: Dict[int, Tuple[str, TypedSignature]],
     trace: Optional[Dict[str, Any]] = None,
+    graded_node_credit: bool = False,
+    node_chance: bool = False,
 ) -> Tuple[float, float, float, float, float, float, Dict[int, int]]:
     """[Kc2] Shared correspondence and mass accumulation.
 
@@ -911,6 +1095,26 @@ def _mcs_accumulate(
     the Hungarian correspondence, the `GESTALT_LENS_BOOST` node
     weighting, the (optional) K.3 absorption blocks, and the trace
     writes, up to (but not including) the final normalization branch.
+
+    [D1] `graded_node_credit` -- how much MATCHED NODE MASS a pair earns.
+    False (default; `mcs_score`, `mcs_similarity`): the historical binary
+    credit -- any pair the correspondence keeps (similarity merely > 0)
+    earns its full `GESTALT_LENS_BOOST * node_weight`. True
+    (`evidence_score`, under P.EVIDENCE_GRADED_NODE_CREDIT): the pair earns
+    `GESTALT_LENS_BOOST * node_weight * signature_similarity`, the
+    similarity being `TypedSignature.similarity` of the two nodes (the
+    anchor-position factor steers WHO pairs with whom and is deliberately
+    not part of the credit). The correspondence, the totals (`q_mass`,
+    `c_mass`) and the whole edge accumulation are identical in both modes.
+
+    [NULL CALIBRATION] `node_chance` (needs `trace`) -- also accumulate the
+    matched node mass a RANDOM PAIRING would earn under the same credit
+    rule, into trace["q_chance_nm"] / trace["c_chance_nm"]. Inside a lens
+    type a given pair belongs to a uniformly random maximum pairing with
+    probability 1 / max(|Q_l|, |C_l|), so a node's expected credit is the
+    sum of the credit over its candidates divided by that maximum (the mean
+    of the candidate matrix, matching/calibration.py NullModel.from_matrix).
+    Nothing the function returns changes.
 
     Returns:
         q_mass, c_mass,
@@ -920,7 +1124,7 @@ def _mcs_accumulate(
     """
     from core.schema import (
         polymorphic_edge_similarity, reverse_edge_params,
-        edge_measured_axes,
+        edge_measured_axes, edge_graded_axes,
     )
     from orchestration.binder import UNDIRECTED_EDGE_TYPES
 
@@ -968,8 +1172,31 @@ def _mcs_accumulate(
             trace["c_size"] = c_size
             trace["correspondence"] = {}
         return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, {})
+    # [NULL CALIBRATION] expected credit of each node under a random pairing
+    _want_chance = bool(node_chance) and trace is not None
+    q_chance: Dict[int, float] = {}
+    c_chance: Dict[int, float] = {}
+    # [SIGNATURE MATRIX IN BLOCKS] similarity of every pair the block path
+    # kept, keyed by the query node: the matrix entry IS the value
+    # `_sig_similarity` returns for the pair, so [D1] below reads it instead
+    # of calling again. Empty on the per-pair path and the global path.
+    _block_sims: Dict[int, float] = {}
     if getattr(P, "MATCH_GLOBAL_CONSISTENCY_ENABLED", False):
         node_correspondence = _global_correspondence(Q, C, q_sigs, c_sigs)
+        if _want_chance:
+            # The global alignment keeps its matrix to itself; the null is
+            # the same per-lens-type random pairing, from the same signature
+            # similarities.
+            for lt in common_types:
+                q_ids = q_by_type[lt]
+                c_ids = c_by_type[lt]
+                if not q_ids or not c_ids:
+                    continue
+                _chance_credit(
+                    q_ids, c_ids,
+                    [[_sig_similarity(q_sigs[q][1], c_sigs[c][1])
+                      for c in c_ids] for q in q_ids],
+                    graded_node_credit, q_chance, c_chance)
     else:
         _q_anchor = getattr(Q, "anchor_of_node", None) or {}
         _c_anchor = getattr(C, "anchor_of_node", None) or {}
@@ -1007,20 +1234,73 @@ def _mcs_accumulate(
             return math.exp(-2.5 * dist)
 
         node_correspondence = {}
+        # [SIGNATURE MATRIX IN BLOCKS] P.MATCH_SIGNATURE_MATRIX_BLOCKS
+        # (default True): the matrix of a lens type is built by
+        # matching/signature_matrix.py and the anchor factor by
+        # `_anchor_weights` -- the same floats as the per-pair expressions
+        # below, bit for bit (pinned), several times faster. False = the
+        # per-pair loop, untouched.
+        _blocks = bool(getattr(P, "MATCH_SIGNATURE_MATRIX_BLOCKS", True))
+        if _blocks:
+            from matching.signature_matrix import signature_similarity_matrix
+            _q_norm = _normalised_anchors(Q)
+            _c_norm = _normalised_anchors(C)
         for lt in common_types:
             q_ids = q_by_type[lt]
             c_ids = c_by_type[lt]
             if not q_ids or not c_ids:
                 continue
-            weights = [
-                [_sig_similarity(q_sigs[q][1], c_sigs[c][1]) *
-                 _anchor_similarity(q, c) for c in c_ids]
-                for q in q_ids
-            ]
+            if _blocks:
+                _sims = signature_similarity_matrix(
+                    [q_sigs[q][1] for q in q_ids],
+                    [c_sigs[c][1] for c in c_ids], _sig_similarity)
+                weights = _anchor_weights(_sims, q_ids, c_ids,
+                                          _q_norm, _c_norm)
+                if _want_chance:
+                    _chance_credit(q_ids, c_ids, _sims, graded_node_credit,
+                                   q_chance, c_chance)
+            elif _want_chance:
+                # [NULL CALIBRATION] The same matrix, with the signature
+                # factor kept: `weights` holds the identical products.
+                _sims = [
+                    [_sig_similarity(q_sigs[q][1], c_sigs[c][1])
+                     for c in c_ids]
+                    for q in q_ids
+                ]
+                weights = [
+                    [_sims[_i][_j] * _anchor_similarity(q, c)
+                     for _j, c in enumerate(c_ids)]
+                    for _i, q in enumerate(q_ids)
+                ]
+                _chance_credit(q_ids, c_ids, _sims, graded_node_credit,
+                               q_chance, c_chance)
+            else:
+                weights = [
+                    [_sig_similarity(q_sigs[q][1], c_sigs[c][1]) *
+                     _anchor_similarity(q, c) for c in c_ids]
+                    for q in q_ids
+                ]
             assignment = _max_weight_match(weights)
             for qi, ci in assignment:
                 if weights[qi][ci] > 0.0:
                     node_correspondence[q_ids[qi]] = c_ids[ci]
+                    if _blocks:
+                        _block_sims[q_ids[qi]] = _sims[qi][ci]
+
+    # [D1] Signature similarity of every credited pair, keyed by the query
+    # node. Empty in the binary mode: `.get(q_id, 1.0)` below then multiplies
+    # by exactly 1.0, which leaves every float bit-identical to the pre-D1
+    # accumulation (same values, same order).
+    pair_sim: Dict[int, float] = {}
+    if graded_node_credit:
+        for _q_id, _c_id in node_correspondence.items():
+            if _q_id in _block_sims:
+                _s = _block_sims[_q_id]
+            else:
+                _iq, _ic = q_sigs.get(_q_id), c_sigs.get(_c_id)
+                _s = (_sig_similarity(_iq[1], _ic[1])
+                      if (_iq is not None and _ic is not None) else 0.0)
+            pair_sim[_q_id] = min(1.0, max(0.0, float(_s)))
 
     q_node_weights = getattr(Q, "node_weights", None) or {}
     # [U32 / Layer 3] Redundancy-aware weights replace the raw 1-per-edge
@@ -1171,14 +1451,20 @@ def _mcs_accumulate(
             _write_trace(q_mass, c_mass, 0.0, 0.0, 0.0, 0.0)
         return (q_mass, c_mass, 0.0, 0.0, 0.0, 0.0, node_correspondence)
 
+    # [D1] `_bin` accumulators keep the BINARY mass alongside the credited
+    # one, for the trace only (they equal the credited mass in binary mode).
+    q_matched_nm_bin = 0.0
+    c_matched_nm_bin = 0.0
     if q_node_weights:
         q_matched_nm = 0.0
         for q_id in node_correspondence.keys():
             info = q_sigs.get(q_id)
             lt = info[0] if info is not None else ""
             boost = GESTALT_LENS_BOOST.get(lt, 1.0)
-            _contrib = boost * float(q_node_weights.get(q_id, 0.0))
+            _full = boost * float(q_node_weights.get(q_id, 0.0))
+            _contrib = _full * pair_sim.get(q_id, 1.0)
             q_matched_nm += _contrib
+            q_matched_nm_bin += _full
             if trace is not None:
                 q_tier_node_matched[lens_tier(lt)] += _contrib
     else:
@@ -1186,27 +1472,33 @@ def _mcs_accumulate(
         for q_id in node_correspondence.keys():
             info = q_sigs.get(q_id)
             lt = info[0] if info is not None else ""
-            _contrib = GESTALT_LENS_BOOST.get(lt, 1.0)
+            _full = GESTALT_LENS_BOOST.get(lt, 1.0)
+            _contrib = _full * pair_sim.get(q_id, 1.0)
             q_matched_nm += _contrib
+            q_matched_nm_bin += _full
             if trace is not None:
                 q_tier_node_matched[lens_tier(lt)] += _contrib
     if c_node_weights:
         c_matched_nm = 0.0
-        for c_id in node_correspondence.values():
+        for q_id, c_id in node_correspondence.items():
             info = c_sigs.get(c_id)
             lt = info[0] if info is not None else ""
             boost = GESTALT_LENS_BOOST.get(lt, 1.0)
-            _contrib = boost * float(c_node_weights.get(c_id, 0.0))
+            _full = boost * float(c_node_weights.get(c_id, 0.0))
+            _contrib = _full * pair_sim.get(q_id, 1.0)
             c_matched_nm += _contrib
+            c_matched_nm_bin += _full
             if trace is not None:
                 c_tier_node_matched[lens_tier(lt)] += _contrib
     else:
         c_matched_nm = 0.0
-        for c_id in node_correspondence.values():
+        for q_id, c_id in node_correspondence.items():
             info = c_sigs.get(c_id)
             lt = info[0] if info is not None else ""
-            _contrib = GESTALT_LENS_BOOST.get(lt, 1.0)
+            _full = GESTALT_LENS_BOOST.get(lt, 1.0)
+            _contrib = _full * pair_sim.get(q_id, 1.0)
             c_matched_nm += _contrib
+            c_matched_nm_bin += _full
             if trace is not None:
                 c_tier_node_matched[lens_tier(lt)] += _contrib
 
@@ -1226,7 +1518,9 @@ def _mcs_accumulate(
         q_edge_index[(qs, qd)].append((qet, qp, q_key))
         if qet in UNDIRECTED_EDGE_TYPES:
             # Reverse asymmetric parameters for reverse traversal
-            qp_rev = reverse_edge_params(qp) if qp is not None else None
+            # [MIXTURE REVERSAL] through the helper, so a mixture is
+            # reversed too (reverse_edge_params alone returns it unchanged)
+            qp_rev = _reverse_for_traversal(qp)
             q_edge_index[(qd, qs)].append((qet, qp_rev, q_key))
 
     # 2. Verifiable core edges: both endpoints mapped under M
@@ -1241,6 +1535,12 @@ def _mcs_accumulate(
     q_matched_em_terms: List[float] = []
     c_matched_em_terms: List[float] = []
     matched_rel_sim_sum = 0.0
+    # [P4b] trace only: how many verifiable core edges have a counterpart
+    # (best similarity > 0), how many of those pairs have a GRADED axis
+    # measured on both sides, and the similarity sum over the latter.
+    _rel_present = 0
+    _rel_physical = 0
+    _rel_physical_sum = 0.0
 
     for cs, cd, cet in verifiable_core_edges:
         qs = inv_corr[cs]
@@ -1272,6 +1572,12 @@ def _mcs_accumulate(
 
         matched_rel_sim_sum += best_sim
 
+        if trace is not None and best_sim > 0.0:
+            _rel_present += 1
+            if edge_graded_axes(best_qp, cp) > 0:
+                _rel_physical += 1
+                _rel_physical_sum += best_sim
+
         if best_sim > 0.0:
             q_w = float(q_edge_weights.get(best_q_key,
                                            q_edge_weights.get(_canon(best_q_key), 0.0)))
@@ -1302,7 +1608,34 @@ def _mcs_accumulate(
         trace["c_node_total"] = c_node_total
         trace["verifiable_core_edges_count"] = len(verifiable_core_edges)
         trace["matched_rel_sim_sum"] = matched_rel_sim_sum
+        trace["rel_present"] = _rel_present
+        trace["rel_physical"] = _rel_physical
+        trace["rel_physical_sim_sum"] = _rel_physical_sum
         trace["n_core_edges"] = len(C.edges)
+        # [D1] Which credit rule produced q/c_matched_nm, and the binary
+        # mass of the same correspondence (equal to it in binary mode).
+        trace["node_credit"] = "graded" if graded_node_credit else "binary"
+        trace["q_matched_nm_binary"] = q_matched_nm_bin
+        trace["c_matched_nm_binary"] = c_matched_nm_bin
+        if _want_chance:
+            # [NULL CALIBRATION] The mass a random pairing would earn: the
+            # masses of the matched-mass loops above (boost x node weight,
+            # or boost alone when the side carries no weights), times each
+            # node's expected credit.
+            def _chance_mass(chance, sigs, node_weights):
+                terms = []
+                for _nid in sorted(chance):
+                    _info = sigs.get(_nid)
+                    _lt = _info[0] if _info is not None else ""
+                    _m = GESTALT_LENS_BOOST.get(_lt, 1.0)
+                    if node_weights:
+                        _m *= float(node_weights.get(_nid, 0.0))
+                    terms.append(_m * chance[_nid])
+                return math.fsum(terms)
+            trace["q_chance_nm"] = _chance_mass(q_chance, q_sigs,
+                                                q_node_weights)
+            trace["c_chance_nm"] = _chance_mass(c_chance, c_sigs,
+                                                c_node_weights)
 
     # [Kc2] The success-path trace write stays here
     if trace is not None:
@@ -1315,6 +1648,185 @@ def _mcs_accumulate(
         q_matched_em, c_matched_em,
         node_correspondence,
     )
+
+def _reverse_for_traversal(ep: Any) -> Any:
+    """[MIXTURE REVERSAL] Edge parameters as read AGAINST the stored
+    direction of their (undirected) edge.
+
+    `reverse_edge_params` reverses an `EdgeParams` and returns anything else
+    unchanged, so the edge loops read an `EdgeParamsMixture` backwards with
+    its prototypes not reversed: a mixture and the plain prototype it holds
+    then compared differently, and the same edge pair got two similarities
+    from its two ends. Under P.EDGE_REVERSE_FLIPS_MIXTURE (default True) a
+    mixture is reversed with its own `flipped_copy()` -- what
+    matching/structural_similarity.py does at its call sites. False = the
+    historical call, `reverse_edge_params(ep)`. `None` stays `None`.
+
+    Used by both edge loops (`_mcs_accumulate`, `_edge_side_evidence`) where
+    the reversed index entry of an undirected edge is built, so the two stay
+    the same loop under either value.
+    """
+    if ep is None:
+        return None
+    if getattr(P, "EDGE_REVERSE_FLIPS_MIXTURE", True):
+        from core.schema import EdgeParamsMixture
+        if isinstance(ep, EdgeParamsMixture):
+            return ep.flipped_copy()
+    return reverse_edge_params(ep)
+
+
+def _chance_credit(
+    q_ids: Sequence[int],
+    c_ids: Sequence[int],
+    sims: Sequence[Sequence[float]],
+    graded: bool,
+    q_chance: Dict[int, float],
+    c_chance: Dict[int, float],
+) -> None:
+    """[NULL CALIBRATION] Expected node credit under a RANDOM PAIRING of one
+    lens type's query nodes with its core nodes.
+
+    `sims[i][j]` is the signature similarity of q_ids[i] and c_ids[j]. The
+    credit of a pair is what the live rule gives it once paired: the
+    similarity clipped to [0, 1] (graded), or 1.0 when it is positive
+    (binary). A uniformly random maximum pairing of the two sets contains a
+    given pair with probability 1 / max(|Q|, |C|); the expected credit of a
+    node is therefore the sum of the credit over its candidates divided by
+    that maximum -- the mean of the candidate matrix, scaled by the share of
+    the side a pairing can cover. Writes into `q_chance` / `c_chance`.
+    """
+    n_q, n_c = len(q_ids), len(c_ids)
+    if n_q == 0 or n_c == 0:
+        return
+    denom = float(max(n_q, n_c))
+    col = [0.0] * n_c
+    for i, row in enumerate(sims):
+        r = 0.0
+        for j, s in enumerate(row):
+            g = (min(1.0, max(0.0, float(s))) if graded
+                 else (1.0 if s > 0.0 else 0.0))
+            r += g
+            col[j] += g
+        q_chance[q_ids[i]] = r / denom
+    for j, c_id in enumerate(c_ids):
+        c_chance[c_id] = col[j] / denom
+
+
+def _edge_side_evidence(
+    A: Subgraph,
+    B: Subgraph,
+    a_to_b: Dict[int, int],
+    detail: Optional[Dict[str, Any]] = None,
+) -> Tuple[int, int, float]:
+    """[D3] Edge evidence read from ONE side: the edges of `A` under the node
+    map `a_to_b`, searched in `B`.
+
+    [P4b] `detail`, when given, receives `present` (verifiable edges with a
+    counterpart, best similarity > 0), `physical` (those whose best pair has
+    a graded axis measured on both sides, core/schema.py edge_graded_axes)
+    and `physical_sim_sum`. The returned triple is unchanged.
+
+    Returns (n_edges, n_verifiable, sim_sum):
+      n_edges       edges of A
+      n_verifiable  edges of A with BOTH endpoints mapped
+      sim_sum       over those, the best similarity to an edge of B between
+                    the two mapped endpoints (0.0 when B has none there)
+
+    This is the edge loop of `_mcs_accumulate` with the two roles named
+    instead of fixed. `_mcs_accumulate` verifies the CORE's edges in the
+    query: `_edge_side_evidence(C, Q, inverse_correspondence)` returns its
+    `verifiable_core_edges_count` and `matched_rel_sim_sum` exactly (same
+    calls, same order -- pinned). `evidence_score` calls it the other way
+    round, `(Q, C, correspondence)`, for the query-side terms. Kept as a
+    separate function so the historical loop is not touched.
+    """
+    from core.schema import (
+        polymorphic_edge_similarity, reverse_edge_params, edge_graded_axes,
+    )
+    from orchestration.binder import UNDIRECTED_EDGE_TYPES
+
+    def _canon(e):
+        if e[2] in UNDIRECTED_EDGE_TYPES:
+            return (min(e[0], e[1]), max(e[0], e[1]), e[2])
+        return e
+
+    a_edge_params = getattr(A, "edge_params", None) or {}
+    b_edge_params = getattr(B, "edge_params", None) or {}
+
+    # the searched side, indexed by endpoint pair; an undirected edge is also
+    # reachable in reverse, with its asymmetric parameters reversed
+    b_index: Dict[Tuple[int, int], List[Tuple[Any, Any, Any]]] = defaultdict(list)
+    for b_e in B.edges:
+        bs, bd, bet = b_e
+        b_key = _canon(b_e)
+        bp = b_edge_params.get(b_key) or b_edge_params.get(b_e)
+        if bp is None and bet in UNDIRECTED_EDGE_TYPES:
+            bp = b_edge_params.get((b_e[1], b_e[0], b_e[2]))
+        b_index[(bs, bd)].append((bet, bp, b_key))
+        if bet in UNDIRECTED_EDGE_TYPES:
+            bp_rev = _reverse_for_traversal(bp)
+            b_index[(bd, bs)].append((bet, bp_rev, b_key))
+
+    n_verifiable = 0
+    sim_sum = 0.0
+    n_present = 0
+    n_physical = 0
+    physical_sum = 0.0
+    for a_s, a_d, aet in A.edges:
+        if a_s not in a_to_b or a_d not in a_to_b:
+            continue
+        n_verifiable += 1
+        bs = a_to_b[a_s]
+        bd = a_to_b[a_d]
+        a_key = _canon((a_s, a_d, aet))
+        ap = a_edge_params.get(a_key) or a_edge_params.get((a_s, a_d, aet))
+
+        cand_list = list(b_index.get((bs, bd), []))
+        if aet in UNDIRECTED_EDGE_TYPES and bs != bd:
+            seen = {bk for _, _, bk in cand_list}
+            for bet_r, bp_r, bk_r in b_index.get((bd, bs), []):
+                if bk_r not in seen:
+                    cand_list.append((bet_r, bp_r, bk_r))
+
+        best_sim = 0.0
+        best_bp = None
+        for bet, bp, _bk in cand_list:
+            sim = polymorphic_edge_similarity(
+                bp, ap, use_confidence=False, edge_types=(bet, aet))
+            if sim > best_sim:
+                best_sim = sim
+                best_bp = bp
+        sim_sum += best_sim
+        if detail is not None and best_sim > 0.0:
+            n_present += 1
+            if edge_graded_axes(best_bp, ap) > 0:
+                n_physical += 1
+                physical_sum += best_sim
+    if detail is not None:
+        # [P4b] the same three figures `_mcs_accumulate` traces for its side
+        detail["present"] = n_present
+        detail["physical"] = n_physical
+        detail["physical_sim_sum"] = physical_sum
+    return len(A.edges), n_verifiable, sim_sum
+
+
+#: [D3] The terms of `evidence_score` that can read BOTH sides.
+_QUERY_SIDE_TERM_NAMES = frozenset({"node", "relation", "absence"})
+
+
+def _query_side_terms() -> FrozenSet[str]:
+    """P.EVIDENCE_QUERY_SIDE_TERMS as a validated frozenset (empty = off)."""
+    raw = getattr(P, "EVIDENCE_QUERY_SIDE_TERMS", ()) or ()
+    if isinstance(raw, str):
+        raw = (raw,)
+    terms = frozenset(str(t) for t in raw)
+    unknown = terms - _QUERY_SIDE_TERM_NAMES
+    if unknown:
+        raise ValueError(
+            "EVIDENCE_QUERY_SIDE_TERMS: unknown term(s) %s (known: %s)"
+            % (sorted(unknown), sorted(_QUERY_SIDE_TERM_NAMES)))
+    return terms
+
 
 def mcs_score(
     Q: Subgraph,
@@ -1402,29 +1914,183 @@ def evidence_score(
     lambda_absence: Optional[float] = None,
     trace: Optional[Dict[str, Any]] = None,
 ) -> Tuple[float, Dict[int, int]]:
-    """Conjunctive evidence score with unconfounded two-component absence."""
+    """Conjunctive evidence score with unconfounded two-component absence.
+
+    [D1] Node coverage reads GRADED node credit under
+    P.EVIDENCE_GRADED_NODE_CREDIT (default True): a credited pair earns
+    boost * weight * signature_similarity, so two cores that both find a
+    partner for every node no longer tie on the node term -- the one whose
+    partners are more alike scores higher. See `_mcs_accumulate`.
+
+    [D3] P.EVIDENCE_QUERY_SIDE_TERMS names the terms that read both sides
+    (any of "node", "relation", "absence"; empty = the historical one-sided
+    score):
+
+        node      (q_matched_nm + c_matched_nm) / (q_node_total + c_node_total)
+        relation  (core-side sim sum + query-side sim sum)
+                  / (verifiable core edges + verifiable query edges)
+        absence   (uncovered core edges + uncovered query edges)
+                  / (core edges + query edges)
+
+    An edgeless core keeps the vacuous relational reading (multiplier 1.0, no
+    absence) in every setting; so with all three terms the score is symmetric
+    in its two arguments when both sides have edges or neither has, and not
+    when exactly one side is edgeless. Under P.EVIDENCE_ONLY_EDGES only "node"
+    acts: that branch keeps its own relational rule, the other names are
+    accepted and dropped, and the trace's `query_side_terms` lists the terms
+    the score used. An unknown name is an error before any matching is done.
+
+    [NULL CALIBRATION] Under P.EVIDENCE_NODE_NULL_CALIBRATED the node term is
+    read as evidence above chance, (N - N0) / (1 - N0) clamped to [0, 1]
+    (matching/calibration.py), N0 being the coverage a random pairing inside
+    each lens type would earn under the same credit rule over the same
+    side(s). A coverage any pairing would reach is then worth 0. The
+    calibration presupposes graded credit: under binary credit a count is
+    exactly what a random pairing earns, so the term is 0 for every pair.
+
+    Trace: `node_coverage` is the node term the score used;
+    `node_coverage_raw` the same term before calibration;
+    `node_coverage_binary` its binary twin (same form, every kept pair
+    credited in full, never calibrated); `core_node_coverage` and
+    `query_node_coverage` the two one-sided graded fractions;
+    `relation_presence` and `relation_physics` the two factors of the
+    relational term kept apart ([P4b]; the term is their product only under
+    P.EVIDENCE_RELATION_COUNT_APART, see `relation_count_apart`). On the
+    early exits (an empty side, no lens type in common) none of them is
+    written.
+    """
     internal_trace = trace if trace is not None else {}
+    null_calibrated = bool(getattr(P, "EVIDENCE_NODE_NULL_CALIBRATED", False))
+    # [D3] Which terms read BOTH sides. Empty (the historical score): every
+    # term is a fraction of the CORE, so nothing asks how much of the QUERY
+    # the core explains and a small core is covered by almost anything.
+    # Balanced form, the one `mcs_similarity` and matching/fuzzy.py already
+    # use: numerator and denominator are each summed over the two sides.
+    # Read (and validated) before any work, so a mistyped name is an error on
+    # every path, the early exits included.
+    qs_terms = _query_side_terms()
+    if getattr(P, "EVIDENCE_ONLY_EDGES", False):
+        # RULE B16 fixes the relational reading of that branch (similarity
+        # over ALL core edges, no absence term): only the node term can read
+        # both sides there. The names that cannot act are dropped HERE, so
+        # the mirror loop is not run for them and the trace reports the terms
+        # the score used.
+        qs_terms = qs_terms & frozenset({"node"})
     q_mass, c_mass, q_nm, c_nm, q_em, c_em, corr = _mcs_accumulate(
-        Q, C, q_sigs, c_sigs, trace=internal_trace
+        Q, C, q_sigs, c_sigs, trace=internal_trace,
+        graded_node_credit=bool(
+            getattr(P, "EVIDENCE_GRADED_NODE_CREDIT", True)),
+        node_chance=null_calibrated,
     )
     if c_mass <= 0.0:
         return 0.0, corr
 
     # 1. Node Coverage (Part Matching)
     c_node_total = internal_trace.get("c_node_total", c_nm)
-    node_coverage = (c_nm / (c_node_total + P.EPSILON)) if c_node_total > 0 else 0.0
+    q_node_total = internal_trace.get("q_node_total", q_nm)
+    core_node_coverage = (
+        (c_nm / (c_node_total + P.EPSILON)) if c_node_total > 0 else 0.0)
+    query_node_coverage = (
+        (q_nm / (q_node_total + P.EPSILON)) if q_node_total > 0 else 0.0)
+    if "node" in qs_terms:
+        _nt = q_node_total + c_node_total
+        node_coverage = ((q_nm + c_nm) / (_nt + P.EPSILON)) if _nt > 0 else 0.0
+    else:
+        node_coverage = core_node_coverage
+
+    # [NULL CALIBRATION] Node coverage as evidence ABOVE CHANCE. N0 is the
+    # coverage a random pairing inside each lens type would earn under the
+    # same credit rule, over the same side(s) and with the same masses as
+    # the coverage itself; the map is matching/calibration.py's
+    # (observed - chance) / (1 - chance), clamped, 0 when chance >= 1.
+    node_coverage_raw = node_coverage
+    node_coverage_chance = 0.0
+    if null_calibrated:
+        from matching.calibration import calibrate_fraction
+        _q_ch = float(internal_trace.get("q_chance_nm", 0.0))
+        _c_ch = float(internal_trace.get("c_chance_nm", 0.0))
+        if "node" in qs_terms:
+            _nt = q_node_total + c_node_total
+            node_coverage_chance = (
+                ((_q_ch + _c_ch) / (_nt + P.EPSILON)) if _nt > 0 else 0.0)
+        else:
+            node_coverage_chance = (
+                (_c_ch / (c_node_total + P.EPSILON))
+                if c_node_total > 0 else 0.0)
+        node_coverage = calibrate_fraction(node_coverage_raw,
+                                           node_coverage_chance)
 
     # 2. Relational Consistency
     n_core_edges = internal_trace.get("n_core_edges", len(C.edges))
     n_verifiable = internal_trace.get("verifiable_core_edges_count", 0)
     matched_rel_sim_sum = internal_trace.get("matched_rel_sim_sum", c_em)
 
+    # [D3] Query-side edge evidence: the mirror of the core-side loop. Only
+    # read when a term asks for it AND the core has edges -- an edgeless core
+    # asserts no relation and keeps its vacuous reading in every setting.
+    n_query_edges = len(Q.edges)
+    q_verifiable = 0
+    q_rel_sim_sum = 0.0
+    _q_detail: Dict[str, Any] = {}
+    _edge_terms = bool(qs_terms & {"relation", "absence"}) and n_core_edges > 0
+    if _edge_terms:
+        n_query_edges, q_verifiable, q_rel_sim_sum = _edge_side_evidence(
+            Q, C, corr, detail=_q_detail)
+
     if n_core_edges == 0:
         relational_consistency = 1.0  # Edgeless core: relations vacuously satisfied
+    elif "relation" in qs_terms:
+        _nv = n_verifiable + q_verifiable
+        relational_consistency = (
+            clamp((matched_rel_sim_sum + q_rel_sim_sum) / float(_nv), 0.0, 1.0)
+            if _nv > 0 else 0.0)
     elif n_verifiable == 0:
         relational_consistency = 0.0  # Relations exist in C, but none were verifiable under M
     else:
         relational_consistency = clamp(matched_rel_sim_sum / float(n_verifiable), 0.0, 1.0)
+
+    # [P4b] THE COUNT KEPT APART FROM THE PHYSICS. The mean above credits a
+    # matched pair with its similarity whatever that similarity is made of.
+    # A pair with no graded axis measured on both sides (a membership flag,
+    # a parameter-less predicate, a categorical agreement) reads exactly 1.0
+    # there: the fact that the relation EXISTS on both sides, entered as a
+    # perfect MEASUREMENT. Kept apart:
+    #     presence = verifiable edges with a counterpart / verifiable edges
+    #     physics  = mean similarity of the pairs that measured something
+    #                (1.0 when none did: nothing measured, nothing
+    #                contradicted -- matching/fuzzy.py's convention)
+    #     term     = presence * physics
+    # With t count-only pairs READING 1.0 and p physical pairs of mean
+    # similarity m among v verifiable edges the term goes from (t + p*m)/v
+    # to (t + p)*m/v: it can only stay or fall. (A count-only pair reads 1.0
+    # when it is a flag, a parameter-less pair or a categorical agreement.
+    # With the Phase-4 floors restored an all-UNKNOWN pair reads 0.2 and
+    # becomes a full count here, so the term can rise in that setting.)
+    # "Present" is a best similarity > 0, exactly the pairs the mean
+    # credits: nothing is newly credited. The two factors read the side(s)
+    # the term reads
+    # (both under D3 "relation"). Always traced; they replace the mean only
+    # under P.EVIDENCE_RELATION_COUNT_APART (default False), and never in the
+    # EVIDENCE_ONLY_EDGES branch, whose reading RULE B16 fixes.
+    _rel_v = n_verifiable
+    _rel_present = float(internal_trace.get("rel_present", 0))
+    _rel_phys_n = float(internal_trace.get("rel_physical", 0))
+    _rel_phys_sum = float(internal_trace.get("rel_physical_sim_sum", 0.0))
+    if "relation" in qs_terms and n_core_edges > 0:
+        _rel_v = n_verifiable + q_verifiable
+        _rel_present += float(_q_detail.get("present", 0))
+        _rel_phys_n += float(_q_detail.get("physical", 0))
+        _rel_phys_sum += float(_q_detail.get("physical_sim_sum", 0.0))
+    relation_presence = (_rel_present / float(_rel_v)) if _rel_v > 0 else 0.0
+    relation_physics = (
+        (_rel_phys_sum / _rel_phys_n) if _rel_phys_n > 0 else 1.0)
+    count_apart = (
+        bool(getattr(P, "EVIDENCE_RELATION_COUNT_APART", False))
+        and not getattr(P, "EVIDENCE_ONLY_EDGES", False))
+    if count_apart and n_core_edges > 0:
+        relational_consistency = (
+            clamp(relation_presence * relation_physics, 0.0, 1.0)
+            if _rel_v > 0 else 0.0)
 
     # 3. Conjunctive Relational Multiplier
     if getattr(P, "EVIDENCE_ONLY_EDGES", False):
@@ -1486,7 +2152,13 @@ def evidence_score(
         if lambda_absence is not None and lambda_absence > 0.0:
             lambda_missing = float(lambda_absence)
 
-        if n_core_edges > 0:
+        if n_core_edges > 0 and "absence" in qs_terms:
+            # [D3] edges of EITHER side the correspondence failed to cover
+            edge_absence = (
+                (float(n_core_edges) - float(n_verifiable))
+                + (float(n_query_edges) - float(q_verifiable))
+            ) / float(n_core_edges + n_query_edges)
+        elif n_core_edges > 0:
             edge_absence = (float(n_core_edges) - float(n_verifiable)) / float(n_core_edges)
         else:
             edge_absence = 0.0
@@ -1497,11 +2169,53 @@ def evidence_score(
 
     if trace is not None:
         trace["node_coverage"] = node_coverage
+        # [D1] The BINARY TWIN of `node_coverage_raw`: the same form (the
+        # one-sided core fraction, or the balanced one under D3 "node") over
+        # the same correspondence, every kept pair credited in full. Never
+        # calibrated. In every setting
+        #     node_coverage <= node_coverage_raw <= node_coverage_binary
+        # and under binary credit node_coverage_raw IS this value (the same
+        # floats in the same expression). Trace only: no score reads it.
+        _c_nm_bin = internal_trace.get("c_matched_nm_binary", c_nm)
+        _q_nm_bin = internal_trace.get("q_matched_nm_binary", q_nm)
+        if "node" in qs_terms:
+            _nt = q_node_total + c_node_total
+            trace["node_coverage_binary"] = (
+                ((_q_nm_bin + _c_nm_bin) / (_nt + P.EPSILON))
+                if _nt > 0 else 0.0)
+        else:
+            trace["node_coverage_binary"] = (
+                (_c_nm_bin / (c_node_total + P.EPSILON))
+                if c_node_total > 0 else 0.0)
         trace["relational_consistency"] = relational_consistency
+        # [P4b] the two factors (always), and whether the score used them
+        trace["relation_presence"] = relation_presence
+        trace["relation_physics"] = relation_physics
+        trace["relation_count_apart"] = count_apart
         trace["relational_multiplier"] = relational_multiplier
         trace["edge_absence"] = edge_absence
         trace["total_absence"] = absence
         trace["core_coverage"] = core_coverage
+        # [D3] `node_coverage` above is the node term the score USED. The two
+        # one-sided coverages are always traced, whichever was used.
+        trace["query_side_terms"] = tuple(sorted(qs_terms))
+        trace["core_node_coverage"] = core_node_coverage
+        trace["query_node_coverage"] = query_node_coverage
+        # [NULL CALIBRATION] `node_coverage` is what the score used; the
+        # uncalibrated value and the chance level are traced next to it.
+        trace["node_null_calibrated"] = null_calibrated
+        trace["node_coverage_raw"] = node_coverage_raw
+        if null_calibrated:
+            trace["node_coverage_chance"] = node_coverage_chance
+        if _edge_terms:
+            trace["n_query_edges"] = n_query_edges
+            trace["q_verifiable_edges_count"] = q_verifiable
+            trace["q_matched_rel_sim_sum"] = q_rel_sim_sum
+            # [P4b] the query side's present / physical pairs
+            trace["q_rel_present"] = _q_detail.get("present", 0)
+            trace["q_rel_physical"] = _q_detail.get("physical", 0)
+            trace["q_rel_physical_sim_sum"] = _q_detail.get(
+                "physical_sim_sum", 0.0)
 
     return float(score), corr
 

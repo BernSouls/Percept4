@@ -1,0 +1,4 @@
+STAGE 2 probe -- score(Q, C) against score(C, Q) under EVIDENCE_QUERY_SIDE_TERMS = ('node', 'relation', 'absence')
+source digest ef4516a74acb   sample: every fifth EVAL query of each class, 3 per class
+window = full 48 pairs: |score(Q,C) - score(C,Q)|  mean 0.0040  median 0.0030  max 0.0150   node term: mean 0.0052  max 0.0231   same correspondence both ways: 0 of 48 pairs   queries whose answer depends on the direction: 1 of 12: apple3-068-270.png (car vs cup)
+window = v1   48 pairs: |score(Q,C) - score(C,Q)|  mean 0.0031  median 0.0019  max 0.0131   node term: mean 0.0058  max 0.0218   same correspondence both ways: 0 of 48 pairs   queries whose answer depends on the direction: 1 of 12: apple1-090-202.png (car vs cup)

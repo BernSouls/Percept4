@@ -1,0 +1,14 @@
+...............................................x........................ [ 69%]
+xxx............................                                          [100%]
+
+PARAMETER OVERRIDES for this session: none (tree defaults)
+
+REACH -- calls into the functions the fixes edited, whole session:
+  core.schema.EdgeParams.similarity                0
+  core.schema.polymorphic_edge_similarity          0
+  memory.cores._mcs_accumulate                     0
+  memory.cores.evidence_score                      0
+  memory.cores.mcs_score                           0
+  memory.cores.mcs_similarity                      0
+  imported by the collected tests themselves: consolidator no, core.schema no, matching.calibration no, memory.cores no, memory.mapper no
+99 passed, 4 xfailed in 141.79s (0:02:21)

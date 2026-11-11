@@ -1,0 +1,373 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BernSouls <256335293+BernSouls@users.noreply.github.com>
+Date: Tue, 10 Nov 2026 22:55:33 +0000
+Subject: [D1] evidence_score: node credit graded by signature similarity
+
+Switch EVIDENCE_GRADED_NODE_CREDIT (default True; False = binary credit). mcs_score / mcs_similarity keep binary mass.
+Pin: tests_matcher/test_d1_graded_node_credit.py
+
+Co-authored-by: arena-agent <297053741+arena-agent@users.noreply.github.com>
+---
+ memory/cores.py                             |  72 +++++++-
+ parameters/_text.py                         |   8 +
+ tests_matcher/test_d1_graded_node_credit.py | 172 ++++++++++++++++++++
+ 3 files changed, 244 insertions(+), 8 deletions(-)
+ create mode 100644 tests_matcher/test_d1_graded_node_credit.py
+
+diff --git a/memory/cores.py b/memory/cores.py
+index 566755a..856b055 100644
+--- a/memory/cores.py
++++ b/memory/cores.py
+@@ -904,6 +904,7 @@ def _mcs_accumulate(
+     q_sigs: Dict[int, Tuple[str, TypedSignature]],
+     c_sigs: Dict[int, Tuple[str, TypedSignature]],
+     trace: Optional[Dict[str, Any]] = None,
++    graded_node_credit: bool = False,
+ ) -> Tuple[float, float, float, float, float, float, Dict[int, int]]:
+     """[Kc2] Shared correspondence and mass accumulation.
+ 
+@@ -912,6 +913,17 @@ def _mcs_accumulate(
+     weighting, the (optional) K.3 absorption blocks, and the trace
+     writes, up to (but not including) the final normalization branch.
+ 
++    [D1] `graded_node_credit` -- how much MATCHED NODE MASS a pair earns.
++    False (default; `mcs_score`, `mcs_similarity`): the historical binary
++    credit -- any pair the correspondence keeps (similarity merely > 0)
++    earns its full `GESTALT_LENS_BOOST * node_weight`. True
++    (`evidence_score`, under P.EVIDENCE_GRADED_NODE_CREDIT): the pair earns
++    `GESTALT_LENS_BOOST * node_weight * signature_similarity`, the
++    similarity being `TypedSignature.similarity` of the two nodes (the
++    anchor-position factor steers WHO pairs with whom and is deliberately
++    not part of the credit). The correspondence, the totals (`q_mass`,
++    `c_mass`) and the whole edge accumulation are identical in both modes.
++
+     Returns:
+         q_mass, c_mass,
+         q_matched_nm, c_matched_nm,
+@@ -1022,6 +1034,18 @@ def _mcs_accumulate(
+                 if weights[qi][ci] > 0.0:
+                     node_correspondence[q_ids[qi]] = c_ids[ci]
+ 
++    # [D1] Signature similarity of every credited pair, keyed by the query
++    # node. Empty in the binary mode: `.get(q_id, 1.0)` below then multiplies
++    # by exactly 1.0, which leaves every float bit-identical to the pre-D1
++    # accumulation (same values, same order).
++    pair_sim: Dict[int, float] = {}
++    if graded_node_credit:
++        for _q_id, _c_id in node_correspondence.items():
++            _iq, _ic = q_sigs.get(_q_id), c_sigs.get(_c_id)
++            _s = (_sig_similarity(_iq[1], _ic[1])
++                  if (_iq is not None and _ic is not None) else 0.0)
++            pair_sim[_q_id] = min(1.0, max(0.0, float(_s)))
++
+     q_node_weights = getattr(Q, "node_weights", None) or {}
+     # [U32 / Layer 3] Redundancy-aware weights replace the raw 1-per-edge
+     # masses.  The graph keeps every edge; only its EVIDENCE CONTRIBUTION is
+@@ -1171,14 +1195,20 @@ def _mcs_accumulate(
+             _write_trace(q_mass, c_mass, 0.0, 0.0, 0.0, 0.0)
+         return (q_mass, c_mass, 0.0, 0.0, 0.0, 0.0, node_correspondence)
+ 
++    # [D1] `_bin` accumulators keep the BINARY mass alongside the credited
++    # one, for the trace only (they equal the credited mass in binary mode).
++    q_matched_nm_bin = 0.0
++    c_matched_nm_bin = 0.0
+     if q_node_weights:
+         q_matched_nm = 0.0
+         for q_id in node_correspondence.keys():
+             info = q_sigs.get(q_id)
+             lt = info[0] if info is not None else ""
+             boost = GESTALT_LENS_BOOST.get(lt, 1.0)
+-            _contrib = boost * float(q_node_weights.get(q_id, 0.0))
++            _full = boost * float(q_node_weights.get(q_id, 0.0))
++            _contrib = _full * pair_sim.get(q_id, 1.0)
+             q_matched_nm += _contrib
++            q_matched_nm_bin += _full
+             if trace is not None:
+                 q_tier_node_matched[lens_tier(lt)] += _contrib
+     else:
+@@ -1186,27 +1216,33 @@ def _mcs_accumulate(
+         for q_id in node_correspondence.keys():
+             info = q_sigs.get(q_id)
+             lt = info[0] if info is not None else ""
+-            _contrib = GESTALT_LENS_BOOST.get(lt, 1.0)
++            _full = GESTALT_LENS_BOOST.get(lt, 1.0)
++            _contrib = _full * pair_sim.get(q_id, 1.0)
+             q_matched_nm += _contrib
++            q_matched_nm_bin += _full
+             if trace is not None:
+                 q_tier_node_matched[lens_tier(lt)] += _contrib
+     if c_node_weights:
+         c_matched_nm = 0.0
+-        for c_id in node_correspondence.values():
++        for q_id, c_id in node_correspondence.items():
+             info = c_sigs.get(c_id)
+             lt = info[0] if info is not None else ""
+             boost = GESTALT_LENS_BOOST.get(lt, 1.0)
+-            _contrib = boost * float(c_node_weights.get(c_id, 0.0))
++            _full = boost * float(c_node_weights.get(c_id, 0.0))
++            _contrib = _full * pair_sim.get(q_id, 1.0)
+             c_matched_nm += _contrib
++            c_matched_nm_bin += _full
+             if trace is not None:
+                 c_tier_node_matched[lens_tier(lt)] += _contrib
+     else:
+         c_matched_nm = 0.0
+-        for c_id in node_correspondence.values():
++        for q_id, c_id in node_correspondence.items():
+             info = c_sigs.get(c_id)
+             lt = info[0] if info is not None else ""
+-            _contrib = GESTALT_LENS_BOOST.get(lt, 1.0)
++            _full = GESTALT_LENS_BOOST.get(lt, 1.0)
++            _contrib = _full * pair_sim.get(q_id, 1.0)
+             c_matched_nm += _contrib
++            c_matched_nm_bin += _full
+             if trace is not None:
+                 c_tier_node_matched[lens_tier(lt)] += _contrib
+ 
+@@ -1303,6 +1339,11 @@ def _mcs_accumulate(
+         trace["verifiable_core_edges_count"] = len(verifiable_core_edges)
+         trace["matched_rel_sim_sum"] = matched_rel_sim_sum
+         trace["n_core_edges"] = len(C.edges)
++        # [D1] Which credit rule produced q/c_matched_nm, and the binary
++        # mass of the same correspondence (equal to it in binary mode).
++        trace["node_credit"] = "graded" if graded_node_credit else "binary"
++        trace["q_matched_nm_binary"] = q_matched_nm_bin
++        trace["c_matched_nm_binary"] = c_matched_nm_bin
+ 
+     # [Kc2] The success-path trace write stays here
+     if trace is not None:
+@@ -1402,10 +1443,19 @@ def evidence_score(
+     lambda_absence: Optional[float] = None,
+     trace: Optional[Dict[str, Any]] = None,
+ ) -> Tuple[float, Dict[int, int]]:
+-    """Conjunctive evidence score with unconfounded two-component absence."""
++    """Conjunctive evidence score with unconfounded two-component absence.
++
++    [D1] Node coverage reads GRADED node credit under
++    P.EVIDENCE_GRADED_NODE_CREDIT (default True): a credited pair earns
++    boost * weight * signature_similarity, so two cores that both find a
++    partner for every node no longer tie on the node term -- the one whose
++    partners are more alike scores higher. See `_mcs_accumulate`.
++    """
+     internal_trace = trace if trace is not None else {}
+     q_mass, c_mass, q_nm, c_nm, q_em, c_em, corr = _mcs_accumulate(
+-        Q, C, q_sigs, c_sigs, trace=internal_trace
++        Q, C, q_sigs, c_sigs, trace=internal_trace,
++        graded_node_credit=bool(
++            getattr(P, "EVIDENCE_GRADED_NODE_CREDIT", True)),
+     )
+     if c_mass <= 0.0:
+         return 0.0, corr
+@@ -1497,6 +1547,12 @@ def evidence_score(
+ 
+     if trace is not None:
+         trace["node_coverage"] = node_coverage
++        # [D1] The binary coverage of the same correspondence (== the
++        # node_coverage above when graded credit is off).
++        _c_nm_bin = internal_trace.get("c_matched_nm_binary", c_nm)
++        trace["node_coverage_binary"] = (
++            (_c_nm_bin / (c_node_total + P.EPSILON))
++            if c_node_total > 0 else 0.0)
+         trace["relational_consistency"] = relational_consistency
+         trace["relational_multiplier"] = relational_multiplier
+         trace["edge_absence"] = edge_absence
+diff --git a/parameters/_text.py b/parameters/_text.py
+index 91161a7..79761d8 100644
+--- a/parameters/_text.py
++++ b/parameters/_text.py
+@@ -1931,6 +1931,14 @@ MATCH_SEARCH_MAX_OPS = 200000
+ # callers that pass `edge_types` (the live matcher, memory/cores.py) are
+ # affected.
+ EDGE_UNPARAMETERISED_STRUCTURAL_MATCH: bool = True
++# [D1] evidence_score: a credited node pair earns
++#     GESTALT_LENS_BOOST * node_weight * signature_similarity
++# instead of the full GESTALT_LENS_BOOST * node_weight for any pair whose
++# similarity is merely positive. False = the historical binary credit.
++# Scope: evidence_score only. mcs_score / mcs_similarity keep binary mass:
++# they feed containment and fusion gates (THETA_FUSE, mcs_contained, _classify)
++# whose thresholds are calibrated on it.
++EVIDENCE_GRADED_NODE_CREDIT: bool = True
+ 
+ # =============================================================================
+ # LOCOMOTION BRIDGE & ANCHOR FALLBACK
+diff --git a/tests_matcher/test_d1_graded_node_credit.py b/tests_matcher/test_d1_graded_node_credit.py
+new file mode 100644
+index 0000000..ff25638
+--- /dev/null
++++ b/tests_matcher/test_d1_graded_node_credit.py
+@@ -0,0 +1,172 @@
++"""PIN -- [D1] node credit is graded by signature similarity.
++
++Before D1 a node pair the correspondence kept earned its FULL mass
++(``GESTALT_LENS_BOOST * node_weight``) whenever its similarity was merely
++positive, so ``node_coverage`` was, to a close approximation, the per-lens
++node-count overlap of the two graphs: two cores with the same lens census tied
++on the node term however alike or unlike their nodes were.
++
++Pinned here, on ``evidence_score``:
++  * credit of a kept pair = boost * weight * TypedSignature.similarity
++  * identical graphs still score a full node term
++  * with equal lens census, the core whose nodes are more alike now wins
++    (binary credit tied them exactly)
++  * graded coverage never exceeds the binary coverage of the same
++    correspondence, and the correspondence itself does not change
++  * P.EVIDENCE_GRADED_NODE_CREDIT = False restores binary credit
++and on the containment scores:
++  * mcs_score / mcs_similarity keep BINARY mass under either setting (their
++    gate thresholds are calibrated on it)
++"""
++from __future__ import annotations
++
++import random
++
++import pytest
++
++from core.types import TypedSignature
++from matching.structural_similarity import GESTALT_LENS_BOOST
++from memory.cores import evidence_score, mcs_score, mcs_similarity
++
++from _graphs import graph, tex
++
++
++def _ev(Q, C):
++    trace: dict = {}
++    score, corr = evidence_score(Q[0], C[0], Q[1], C[1], trace=trace)
++    return score, corr, trace
++
++
++# Query: three Texture nodes.  Two cores with the SAME lens census (three
++# Texture nodes each): `near` is one bin off on every node, `far` is several.
++QUERY = graph({1: ("Texture", tex(1, 1)), 2: ("Texture", tex(4, 4)),
++               3: ("Texture", tex(8, 8))})
++NEAR = graph({11: ("Texture", tex(1, 2)), 12: ("Texture", tex(4, 5)),
++              13: ("Texture", tex(8, 9))})
++FAR = graph({21: ("Texture", tex(2, 3)), 22: ("Texture", tex(5, 6)),
++             23: ("Texture", tex(9, 6))})
++
++
++def _expected_cov(Q, C, corr):
++    """sum boost*w*sim over kept pairs / sum boost*w over the core."""
++    num = 0.0
++    for q, c in corr.items():
++        lt, sig_c = C[1][c]
++        w = C[0].node_weights.get(c, 0.0) if C[0].node_weights else 1.0
++        num += GESTALT_LENS_BOOST.get(lt, 1.0) * w * Q[1][q][1].similarity(sig_c)
++    den = 0.0
++    for c, (lt, _s) in C[1].items():
++        w = C[0].node_weights.get(c, 0.0) if C[0].node_weights else 1.0
++        den += GESTALT_LENS_BOOST.get(lt, 1.0) * w
++    return num / den
++
++
++def test_identical_graphs_keep_a_full_node_term():
++    score, corr, tr = _ev(QUERY, QUERY)
++    assert corr == {1: 1, 2: 2, 3: 3}
++    assert tr["node_credit"] == "graded"
++    assert tr["node_coverage"] == pytest.approx(1.0, abs=1e-6)
++    assert tr["node_coverage_binary"] == pytest.approx(1.0, abs=1e-6)
++    assert score == pytest.approx(1.0, abs=1e-6)
++
++
++def test_credit_is_boost_times_weight_times_similarity():
++    for core in (NEAR, FAR):
++        _score, corr, tr = _ev(QUERY, core)
++        assert len(corr) == 3
++        sims = [QUERY[1][q][1].similarity(core[1][c][1])
++                for q, c in corr.items()]
++        assert all(0.0 < s < 1.0 for s in sims), sims     # a graded case
++        assert tr["node_coverage"] == pytest.approx(
++            _expected_cov(QUERY, core, corr), abs=1e-9)
++        assert tr["node_coverage"] == pytest.approx(sum(sims) / 3, abs=1e-9)
++        # every node found a partner: the binary rule reads full coverage
++        assert tr["node_coverage_binary"] == pytest.approx(1.0, abs=1e-6)
++
++
++def test_equal_census_the_more_alike_core_now_wins():
++    s_near, _c, tr_near = _ev(QUERY, NEAR)
++    s_far, _c, tr_far = _ev(QUERY, FAR)
++    assert tr_near["node_coverage"] > tr_far["node_coverage"] + 0.05
++    assert s_near > s_far + 0.05
++    # ... where binary credit could not tell them apart
++    assert tr_near["node_coverage_binary"] == tr_far["node_coverage_binary"]
++
++
++def test_binary_credit_tied_them_and_the_switch_restores_it(params):
++    params(EVIDENCE_GRADED_NODE_CREDIT=False)
++    s_near, c_near, tr_near = _ev(QUERY, NEAR)
++    s_far, c_far, tr_far = _ev(QUERY, FAR)
++    assert tr_near["node_credit"] == tr_far["node_credit"] == "binary"
++    assert tr_near["node_coverage"] == tr_far["node_coverage"]
++    assert tr_near["node_coverage"] == tr_near["node_coverage_binary"]
++    assert s_near == s_far == pytest.approx(1.0, abs=1e-6)
++    assert len(c_near) == len(c_far) == 3
++
++
++def test_node_weight_and_lens_boost_enter_the_credit():
++    assert GESTALT_LENS_BOOST.get("Contour", 1.0) != 1.0   # a boosted lens
++    q = graph({1: ("Texture", tex(1, 1)), 2: ("Contour", tex(4, 4))})
++    c = graph({11: ("Texture", tex(1, 3)), 12: ("Contour", tex(4, 5))},
++              node_weights={11: 0.25, 12: 2.0})
++    _score, corr, tr = _ev(q, c)
++    assert corr == {1: 11, 2: 12}
++    b = GESTALT_LENS_BOOST["Contour"]
++    s1 = tex(1, 1).similarity(tex(1, 3))
++    s2 = tex(4, 4).similarity(tex(4, 5))
++    want = (1.0 * 0.25 * s1 + b * 2.0 * s2) / (1.0 * 0.25 + b * 2.0)
++    assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
++    assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr),
++                                                abs=1e-9)
++
++
++def test_the_correspondence_does_not_depend_on_the_credit_rule(params):
++    graded = [_ev(QUERY, core)[1] for core in (NEAR, FAR, QUERY)]
++    params(EVIDENCE_GRADED_NODE_CREDIT=False)
++    binary = [_ev(QUERY, core)[1] for core in (NEAR, FAR, QUERY)]
++    assert graded == binary
++
++
++def _random_graph(rng, n, base):
++    return graph({base + i: ("Texture", tex(rng.randrange(10),
++                                             rng.randrange(10)))
++                  for i in range(n)})
++
++
++def test_graded_coverage_never_exceeds_binary_coverage():
++    rng = random.Random(20261110)
++    for _ in range(40):
++        q = _random_graph(rng, rng.randrange(1, 9), 0)
++        c = _random_graph(rng, rng.randrange(1, 9), 100)
++        _s, corr, tr = _ev(q, c)
++        assert tr["node_coverage"] <= tr["node_coverage_binary"] + 1e-12
++        assert 0.0 <= tr["node_coverage"] <= 1.0
++        if corr:
++            assert tr["node_coverage"] == pytest.approx(
++                _expected_cov(q, c, corr), abs=1e-9)
++
++
++def test_containment_scores_keep_binary_mass(params):
++    """mcs_score / mcs_similarity: every node of the smaller side found a
++    partner, so the binary containment is 1.0 -- under either setting."""
++    for core in (NEAR, FAR):
++        assert mcs_score(QUERY[0], core[0], QUERY[1], core[1])[0] == \
++            pytest.approx(1.0)
++        assert mcs_similarity(QUERY[0], core[0], QUERY[1], core[1])[0] == \
++            pytest.approx(1.0)
++    on = [mcs_score(QUERY[0], c[0], QUERY[1], c[1])[0] for c in (NEAR, FAR)]
++    params(EVIDENCE_GRADED_NODE_CREDIT=False)
++    off = [mcs_score(QUERY[0], c[0], QUERY[1], c[1])[0] for c in (NEAR, FAR)]
++    assert on == off
++
++
++def test_an_unmatched_core_node_earns_nothing_under_either_rule(params):
++    # the POLARITY node has no partner of its lens type in the query
++    pol = TypedSignature(kind="CANONICAL", class_="POLARITY", quantized=(1.0,))
++    core = graph({11: ("Texture", tex(1, 1)), 12: ("Polarity", pol)})
++    query = graph({1: ("Texture", tex(1, 1))})
++    _s, corr, tr = _ev(query, core)
++    assert corr == {1: 11}
++    assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
++    params(EVIDENCE_GRADED_NODE_CREDIT=False)
++    assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+-- 
+2.39.5
+

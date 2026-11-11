@@ -1,0 +1,85 @@
+MERGE-RESULT CHECK -- the branch with main merged in, on a scratch copy (the branch itself was not merged)
+
+branch       arena/8ef05428-percept4 at its commit "diagnostics: report" (branched from bd27128).
+             The commit that adds this log comes after it and changes documentation only.
+main         5be15a1  "Delete _u27_selftest.py" -- the only commit on main since bd27128
+merge        git merge 5be15a1 into a clone of the branch at that commit: clean, no conflict.
+             The merged tree is that commit's tree minus _u27_selftest.py and nothing else.
+
+digests of the merged tree
+             source     ec8a7ebce62d   (on the branch: f66ea9ac0eea -- the source digest hashes every .py
+                                       outside diagnostics/, the tests and data/, so the deleted root
+                                       script moves it)
+             harness    6e3efcabb263   (same as on the branch)
+             front end  c1ea81ae1b6c   (same as on the branch: the graph cache is re-used)
+
+bars on the merged tree
+             matcher pins   390 passed in 5.67s
+                            python -m pytest tests_matcher -q -p no:cacheprovider
+             figground      99 passed, 4 xfailed in 200.87s (0:03:20)
+                            PERCEPT_REACH=1 PYTHONPATH=.:diagnostics:diagnostics/_export_shims python -m pytest
+                            tests_figground --ignore=tests_figground/test_renderer_truth.py -q
+                            -p no:cacheprovider -p _param_overrides_plugin
+             _u27_selftest  not runnable: the file is gone on main
+
+stored records
+             five stored configurations re-run on the merged tree, both windows, against the records
+             stored on the branch: 112,200 values compared, 0 differing; answers differing 0 of 75 on
+             each of the 10 records; aggregated breakdown tables identical on each.
+             python diagnostics/phase2_continuity.py --tags p2_R0,p2x_DEF,p2x_D3,p3_CA,p3_D3_CA
+
+The output of that last command follows.
+
+CONTINUITY -- fresh run against the stored record, value by value (both rounded to 10 significant digits)
+environment now: python 3.11.2  numpy 2.4.6  scipy 1.17.1  pillow 13.0.0  PYTHONHASHSEED=0
+digests now:     source ec8a7ebce62d  harness 6e3efcabb263  front end c1ea81ae1b6c
+
+p2_R0 full   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=False; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=False; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=False; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p2_R0 v1   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=False; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=False; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=False; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p2x_DEF full   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p2x_DEF v1   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p2x_D3 full   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence'); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 12300   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p2x_D3 v1   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence'); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 12300   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p3_CA full   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=True; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p3_CA v1   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=True; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p3_D3_CA full   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence'); EVIDENCE_RELATION_COUNT_APART=True; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 12300   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p3_D3_CA v1   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence'); EVIDENCE_RELATION_COUNT_APART=True; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 12300   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True

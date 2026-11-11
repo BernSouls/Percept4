@@ -1,0 +1,117 @@
+.....................F..........................FFF.FF.F.                [100%]
+=================================== FAILURES ===================================
+____________________________ test_declared_defaults ____________________________
+
+declared_defaults = {'EDGE_UNPARAMETERISED_STRUCTURAL_MATCH': True, 'EVIDENCE_GRADED_NODE_CREDIT': True, 'EVIDENCE_QUERY_SIDE_TERMS': (), 'EDGE_UNMEASURED_IS_NOT_EVIDENCE': False, ...}
+
+    def test_declared_defaults(declared_defaults):
+>       assert declared_defaults == {
+            # F6 -- landed on; a parameter-less pair matches as structure
+            "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True,
+            # D1 -- landed on; its success signal was NOT met
+            "EVIDENCE_GRADED_NODE_CREDIT": True,
+            # D3 -- in the tree, OFF: its pre-registered rule failed
+            "EVIDENCE_QUERY_SIDE_TERMS": (),
+            # Phase 4 -- on by the spec; never exercised on ETH-80
+            "EDGE_UNMEASURED_IS_NOT_EVIDENCE": True,
+            # null calibration -- in the tree, OFF: its rule failed
+            "EVIDENCE_NODE_NULL_CALIBRATED": False,
+        }
+E       AssertionError: assert {'EDGE_UNPARA...': False, ...} == {'EDGE_UNPARA...E': True, ...}
+E         
+E         Omitting 4 identical items, use -vv to show
+E         Differing items:
+E         {'EDGE_UNMEASURED_IS_NOT_EVIDENCE': False} != {'EDGE_UNMEASURED_IS_NOT_EVIDENCE': True}
+E         Use -v to get more diff
+
+tests_matcher/test_declared_defaults.py:14: AssertionError
+_________________ test_two_all_unknown_tuples_are_not_evidence _________________
+
+params = <function params.<locals>._set at 0x7f9f43859760>
+
+    def test_two_all_unknown_tuples_are_not_evidence(params):
+>       assert sim(co(U, U), co(U, U)) == 0.0
+E       AssertionError: assert 0.2 == 0.0
+E        +  where 0.2 = sim(EdgeParams(class_='EDGE_CO_LOCATED', quantized=(-1.0, -1.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin=''), EdgeParams(class_='EDGE_CO_LOCATED', quantized=(-1.0, -1.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin=''))
+E        +    where EdgeParams(class_='EDGE_CO_LOCATED', quantized=(-1.0, -1.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin='') = co(-1.0, -1.0)
+E        +    and   EdgeParams(class_='EDGE_CO_LOCATED', quantized=(-1.0, -1.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin='') = co(-1.0, -1.0)
+
+tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py:50: AssertionError
+________ test_tuples_measured_on_different_axes_are_not_a_perfect_match ________
+
+params = <function params.<locals>._set at 0x7f9f43858cc0>
+
+    def test_tuples_measured_on_different_axes_are_not_a_perfect_match(params):
+        a, b = co(U, 5.0), co(3.0, U)       # nothing measured on both sides
+        assert edge_measured_axes(a, b) == 0
+>       assert sim(a, b) == 0.0
+E       AssertionError: assert 1.0 == 0.0
+E        +  where 1.0 = sim(EdgeParams(class_='EDGE_CO_LOCATED', quantized=(-1.0, 5.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin=''), EdgeParams(class_='EDGE_CO_LOCATED', quantized=(3.0, -1.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin=''))
+
+tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py:58: AssertionError
+__________________ test_one_side_all_unknown_is_not_evidence ___________________
+
+params = <function params.<locals>._set at 0x7f9f43858d60>
+
+    def test_one_side_all_unknown_is_not_evidence(params):
+>       assert sim(co(U, U), co(3.0, 5.0)) == 0.0
+E       AssertionError: assert 1.0 == 0.0
+E        +  where 1.0 = sim(EdgeParams(class_='EDGE_CO_LOCATED', quantized=(-1.0, -1.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin=''), EdgeParams(class_='EDGE_CO_LOCATED', quantized=(3.0, 5.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin=''))
+E        +    where EdgeParams(class_='EDGE_CO_LOCATED', quantized=(-1.0, -1.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin='') = co(-1.0, -1.0)
+E        +    and   EdgeParams(class_='EDGE_CO_LOCATED', quantized=(3.0, 5.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin='') = co(3.0, 5.0)
+
+tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py:65: AssertionError
+________ test_cross_schema_with_no_measured_shared_axis_is_not_evidence ________
+
+params = <function params.<locals>._set at 0x7f9f43858b80>
+
+    def test_cross_schema_with_no_measured_shared_axis_is_not_evidence(params):
+        # the one shared axis ('dist') is unmeasured on both sides
+        a, b = _cocircular(3.0, U), _contour_continuity(U, 2.0, 4.0)
+>       assert polymorphic_edge_similarity(a, b) == 0.0
+E       AssertionError: assert 0.45 == 0.0
+E        +  where 0.45 = polymorphic_edge_similarity(EdgeParams(class_='EDGE_COCIRCULAR', quantized=(3.0, -1.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin=''), EdgeParams(class_='EDGE_CONTOUR_CONTINUITY', quantized=(-1.0, 2.0, 4.0), sign=1, confidence=1.0, identity_slots=None, population=(), ontology='', provenance='', origin=''))
+
+tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py:104: AssertionError
+__________ test_cross_schema_mean_runs_over_the_measured_shared_axes ___________
+
+params = <function params.<locals>._set at 0x7f9f43858540>
+
+    def test_cross_schema_mean_runs_over_the_measured_shared_axes(params):
+        # shared: 'cocirc_asym' (measured on both, 3 bins apart) and 'dist'
+        # (unmeasured on one side)
+        a, b = _cocircular(3.0, U), _orientation_continuity(5.0, 6.0)
+        honest = polymorphic_edge_similarity(a, b)
+        same = polymorphic_edge_similarity(_cocircular(3.0, U),
+                                           _orientation_continuity(5.0, 3.0))
+        params(EDGE_UNMEASURED_IS_NOT_EVIDENCE=False)
+        floor = polymorphic_edge_similarity(a, b)
+        same_floor = polymorphic_edge_similarity(_cocircular(3.0, U),
+                                                 _orientation_continuity(5.0, 3.0))
+>       assert 0.0 < honest < floor         # the unmeasured axis no longer dilutes
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       assert 0.4779863919318107 < 0.4779863919318107
+
+tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py:121: AssertionError
+___________ test_matcher_gives_an_unmeasured_edge_pair_no_similarity ___________
+
+params = <function params.<locals>._set at 0x7f9f43859440>
+
+    def test_matcher_gives_an_unmeasured_edge_pair_no_similarity(params):
+        score, tr = _evidence(co(U, U), co(U, U))
+        assert tr["verifiable_core_edges_count"] == 1
+>       assert tr["matched_rel_sim_sum"] == 0.0
+E       assert 0.2 == 0.0
+
+tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py:153: AssertionError
+
+PARAMETER OVERRIDES for this session: EDGE_UNMEASURED_IS_NOT_EVIDENCE=False
+=========================== short test summary info ============================
+FAILED tests_matcher/test_declared_defaults.py::test_declared_defaults - Asse...
+FAILED tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py::test_two_all_unknown_tuples_are_not_evidence
+FAILED tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py::test_tuples_measured_on_different_axes_are_not_a_perfect_match
+FAILED tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py::test_one_side_all_unknown_is_not_evidence
+FAILED tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py::test_cross_schema_with_no_measured_shared_axis_is_not_evidence
+FAILED tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py::test_cross_schema_mean_runs_over_the_measured_shared_axes
+FAILED tests_matcher/test_p4_unmeasured_edge_is_not_evidence.py::test_matcher_gives_an_unmeasured_edge_pair_no_similarity
+7 failed, 50 passed in 2.44s

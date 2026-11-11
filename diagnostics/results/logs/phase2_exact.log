@@ -1,0 +1,86 @@
+EXACT ASSIGNMENT -- MATCH_ASSIGNMENT_EXACT, EVAL-75 (in-sample)
+source 94f7f71f7f09  harness 2feef46f0125  front end cfaca6d6b915   environment {'python': '3.11.2', 'PYTHONHASHSEED': '0', 'numpy': '2.4.6', 'scipy': '1.17.1', 'PIL': '13.0.0'}
+declared defaults: EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); MATCH_ASSIGNMENT_EXACT=True
+DEFAULTS is what the tree declares: True
+
+========================================================================================================
+window = full
+========================================================================================================
+             hits (split)  per class a/c/c/h  answers a/c/c/h   ties  pairs at 0   variance of the score: which reference / own class
+  BASE       38 (38.00)     2/ 6/16/14         2/11/29/33       0     53        10.1% / 10.1%
+  DEFAULTS   37 (37.00)     1/ 7/16/13         1/13/29/32       0     30        12.7% / 7.8%
+  D3         41 (41.00)    10/12/14/ 5        14/24/20/17       0     47        10.5% / 12.6%
+  D3 exact   37 (37.00)     7/13/13/ 4        12/27/21/15       0     31        18.5% / 10.7%
+
+  DEFAULTS against BASE: paired +1/-2 vs baseline, McNemar p=1.000; scores moved 271 of 300 (largest 0.0454); answers moved 4
+    means, own-class pairs / wrong-class pairs (difference)          BASE                               DEFAULTS
+      node pairs kept                            582.8533 / 544.7511 (+38.1022)     628.6533 / 588.1111 (+40.5422)
+      binary coverage (twin of the node term)    0.7993 / 0.7405 (+0.0587)          0.8619 / 0.7981 (+0.0639)
+      count formula of the same form             0.8652 / 0.8014 (+0.0638)          0.8652 / 0.8014 (+0.0638)
+      node term (graded, uncalibrated)           0.7115 / 0.6508 (+0.0607)          0.7507 / 0.6850 (+0.0657)
+      mean similarity of the pairs kept          0.8905 / 0.8790 (+0.0115)          0.8717 / 0.8594 (+0.0123)
+      verifiable core edges                      578.3067 / 520.2311 (+58.0756)     666.3733 / 597.0178 (+69.3556)
+      relational consistency                     0.1516 / 0.1370 (+0.0146)          0.1417 / 0.1309 (+0.0108)
+      edge absence                               0.3184 / 0.3792 (-0.0607)          0.2242 / 0.2944 (-0.0702)
+      score                                      0.0609 / 0.0356 (+0.0253)          0.0725 / 0.0477 (+0.0248)
+    each term deciding alone, hits: BASE node 37, relation 30   |   DEFAULTS node 39, relation 23
+    D1 signal, BASE      node term alone 37 against the count formula alone 34: +9/-6, p=0.607; r(node term, count formula) between references of one query 0.946
+    D1 signal, DEFAULTS  node term alone 39 against the count formula alone 34: +7/-2, p=0.180; r(node term, count formula) between references of one query 0.983
+
+  D3 exact against D3: paired +2/-6 vs baseline, McNemar p=0.289; scores moved 269 of 300 (largest 0.0402); answers moved 9
+    means, own-class pairs / wrong-class pairs (difference)          D3                                 D3 exact
+      node pairs kept                            582.8533 / 544.7511 (+38.1022)     628.6533 / 588.1111 (+40.5422)
+      binary coverage (twin of the node term)    0.8079 / 0.7493 (+0.0586)          0.8705 / 0.8073 (+0.0632)
+      count formula of the same form             0.8738 / 0.8106 (+0.0632)          0.8738 / 0.8106 (+0.0632)
+      node term (graded, uncalibrated)           0.7193 / 0.6586 (+0.0608)          0.7585 / 0.6930 (+0.0654)
+      mean similarity of the pairs kept          0.8905 / 0.8790 (+0.0115)          0.8717 / 0.8594 (+0.0123)
+      verifiable core edges                      578.3067 / 520.2311 (+58.0756)     666.3733 / 597.0178 (+69.3556)
+      relational consistency                     0.1541 / 0.1395 (+0.0145)          0.1435 / 0.1327 (+0.0108)
+      edge absence                               0.3514 / 0.4149 (-0.0635)          0.2532 / 0.3290 (-0.0759)
+      score                                      0.0580 / 0.0327 (+0.0253)          0.0706 / 0.0448 (+0.0258)
+    each term deciding alone, hits: D3 node 48, relation 27   |   D3 exact node 49, relation 27
+    D1 signal, D3        node term alone 48 against the count formula alone 41: +11/-4, p=0.118; r(node term, count formula) between references of one query 0.931
+    D1 signal, D3 exact  node term alone 49 against the count formula alone 41: +9/-1, p=0.021; r(node term, count formula) between references of one query 0.978
+
+========================================================================================================
+window = v1
+========================================================================================================
+             hits (split)  per class a/c/c/h  answers a/c/c/h   ties  pairs at 0   variance of the score: which reference / own class
+  BASE       34 (34.00)     0/ 7/14/13         0/12/20/43       0     88        29.4% / 10.4%
+  DEFAULTS   39 (39.00)     2/ 8/15/14         2/14/23/36       0     48        30.7% / 11.2%
+  D3         39 (39.00)     6/16/16/ 1         6/34/25/10       0    102        18.3% / 19.6%
+  D3 exact   40 (40.00)     5/18/17/ 0         5/34/30/ 6       0     55        31.2% / 18.5%
+
+  DEFAULTS against BASE: paired +6/-1 vs baseline, McNemar p=0.125; scores moved 252 of 300 (largest 0.0471); answers moved 12
+    means, own-class pairs / wrong-class pairs (difference)          BASE                               DEFAULTS
+      node pairs kept                            250.5333 / 239.5244 (+11.0089)     265.6400 / 252.9822 (+12.6578)
+      binary coverage (twin of the node term)    0.8963 / 0.8621 (+0.0341)          0.9477 / 0.9081 (+0.0396)
+      count formula of the same form             0.9502 / 0.9117 (+0.0385)          0.9502 / 0.9117 (+0.0385)
+      node term (graded, uncalibrated)           0.8297 / 0.7915 (+0.0382)          0.8622 / 0.8180 (+0.0441)
+      mean similarity of the pairs kept          0.9257 / 0.9176 (+0.0081)          0.9096 / 0.9001 (+0.0096)
+      verifiable core edges                      337.9733 / 302.3511 (+35.6222)     389.7333 / 346.4889 (+43.2444)
+      relational consistency                     0.0939 / 0.0752 (+0.0187)          0.0865 / 0.0713 (+0.0152)
+      edge absence                               0.2345 / 0.2893 (-0.0548)          0.1270 / 0.1939 (-0.0670)
+      score                                      0.0433 / 0.0235 (+0.0198)          0.0557 / 0.0335 (+0.0222)
+    each term deciding alone, hits: BASE node 17, relation 41   |   DEFAULTS node 18, relation 41
+    D1 signal, BASE      node term alone 17 against the count formula alone 19: +0/-2, p=0.500; r(node term, count formula) between references of one query 0.960
+    D1 signal, DEFAULTS  node term alone 18 against the count formula alone 19: +0/-1, p=1.000; r(node term, count formula) between references of one query 0.977
+
+  D3 exact against D3: paired +4/-3 vs baseline, McNemar p=1.000; scores moved 247 of 300 (largest 0.0389); answers moved 9
+    means, own-class pairs / wrong-class pairs (difference)          D3                                 D3 exact
+      node pairs kept                            250.5333 / 239.5244 (+11.0089)     265.6400 / 252.9822 (+12.6578)
+      binary coverage (twin of the node term)    0.8742 / 0.8357 (+0.0385)          0.9253 / 0.8816 (+0.0437)
+      count formula of the same form             0.9278 / 0.8852 (+0.0426)          0.9278 / 0.8852 (+0.0426)
+      node term (graded, uncalibrated)           0.8092 / 0.7669 (+0.0424)          0.8414 / 0.7931 (+0.0483)
+      mean similarity of the pairs kept          0.9257 / 0.9176 (+0.0081)          0.9096 / 0.9001 (+0.0096)
+      verifiable core edges                      337.9733 / 302.3511 (+35.6222)     389.7333 / 346.4889 (+43.2444)
+      relational consistency                     0.0960 / 0.0770 (+0.0190)          0.0880 / 0.0724 (+0.0155)
+      edge absence                               0.2904 / 0.3556 (-0.0652)          0.1811 / 0.2607 (-0.0797)
+      score                                      0.0358 / 0.0130 (+0.0228)          0.0478 / 0.0230 (+0.0249)
+    each term deciding alone, hits: D3 node 38, relation 44   |   D3 exact node 45, relation 43
+    D1 signal, D3        node term alone 38 against the count formula alone 48: +3/-13, p=0.021; r(node term, count formula) between references of one query 0.784
+    D1 signal, D3 exact  node term alone 45 against the count formula alone 48: +1/-4, p=0.375; r(node term, count formula) between references of one query 0.887
+
+========================================================================================================
+DEFAULT RULE (pre-registered): pins green; stranding 0 and exact >= approximate on every pair (correspondence census); no paired fall with p < 0.05
+  paired fall with p < 0.05 on some window or form: no

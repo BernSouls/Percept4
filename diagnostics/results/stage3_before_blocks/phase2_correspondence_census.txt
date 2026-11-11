@@ -1,0 +1,100 @@
+STAGE 2 -- what the node correspondence leaves unpaired (EVAL-75, read-only)
+source digest 94f7f71f7f09   THETA_SIM=0.7003999999999999   candidate rule of the approximation: per query node its top 8 core nodes by weight, plus every pair with weight >= THETA_SIM
+every pair is matched twice, under either value of MATCH_ASSIGNMENT_EXACT; the other switches do not reach the correspondence
+
+====================================================================================================
+window = full   300 pairs
+====================================================================================================
+  -- MATCH_ASSIGNMENT_EXACT = False (the historical approximation: per-row top 8, greedy, 2-opt)
+  lens type          query n    core n  pairable    paired   share  stranded   share no partner   mean sim stranded sim
+  Position             29504     29400     29162     28409   97.4%       753    2.6%          0     0.9981       0.7733
+  CONTOUR_PEAK         30728     36525     26197     24869   94.9%      1328    5.1%          0     0.8601       0.5327
+  TextureBoundary      27884     29325     22230     17306   77.8%      4924   22.2%          0     0.8254       0.4755
+  BorderOwnership      21732     24525     18901     17457   92.4%      1444    7.6%          0     0.9046       0.4358
+  Boundary             21928     20400     18335     17503   95.5%       832    4.5%          0     0.9414       0.4957
+  Orientation          15828     16125     13270     11440   86.2%      1530   11.5%        300     0.7713       0.3301
+  Color                11060     11175      9222      8570   92.9%       652    7.1%          0     0.8408       0.4971
+  EndStopped           10360      9600      8522      8252   96.8%       270    3.2%          0     0.8793       0.4129
+  Texture               8872      7050      6855      6450   94.1%       405    5.9%          0     0.8744       0.5683
+  Contour               5696      6375      4748      4398   92.6%       350    7.4%          0     0.9351       0.9547
+  PEAK_CHAIN            5440      6150      4392      4264   97.1%       128    2.9%          0     0.8069       0.4057
+  ContourFragment       5008      5400      4076      3948   96.9%       125    3.1%          3     0.6791       0.3258
+  CurveComplex          4116      4575      3472      3360   96.8%       112    3.2%          0     0.8582       0.8674
+  RegionShape           3920      4875      3328      3219   96.7%       109    3.3%          0     0.8365       0.5942
+  Surface               4080      3900      3122      2967   95.0%       155    5.0%          0     0.8387       0.5833
+  Corner                3716      4425      2805      2477   88.3%        58    2.1%        270     0.8192       0.4001
+  Polarity               900       900       900       780   86.7%         0    0.0%        120     0.7764       0.0000
+  Onset                  300       300       300       300  100.0%         0    0.0%          0     1.0000       0.0000
+  Junction               282       204       176       176  100.0%         0    0.0%          0     0.7625       0.0000
+  IllusoryContour        244       144       124       115   92.7%         0    0.0%          9     0.5418       0.0000
+  T                       30        23        23        23  100.0%         0    0.0%          0     0.8333       0.0000
+  TOTAL               211628    221396    180160    166283   92.3%     13175    7.3%        702     0.8821       0.4982
+  per pair, boost-weighted: shortfall of pairable mass  mean 0.0733  median 0.0687  max 0.1725   |   of which stranded  mean 0.0692  median 0.0656  max 0.1708   pairs with any stranded node: 300 of 300
+
+  -- MATCH_ASSIGNMENT_EXACT = True (scipy linear_sum_assignment on the same weights)
+  lens type          query n    core n  pairable    paired   share  stranded   share no partner   mean sim stranded sim
+  Position             29504     29400     29162     29162  100.0%         0    0.0%          0     0.9922       0.0000
+  CONTOUR_PEAK         30728     36525     26197     26197  100.0%         0    0.0%          0     0.8551       0.0000
+  TextureBoundary      27884     29325     22230     22230  100.0%         0    0.0%          0     0.7579       0.0000
+  BorderOwnership      21732     24525     18901     18901  100.0%         0    0.0%          0     0.8826       0.0000
+  Boundary             21928     20400     18335     18335  100.0%         0    0.0%          0     0.9293       0.0000
+  Orientation          15828     16125     13270     12970   97.7%         0    0.0%        300     0.7244       0.0000
+  Color                11060     11175      9222      9222  100.0%         0    0.0%          0     0.8261       0.0000
+  EndStopped           10360      9600      8522      8522  100.0%         0    0.0%          0     0.8733       0.0000
+  Texture               8872      7050      6855      6855  100.0%         0    0.0%          0     0.8679       0.0000
+  Contour               5696      6375      4748      4748  100.0%         0    0.0%          0     0.9356       0.0000
+  PEAK_CHAIN            5440      6150      4392      4392  100.0%         0    0.0%          0     0.8017       0.0000
+  ContourFragment       5008      5400      4076      4075  100.0%         0    0.0%          1     0.6745       0.0000
+  CurveComplex          4116      4575      3472      3472  100.0%         0    0.0%          0     0.8613       0.0000
+  RegionShape           3920      4875      3328      3328  100.0%         0    0.0%          0     0.8331       0.0000
+  Surface               4080      3900      3122      3122  100.0%         0    0.0%          0     0.8314       0.0000
+  Corner                3716      4425      2805      2535   90.4%         0    0.0%        270     0.8144       0.0000
+  Polarity               900       900       900       794   88.2%         0    0.0%        106     0.7710       0.0000
+  Onset                  300       300       300       300  100.0%         0    0.0%          0     1.0000       0.0000
+  Junction               282       204       176       176  100.0%         0    0.0%          0     0.7633       0.0000
+  IllusoryContour        244       144       124       115   92.7%         0    0.0%          9     0.5424       0.0000
+  T                       30        23        23        23  100.0%         0    0.0%          0     0.8333       0.0000
+  TOTAL               211628    221396    180160    179474   99.6%         0    0.0%        686     0.8612       0.0000
+  per pair, boost-weighted: shortfall of pairable mass  mean 0.0040  median 0.0021  max 0.0196   |   of which stranded  mean 0.0000  median 0.0000  max 0.0000   pairs with any stranded node: 0 of 300
+
+  columns: pairable = sum of min(|Q_l|, |C_l|); stranded = pairs that could be added to the returned correspondence (both ends unpaired, positive similarity);
+  mean sim = signature similarity of the returned pairs; stranded sim = mean, over the unpaired query nodes that have a free partner, of their BEST free partner's similarity (an upper bound per node, not the similarity of an added pairing)
+
+  -- the total weight of the assignment (signature similarity x anchor factor, summed over the pairs kept), per pair
+     exact below approximate (must be 0): 0 of 300 pairs   largest |exact - optimum of the rebuilt weight matrix|: 2.27e-13 (must be ~0: validates the rebuilt weights)
+     approximate below the optimum: 300 of 300 pairs   gain of the exact total over the approximate one: mean 4.49%  median 4.06%  max 12.13%
+     node pairs: approximate 166283, exact 179474; in both 130484 (78.5% of the approximate pairs are kept by the exact solver)
+
+====================================================================================================
+window = v1   300 pairs
+====================================================================================================
+  -- MATCH_ASSIGNMENT_EXACT = False (the historical approximation: per-row top 8, greedy, 2-opt)
+  lens type          query n    core n  pairable    paired   share  stranded   share no partner   mean sim stranded sim
+  Position             29504     29400     29162     28414   97.4%       748    2.6%          0     0.9981       0.7724
+  Boundary             21928     20400     18335     17508   95.5%       827    4.5%          0     0.9412       0.5026
+  Orientation          15828     16125     13270     11442   86.2%      1528   11.5%        300     0.7711       0.3282
+  Color                11060     11175      9222      8567   92.9%       655    7.1%          0     0.8410       0.4977
+  Texture               8872      7050      6855      6452   94.1%       403    5.9%          0     0.8743       0.5742
+  Onset                  300       300       300       300  100.0%         0    0.0%          0     1.0000       0.0000
+  TOTAL                87492     84450     77144     72683   94.2%      4161    5.4%        300     0.9192       0.5003
+  per pair, boost-weighted: shortfall of pairable mass  mean 0.0556  median 0.0576  max 0.1326   |   of which stranded  mean 0.0519  median 0.0520  max 0.1326   pairs with any stranded node: 300 of 300
+
+  -- MATCH_ASSIGNMENT_EXACT = True (scipy linear_sum_assignment on the same weights)
+  lens type          query n    core n  pairable    paired   share  stranded   share no partner   mean sim stranded sim
+  Position             29504     29400     29162     29162  100.0%         0    0.0%          0     0.9922       0.0000
+  Boundary             21928     20400     18335     18335  100.0%         0    0.0%          0     0.9291       0.0000
+  Orientation          15828     16125     13270     12970   97.7%         0    0.0%        300     0.7245       0.0000
+  Color                11060     11175      9222      9222  100.0%         0    0.0%          0     0.8262       0.0000
+  Texture               8872      7050      6855      6855  100.0%         0    0.0%          0     0.8679       0.0000
+  Onset                  300       300       300       300  100.0%         0    0.0%          0     1.0000       0.0000
+  TOTAL                87492     84450     77144     76844   99.6%         0    0.0%        300     0.9010       0.0000
+  per pair, boost-weighted: shortfall of pairable mass  mean 0.0037  median 0.0000  max 0.0373   |   of which stranded  mean 0.0000  median 0.0000  max 0.0000   pairs with any stranded node: 0 of 300
+
+  columns: pairable = sum of min(|Q_l|, |C_l|); stranded = pairs that could be added to the returned correspondence (both ends unpaired, positive similarity);
+  mean sim = signature similarity of the returned pairs; stranded sim = mean, over the unpaired query nodes that have a free partner, of their BEST free partner's similarity (an upper bound per node, not the similarity of an added pairing)
+
+  -- the total weight of the assignment (signature similarity x anchor factor, summed over the pairs kept), per pair
+     exact below approximate (must be 0): 0 of 300 pairs   largest |exact - optimum of the rebuilt weight matrix|: 8.53e-14 (must be ~0: validates the rebuilt weights)
+     approximate below the optimum: 300 of 300 pairs   gain of the exact total over the approximate one: mean 2.06%  median 2.08%  max 4.42%
+     node pairs: approximate 72683, exact 76844; in both 62505 (86.0% of the approximate pairs are kept by the exact solver)
+

@@ -1,0 +1,49 @@
+STAGE 2 -- what the node correspondence leaves unpaired (EVAL-75, read-only)
+source digest ef4516a74acb   THETA_SIM=0.7003999999999999   candidate rule: per query node its top 8 core nodes by weight, plus every pair with weight >= THETA_SIM
+
+====================================================================================================
+window = full   300 pairs
+====================================================================================================
+  lens type          query n    core n  pairable    paired   share  stranded   share no partner   mean sim stranded sim
+  Position             29504     29400     29162     28409   97.4%       753    2.6%          0     0.9981       0.7733
+  CONTOUR_PEAK         30728     36525     26197     24869   94.9%      1328    5.1%          0     0.8601       0.5327
+  TextureBoundary      27884     29325     22230     17306   77.8%      4924   22.2%          0     0.8254       0.4755
+  BorderOwnership      21732     24525     18901     17457   92.4%      1444    7.6%          0     0.9046       0.4358
+  Boundary             21928     20400     18335     17503   95.5%       832    4.5%          0     0.9414       0.4957
+  Orientation          15828     16125     13270     11440   86.2%      1530   11.5%        300     0.7713       0.3301
+  Color                11060     11175      9222      8570   92.9%       652    7.1%          0     0.8408       0.4971
+  EndStopped           10360      9600      8522      8252   96.8%       270    3.2%          0     0.8793       0.4129
+  Texture               8872      7050      6855      6450   94.1%       405    5.9%          0     0.8744       0.5683
+  Contour               5696      6375      4748      4398   92.6%       350    7.4%          0     0.9351       0.9547
+  PEAK_CHAIN            5440      6150      4392      4264   97.1%       128    2.9%          0     0.8069       0.4057
+  ContourFragment       5008      5400      4076      3948   96.9%       125    3.1%          3     0.6791       0.3258
+  CurveComplex          4116      4575      3472      3360   96.8%       112    3.2%          0     0.8582       0.8674
+  RegionShape           3920      4875      3328      3219   96.7%       109    3.3%          0     0.8365       0.5942
+  Surface               4080      3900      3122      2967   95.0%       155    5.0%          0     0.8387       0.5833
+  Corner                3716      4425      2805      2477   88.3%        58    2.1%        270     0.8192       0.4001
+  Polarity               900       900       900       780   86.7%         0    0.0%        120     0.7764       0.0000
+  Onset                  300       300       300       300  100.0%         0    0.0%          0     1.0000       0.0000
+  Junction               282       204       176       176  100.0%         0    0.0%          0     0.7625       0.0000
+  IllusoryContour        244       144       124       115   92.7%         0    0.0%          9     0.5418       0.0000
+  T                       30        23        23        23  100.0%         0    0.0%          0     0.8333       0.0000
+  TOTAL               211628    221396    180160    166283   92.3%     13175    7.3%        702     0.8821       0.4982
+  columns: pairable = sum of min(|Q_l|, |C_l|); stranded = pairs that could be added to the returned correspondence (both ends unpaired, positive similarity);
+  mean sim = signature similarity of the returned pairs; stranded sim = mean, over the unpaired query nodes that have a free partner, of their BEST free partner's similarity (an upper bound per node, not the similarity of an added pairing)
+  per pair, boost-weighted: shortfall of pairable mass  mean 0.0733  median 0.0687  max 0.1725   |   of which stranded  mean 0.0692  median 0.0656  max 0.1708   pairs with any stranded node: 300 of 300
+
+====================================================================================================
+window = v1   300 pairs
+====================================================================================================
+  lens type          query n    core n  pairable    paired   share  stranded   share no partner   mean sim stranded sim
+  Position             29504     29400     29162     28414   97.4%       748    2.6%          0     0.9981       0.7724
+  Boundary             21928     20400     18335     17508   95.5%       827    4.5%          0     0.9412       0.5026
+  Orientation          15828     16125     13270     11442   86.2%      1528   11.5%        300     0.7711       0.3282
+  Color                11060     11175      9222      8567   92.9%       655    7.1%          0     0.8410       0.4977
+  Texture               8872      7050      6855      6452   94.1%       403    5.9%          0     0.8743       0.5742
+  Onset                  300       300       300       300  100.0%         0    0.0%          0     1.0000       0.0000
+  TOTAL                87492     84450     77144     72683   94.2%      4161    5.4%        300     0.9192       0.5003
+  columns: pairable = sum of min(|Q_l|, |C_l|); stranded = pairs that could be added to the returned correspondence (both ends unpaired, positive similarity);
+  mean sim = signature similarity of the returned pairs; stranded sim = mean, over the unpaired query nodes that have a free partner, of their BEST free partner's similarity (an upper bound per node, not the similarity of an added pairing)
+  per pair, boost-weighted: shortfall of pairable mass  mean 0.0556  median 0.0576  max 0.1326   |   of which stranded  mean 0.0519  median 0.0520  max 0.1326   pairs with any stranded node: 300 of 300
+
+written: /home/user/Percept4/diagnostics/results/phase2_correspondence_census.txt

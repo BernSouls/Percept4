@@ -1,0 +1,126 @@
+PHASE 0 / AUDIT C -- anchor-shuffle control (EVAL-75, in-sample)
+only the QUERY's anchor_of_node map is changed; nodes, signatures, edges and edge parameters are untouched
+
+==============================================================================
+window = full
+==============================================================================
+C1. accuracy
+  baseline                           36/75 =  48.0%   apple  2/16  car  6/24  cup 16/18  horse 12/17   ties 0   margin -0.0026
+  no_anchor                          36/75 =  48.0%   apple  1/16  car  8/24  cup 16/18  horse 11/17   ties 0   margin +0.0026
+  shuffle_anchor_0                   39/75 =  52.0%   apple  4/16  car  6/24  cup 16/18  horse 13/17   ties 4   margin +0.0013
+  shuffle_anchor_1                   35/75 =  46.7%   apple  3/16  car  6/24  cup 12/18  horse 14/17   ties 5   margin -0.0027
+  shuffle_anchor_2                   36/75 =  48.0%   apple  2/16  car  7/24  cup 11/18  horse 16/17   ties 3   margin -0.0009
+  shuffle_anchor_3                   32/75 =  42.7%   apple  3/16  car  3/24  cup 13/18  horse 13/17   ties 4   margin -0.0023
+  shuffle_anchor_4                   33/75 =  44.0%   apple  1/16  car  8/24  cup  9/18  horse 15/17   ties 3   margin -0.0039
+  shuffle_node_0                     36/75 =  48.0%   apple  3/16  car  6/24  cup 12/18  horse 15/17   ties 7   margin +0.0010
+  shuffle_node_1                     39/75 =  52.0%   apple  7/16  car  6/24  cup 12/18  horse 14/17   ties 11   margin +0.0008
+  shuffle_node_2                     33/75 =  44.0%   apple  6/16  car  6/24  cup  9/18  horse 12/17   ties 10   margin +0.0022
+  shuffle_node_3                     34/75 =  45.3%   apple  4/16  car  6/24  cup 10/18  horse 14/17   ties 6   margin -0.0002
+  shuffle_node_4                     37/75 =  49.3%   apple  5/16  car  6/24  cup 11/18  horse 15/17   ties 10   margin +0.0006
+
+  ties and paired comparison (all 63 tied decisions below have a best score of exactly 0.0)
+  arm                 as rule ties wrong ties split   ties   paired with baseline (first-in-order rule)
+  baseline                 36         36      36.00      0   
+  no_anchor                36         36      36.00      0   +3/-3  p=1.000   9 predictions changed
+  shuffle_anchor_0         39         36      37.00      4   +6/-3  p=0.508   15 predictions changed
+  shuffle_anchor_1         35         32      33.25      5   +9/-10  p=1.000   23 predictions changed
+  shuffle_anchor_2         36         34      34.75      3   +7/-7  p=1.000   19 predictions changed
+  shuffle_anchor_3         32         29      30.00      4   +6/-10  p=0.454   20 predictions changed
+  shuffle_anchor_4         33         32      32.75      3   +7/-10  p=0.629   23 predictions changed
+  shuffle_node_0           36         33      34.75      7   +8/-8  p=1.000   24 predictions changed
+  shuffle_node_1           39         32      34.75     11   +10/-7  p=0.629   20 predictions changed
+  shuffle_node_2           33         27      29.50     10   +10/-13  p=0.678   27 predictions changed
+  shuffle_node_3           34         30      31.50      6   +8/-10  p=0.815   22 predictions changed
+  shuffle_node_4           37         32      34.50     10   +8/-7  p=1.000   22 predictions changed
+  shuffle/anchor mean of 5 seeds: as rule 35.0 (min 32, max 39) | ties wrong 32.6 | ties split 33.55 | ties 3.8
+     baseline 36  ->  drop 1.0 queries as scored, 2.5 with ties split (3.3 points)
+  shuffle/node   mean of 5 seeds: as rule 35.8 (min 33, max 39) | ties wrong 30.8 | ties split 33.00 | ties 8.8
+     baseline 36  ->  drop 0.2 queries as scored, 3.0 with ties split (4.0 points)
+  chance for a 4-way decision on this split: 25.0% uniform; always answering the largest class: 24/75 = 32.0%
+
+C2. what moved, on the 75 (query, own-class reference) pairs
+  arm                  score nodecov rel.con absence |    verif no-q-edge  matched  sim_sum | CO verif CO match   CO sim | sig sim
+  baseline            0.0729  0.7993  0.1513  0.3184 |    43373     30571     9513   6862.0 |    12874     1593   1165.6 |   0.891
+  no_anchor           0.0513  0.8049  0.1142  0.2872 |    45897     36545     7574   5496.8 |    12683     1794   1401.6 |   0.912
+  shuffle_anchor (mean)  0.0223  0.7567  0.0840  0.3356 |    42538     35710     5259   3671.8 |    11544      835    597.9 |   0.831
+  shuffle_node (mean)  0.0150  0.7503  0.0688  0.3381 |    42392     36517     4445   3004.5 |    11441      690    506.4 |   0.835
+
+==============================================================================
+window = v1
+==============================================================================
+C1. accuracy
+  baseline                           34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   ties 0   margin -0.0024
+  no_anchor                          39/75 =  52.0%   apple  0/16  car  9/24  cup 15/18  horse 15/17   ties 0   margin +0.0075
+  shuffle_anchor_0                   25/75 =  33.3%   apple  0/16  car  0/24  cup 10/18  horse 15/17   ties 11   margin -0.0034
+  shuffle_anchor_1                   29/75 =  38.7%   apple  2/16  car  1/24  cup 10/18  horse 16/17   ties 17   margin +0.0003
+  shuffle_anchor_2                   26/75 =  34.7%   apple  0/16  car  2/24  cup  8/18  horse 16/17   ties 9   margin -0.0040
+  shuffle_anchor_3                   27/75 =  36.0%   apple  0/16  car  1/24  cup 13/18  horse 13/17   ties 14   margin -0.0024
+  shuffle_anchor_4                   25/75 =  33.3%   apple  1/16  car  0/24  cup  9/18  horse 15/17   ties 18   margin -0.0008
+  shuffle_node_0                     27/75 =  36.0%   apple  0/16  car  1/24  cup 11/18  horse 15/17   ties 17   margin -0.0016
+  shuffle_node_1                     25/75 =  33.3%   apple  0/16  car  1/24  cup 10/18  horse 14/17   ties 17   margin -0.0020
+  shuffle_node_2                     24/75 =  32.0%   apple  2/16  car  1/24  cup  9/18  horse 12/17   ties 20   margin -0.0013
+  shuffle_node_3                     19/75 =  25.3%   apple  0/16  car  1/24  cup  8/18  horse 10/17   ties 14   margin -0.0043
+  shuffle_node_4                     25/75 =  33.3%   apple  1/16  car  2/24  cup 10/18  horse 12/17   ties 21   margin -0.0008
+
+  ties and paired comparison (all 158 tied decisions below have a best score of exactly 0.0)
+  arm                 as rule ties wrong ties split   ties   paired with baseline (first-in-order rule)
+  baseline                 34         34      34.00      0   
+  no_anchor                39         39      39.00      0   +6/-1  p=0.125   13 predictions changed
+  shuffle_anchor_0         25         25      27.75     11   +4/-13  p=0.049   29 predictions changed
+  shuffle_anchor_1         29         27      31.25     17   +7/-12  p=0.359   34 predictions changed
+  shuffle_anchor_2         26         26      28.25      9   +3/-11  p=0.057   23 predictions changed
+  shuffle_anchor_3         27         27      30.50     14   +4/-11  p=0.118   31 predictions changed
+  shuffle_anchor_4         25         24      28.50     18   +5/-14  p=0.064   32 predictions changed
+  shuffle_node_0           27         27      31.25     17   +4/-11  p=0.118   32 predictions changed
+  shuffle_node_1           25         25      29.25     17   +4/-13  p=0.049   34 predictions changed
+  shuffle_node_2           24         22      27.00     20   +5/-15  p=0.041   38 predictions changed
+  shuffle_node_3           19         19      22.50     14   +1/-16  p=0.000   29 predictions changed
+  shuffle_node_4           25         24      29.25     21   +4/-13  p=0.049   38 predictions changed
+  shuffle/anchor mean of 5 seeds: as rule 26.4 (min 25, max 29) | ties wrong 25.8 | ties split 29.25 | ties 13.8
+     baseline 34  ->  drop 7.6 queries as scored, 4.8 with ties split (6.3 points)
+  shuffle/node   mean of 5 seeds: as rule 24.0 (min 19, max 27) | ties wrong 23.4 | ties split 27.85 | ties 17.8
+     baseline 34  ->  drop 10.0 queries as scored, 6.1 with ties split (8.2 points)
+  chance for a 4-way decision on this split: 25.0% uniform; always answering the largest class: 24/75 = 32.0%
+
+C2. what moved, on the 75 (query, own-class reference) pairs
+  arm                  score nodecov rel.con absence |    verif no-q-edge  matched  sim_sum | CO verif CO match   CO sim | sig sim
+  baseline            0.0486  0.8963  0.0934  0.2345 |    25348     20912     3286   2446.5 |    12882     1614   1182.2 |   0.925
+  no_anchor           0.0475  0.9030  0.0913  0.2448 |    25148     21388     3030   2402.7 |    12683     1794   1401.6 |   0.967
+  shuffle_anchor (mean)  0.0073  0.7839  0.0450  0.2735 |    24241     22231     1540   1095.8 |    11619      876    628.2 |   0.786
+  shuffle_node (mean)  0.0053  0.7708  0.0406  0.2755 |    24194     22378     1388    998.1 |    11524      703    513.8 |   0.790
+
+C3. position the shuffle does not touch (it lives in SIGNATURES)
+  nodes over 79 images: 55972;  with an anchor position: 27251 (48.7%)
+  POSITION nodes (signature = object-centric coordinates): 7768 (13.9%)
+  BOUNDARY_ANCHORED nodes (slot 2 = 4x4 position class): 5754 (10.3%)
+  => 24.2% of all nodes carry image position inside their identity; the control above leaves that channel intact.
+
+C4. what the position factor compares
+  A node is a signature, not a place: detections with the same signature share ONE node,
+  and the node keeps the position of the detection that minted it (ConceptGraph.note_pattern_node_position, first write wins).
+  lens                tier  kept det    nodes  det/node   anchored
+  CONTOUR_PEAK          -1         -     8169         -         0%
+  Position               0      7791     7768      1.00       100%
+  TextureBoundary       -1         -     7362         -         0%
+  BorderOwnership        1         -     5760         -         0%
+  Boundary               0     10299     5754      1.79       100%
+  Orientation            0      4586     4172      1.10        97%
+  Color                  0      9767     2914      3.35       100%
+  EndStopped            -1         -     2718         -         0%
+  Texture                0     10589     2312      4.58       100%
+  Contour                1         -     1509         -       100%
+  PEAK_CHAIN            -1         -     1442         -         0%
+  ContourFragment       -1      1336     1324      1.01       100%
+  CurveComplex           2         -     1090         -       100%
+  Surface               -1         -     1072         -         0%
+  RegionShape           -1         -     1045         -         0%
+  Corner                 1         -      988         -        15%
+  Polarity              -1         -      237         -        81%
+  IllusoryContour       -1         -      125         -         0%
+  Junction               1         -       98         -       100%
+  Onset                  0      2361       79     29.89       100%
+  T                      1         -       31         -       100%
+  Y                      1         -        3         -       100%
+  anchored: 27251 of 55972 nodes (48.7%) in the full window; 22859 of 22999 (99.4%) in the v1 window.
+  An unanchored node gets a position factor of 1.0, so the shuffle cannot reach it.
+

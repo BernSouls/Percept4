@@ -1915,6 +1915,159 @@ MATCH_MIN_CONSENSUS_SUPPORT = 0.5
 MATCH_SEARCH_MAX_EXPANSIONS = 4096
 MATCH_SEARCH_MAX_OPS = 200000
 
+# -----------------------------------------------------------------------------
+# GAP-CLOSURE matcher evidence switches (handoff 2026-11; see
+# diagnostics/REPORT.md). Each one is a general matcher behaviour -- none
+# names or reads a benchmark. They exist so every change can be A/B-measured
+# in one tree and so a reddened pin is answered by one line, not a file revert.
+# -----------------------------------------------------------------------------
+# [F6 / PHASE 1] polymorphic_edge_similarity: two corresponding edges of the
+# SAME relational predicate that BOTH carry no EdgeParams (topology-only edge
+# types, e.g. TOPOLOGY / DEGREE) are a structural match and read 1.0. The
+# function's own BLACK-HOLE comment asked for this; the code returned 0.0 on
+# both branches, so a topology-only core edge could never be matched. False =
+# the historical strict 0.0. A pair with params on ONE side only stays 0.0
+# under either setting (a missing measurement is not a perfect one). Only
+# callers that pass `edge_types` (the live matcher, memory/cores.py) are
+# affected.
+EDGE_UNPARAMETERISED_STRUCTURAL_MATCH: bool = True
+# [D1] evidence_score: a credited node pair earns
+#     GESTALT_LENS_BOOST * node_weight * signature_similarity
+# instead of the full GESTALT_LENS_BOOST * node_weight for any pair whose
+# similarity is merely positive. False = the historical binary credit.
+# Scope: evidence_score only. mcs_score / mcs_similarity keep binary mass:
+# they feed containment and fusion gates (THETA_FUSE, mcs_contained, _classify)
+# whose thresholds are calibrated on it.
+EVIDENCE_GRADED_NODE_CREDIT: bool = True
+# [D3] evidence_score: the terms that read BOTH sides of the match. Empty =
+# the historical score, in which every term is a fraction of the CORE and
+# nothing asks how much of the QUERY the core explains. Any of
+#     "node"      (q_matched + c_matched) / (q_total + c_total)
+#     "relation"  (core-side sim sum + query-side sim sum)
+#                 / (verifiable core edges + verifiable query edges)
+#     "absence"   (uncovered core edges + uncovered query edges)
+#                 / (core edges + query edges)
+# -- the balanced form mcs_similarity and matching/fuzzy.py already use. An
+# edgeless core keeps its vacuous relational reading in every setting.
+# CHANGES THE ABSOLUTE SCALE of the score wherever the query is much larger
+# than the core: thresholds calibrated on the one-sided score
+# (THETA_EVIDENCE_POS, per-class thresholds) must be re-read before any
+# non-empty value is used as a default.
+EVIDENCE_QUERY_SIDE_TERMS: Tuple[str, ...] = ()
+# [PHASE 4 / EDGE HONESTY] EdgeParams.similarity / polymorphic_edge_similarity:
+# a pair of edge parameters with NO slot measured on both sides is not a
+# comparison and reads 0.0. Historically an all-UNKNOWN pair read 0.2, a
+# differing pair with no common measured slot read 1.0, and the cross-schema
+# mean counted every unmeasured shared axis as a perfect agreement.
+# False = those floors.
+EDGE_UNMEASURED_IS_NOT_EVIDENCE: bool = True
+# [NULL CALIBRATION] evidence_score: node coverage is read as evidence ABOVE
+# CHANCE, with the null and the map of matching/calibration.py:
+#     node term = clamp((N - N0) / (1 - N0), 0, 1), and 0 when N0 >= 1
+# N0 is the coverage a RANDOM PAIRING inside each lens type would earn under
+# the live credit rule: a pair's expected credit is the mean of that lens
+# type's candidate similarity matrix (NullModel.from_matrix), weighted by the
+# same boost x node-weight masses as N, over the side(s) N reads.
+# MATCH_NULL_CALIBRATED (above) only removes the 0.85 conjunction floor; this
+# is the node-coverage calibration its comment describes.
+# CHANGES THE ABSOLUTE SCALE of the score (every threshold calibrated on the
+# uncalibrated score must be re-read), and a graph whose nodes are
+# interchangeable inside every lens type scores 0 against itself.
+EVIDENCE_NODE_NULL_CALIBRATED: bool = False
+# [MIXTURE REVERSAL] memory/cores.py edge loops (mcs_score, mcs_similarity,
+# evidence_score): an undirected edge read AGAINST its stored direction has
+# its parameters reversed. reverse_edge_params returns anything that is not
+# an EdgeParams unchanged, so an EdgeParamsMixture was read backwards with
+# its prototypes NOT reversed, and the same edge pair got two different
+# similarities from its two ends. True = a mixture is reversed with its own
+# flipped_copy(), as matching/structural_similarity.py already does; a
+# single-prototype mixture then reads exactly as its plain prototype.
+# False = the historical reading. Only a mixture that a reversal changes is
+# affected. The loop is SHARED with the containment and fusion scores: their
+# values move wherever such a mixture is matched against its stored
+# direction, and consolidated cores hold more of them than single-view
+# graphs -- re-read THETA_FUSE / mcs_contained / _classify under either
+# value before relying on it.
+EDGE_REVERSE_FLIPS_MIXTURE: bool = True
+# [EXACT ASSIGNMENT] matching/structural_similarity.py
+# _max_weight_bipartite_matching (the node correspondence of mcs_score,
+# mcs_similarity and evidence_score; also the consolidator, the structural
+# similarity and the seed of the global alignment): solve the maximum-weight
+# assignment EXACTLY (scipy.optimize.linear_sum_assignment) instead of the
+# per-row top-8 sparse greedy + 2-opt. The approximation left a node
+# unmatched while a partner with a positive weight was still free, returned
+# a different correspondence for (Q, C) than for (C, Q), and did not reach
+# the maximum weight. False = the historical approximation. The weights are
+# untouched; only WHO is paired changes -- every gate calibrated on scores
+# of the approximate correspondence must be re-read under either value.
+MATCH_ASSIGNMENT_EXACT: bool = True
+# [SIGNATURE MATRIX IN BLOCKS] memory/cores.py _mcs_accumulate (and the dark
+# _global_correspondence): build the node-similarity matrix of the
+# correspondence with matching/signature_matrix.py -- the population branch
+# of TypedSignature.similarity and the bins path of its Gaussian kernel,
+# evaluated for a whole block with numpy, the SAME floating-point
+# operations in the SAME order -- instead of one Python call per pair. The
+# same switch governs the anchor spacing of the redundancy-aware edge mass
+# (memory/cores.py _median_positive_nn): nearest neighbours found with
+# numpy, the distance itself still math.hypot. A performance change ONLY:
+# both must agree with the Python loops bit for bit on every value
+# (pinned), so no weight, correspondence or score moves. Blocks too small
+# to pay for the numpy calls are left to the loops. False = the loops.
+MATCH_SIGNATURE_MATRIX_BLOCKS: bool = True
+# [P4b / THE COUNT KEPT APART FROM THE PHYSICS] evidence_score: the
+# relational term reads PRESENCE x PHYSICS instead of one mean similarity.
+#   presence  verifiable edges that have a counterpart / verifiable edges --
+#             a count; every relation is in it, the membership flags and
+#             the parameter-less relations included
+#   physics   mean similarity over the present pairs that have a GRADED axis
+#             measured on both sides (core/schema.py edge_graded_axes); 1.0
+#             when none has (nothing measured, nothing contradicted)
+# Today a membership flag (CONTOUR_ORIENTATION, REGION_CONTENT,
+# JUNCTION_ORIENTATION: a literal containment = 1.0 the unit table declares
+# an index-only lookup key) and a parameter-less pair enter the mean at
+# exactly 1.0 -- a count read as a perfect measurement. Where every such
+# pair reads 1.0 (always, under EDGE_UNMEASURED_IS_NOT_EVIDENCE) the term
+# can only stay or fall. Under EVIDENCE_QUERY_SIDE_TERMS "relation" both factors are
+# summed over the two sides; the EVIDENCE_ONLY_EDGES branch (RULE B16) is
+# untouched. False = the historical mean.
+EVIDENCE_RELATION_COUNT_APART: bool = False
+# [P4b] core/schema.py edge_measured_axes (the n of the edge-mass
+# facilitation f(n) = 1 + log2(n + 1) in mcs_score / mcs_similarity): a slot
+# the unit table declares a categorical LOOKUP KEY is not a measured axis.
+# Today the three membership flags and OCCLUSION.source count as one,
+# against the function's own contract ("categorical gates are not graded
+# axes"), because EDGE_SCHEMAS declares them linear. False = the historical
+# count. evidence_score does not read this mass: it moves the containment
+# and fusion scores only -- re-read their gates before turning it on.
+EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS: bool = False
+# [D2 PREREQUISITES] matching/alignment.py global_consistency_alignment:
+# MATCH_ALIGN_MAX_PAIR_EVALS is the budget "for the refinement". The seed's
+# similarity matrix was charged to it when the function built the matrix and
+# not when the caller supplied it, so the route the matcher uses returned
+# the UNREFINED seed on any pair with more candidate pairs than the budget.
+# True: the seed is never charged, and a candidate of similarity 0 (whose
+# weight is 0 whatever its relational agreement) is neither evaluated nor
+# charged. False = the historical accounting. Dark path only
+# (MATCH_GLOBAL_CONSISTENCY_ENABLED).
+MATCH_ALIGN_BUDGET_REFINEMENT_ONLY: bool = True
+# [D2 PREREQUISITES] memory/cores.py _global_correspondence: weigh the
+# candidates of the global alignment by signature similarity x the
+# anchor-position factor -- the weight of the live per-lens-type
+# correspondence -- instead of signature similarity alone. False = as built.
+# Dark path only; exists so that turning the global alignment on can change
+# ONE thing (the relational refinement) instead of two.
+MATCH_GLOBAL_ANCHOR_PRIOR: bool = False
+# [SPECIFICITY CAP, SAME SCHEMA] core/schema.py polymorphic_edge_similarity:
+# apply the [P2] matching-time specificity cap (edge_match_weight: 0.282 for
+# CO_LOCATED, 0.576 for CONTOUR_ORIENTATION, ...) to a SAME-schema pair of
+# generic proximity edges. As built the cap sits in the cross-schema branch
+# only, and no generic class has a cross-schema partner: it never acts in
+# the matcher, although the schema documents it as the matching-time cap.
+# DARK and not to be flipped on a benchmark here: the [U32] note on
+# _effective_edge_weights records that deflating the low-information mass
+# inverted the winner where it was tried. False = as built.
+EDGE_SPECIFICITY_CAP_SAME_SCHEMA: bool = False
+
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK
 # =============================================================================

@@ -1,0 +1,101 @@
+BUG HUNT -- identities and invariants of the matcher changes, EVAL-75 (in-sample)
+tree now: source ef4516a74acb  harness 0925e36eaf59  front end 83937c990fb5
+
+========================================================================================================
+A. LEDGER -- every stored pair recomputed from its own stored components
+========================================================================================================
+   constants read from the tree: EPSILON 1e-09, conjunction floor alpha 0, absence weight 0.15; tolerance 5e-09
+   stored configurations read: 20, pairs 6000; digests (source, harness, front end): ef4516a74acb/0925e36eaf59/83937c990fb5
+
+   identity                                                          pairs failing   largest difference
+   binary credit: matched mass = binary mass                             0   0
+   core_coverage = node term x multiplier                                0   9.04e-11
+   core_node_coverage = c_matched / c_total                              0   2.7e-10
+   edge_absence = uncovered edges / edges                                0   5e-11
+   node_coverage = calibrate(raw, chance)                                0   1.07e-10
+   node_coverage = node_coverage_raw (calibration off)                   0   0
+   node_coverage_binary = binary twin of the form in use              3576   0.245   <-- in: p2_D3 full x300, p2_D3 v1 x296, p2_D3P4 full x300, p2_D3P4 v1 x296, p2_D3b full x300, p2_D3b v1 x296, p2_D3n full x300, p2_D3n v1 x296, p2_D3na full x300, p2_D3na v1 x296, p2_NULLD3 full x300, p2_NULLD3 v1 x296
+   node_coverage_chance = form(chance masses)                            0   2.57e-10
+   node_coverage_raw = form(matched masses)                              0   2.7e-10
+   query-side edge keys present iff an edge term is two-sided            0   0
+   query_node_coverage = q_matched / q_total                             0   2.22e-10
+   relational_consistency = sim sum / verifiable                         0   1.4e-10
+   relational_multiplier = alpha + (1 - alpha) x consistency             0   0
+   score = clamp(node term x multiplier - absence)                       0   7.84e-11
+   total_absence = lambda x edge_absence                                 0   5e-11
+
+   invariant                                                         pairs failing
+   0 <= chance level <= 1                                                0
+   0 <= score, node term, relation, absence <= 1                         0
+   binary mass <= total, each side                                       0
+   graded mass <= binary mass, each side                                 0
+   node_coverage <= node_coverage_raw                                    0
+   node_coverage_raw <= binary twin (recomputed) <= 1                    0
+   node_coverage_raw <= node_coverage_binary (as stored)               727   <-- in: p2_D3 full x54, p2_D3 v1 x28, p2_D3P4 full x54, p2_D3P4 v1 x28, p2_D3b full x174, p2_D3b v1 x143, p2_D3n full x54, p2_D3n v1 x28, p2_D3na full x54, p2_D3na v1 x28, p2_NULLD3 full x54, p2_NULLD3 v1 x28
+   verifiable <= edges; sim sum <= verifiable (core side)                0
+   verifiable <= edges; sim sum <= verifiable (query side)               0
+
+   answers: stored `pred`/`tie` re-derived from the stored scores (first class on an exact tie): 0 queries differ
+
+========================================================================================================
+B. SWITCH INDEPENDENCE -- what a score-level switch must not move, across the stored configurations
+========================================================================================================
+   window = full
+     the correspondence and the binary accumulation (all 10 configurations)                   values  29700  differing     0
+     the graded node masses (the 8 graded-credit configurations)                              values   8400  differing     0
+     the core-side edge evidence, Phase 4 OFF (R0, D3n, D3na, D3, D3b)                        values   6000  differing     0
+     the core-side edge evidence, Phase 4 ON (P4, D3P4, NULL, NULLD3, NULLb)                  values   6000  differing     0
+     the core-side edge evidence across Phase 4 (R0 against P4): what Phase 4 moved           values   1500  differing     0
+     the query-side edge evidence, Phase 4 OFF (D3na, D3, D3b)                                values   1800  differing     0
+     the query-side edge evidence across Phase 4 (D3 against D3P4, NULLD3)                    values   1800  differing     0
+     the chance masses (NULL against NULLD3)                                                  values    600  differing     0
+   window = v1
+     the correspondence and the binary accumulation (all 10 configurations)                   values  29700  differing     0
+     the graded node masses (the 8 graded-credit configurations)                              values   8400  differing     0
+     the core-side edge evidence, Phase 4 OFF (R0, D3n, D3na, D3, D3b)                        values   6000  differing     0
+     the core-side edge evidence, Phase 4 ON (P4, D3P4, NULL, NULLD3, NULLb)                  values   6000  differing     0
+     the core-side edge evidence across Phase 4 (R0 against P4): what Phase 4 moved           values   1500  differing     0
+     the query-side edge evidence, Phase 4 OFF (D3na, D3, D3b)                                values   1800  differing     0
+     the query-side edge evidence across Phase 4 (D3 against D3P4, NULLD3)                    values   1800  differing     0
+     the chance masses (NULL against NULLD3)                                                  values    600  differing     0
+
+========================================================================================================
+C. GRAPH STORAGE -- what the edge loops assume about stored edges (79 EVAL graphs)
+========================================================================================================
+   window = full
+     edges                                                                66951
+     directed                                                             19488
+     undirected                                                           47463
+     self loops                                                               0
+     undirected stored with src > dst                                         0
+     undirected stored in both orientations                                   0
+     undirected src > dst, parameters only under the canonical key            0
+     parameters found only under the REVERSED key                             0
+     parameter entries with no edge                                           0
+     edges without parameters                                              1090
+     mixtures                                                              3525
+     mixture prototypes                                                    3939
+     mixtures reverse_edge_params returns unchanged                        3525
+     undirected plain parameters a reversal changes                        9026
+     undirected mixtures a reversal would change                            198
+       of those, by relation: ORIENTATION_CONTINUITY 198
+   window = v1
+     edges                                                                36319
+     directed                                                              1055
+     undirected                                                           35264
+     self loops                                                               0
+     undirected stored with src > dst                                         0
+     undirected stored in both orientations                                   0
+     undirected src > dst, parameters only under the canonical key            0
+     parameters found only under the REVERSED key                             0
+     parameter entries with no edge                                           0
+     edges without parameters                                              1090
+     mixtures                                                              3295
+     mixture prototypes                                                    3709
+     mixtures reverse_edge_params returns unchanged                        3295
+     undirected plain parameters a reversal changes                        4256
+     undirected mixtures a reversal would change                            198
+       of those, by relation: ORIENTATION_CONTINUITY 198
+
+========================================================================================================
+checks with a finding, per section: A=2  B=0  C=2   total 4

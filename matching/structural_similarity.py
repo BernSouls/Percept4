@@ -615,6 +615,60 @@ GESTALT_LENS_BOOST: Dict[str, float] = {
 }
 
 
+def _exact_max_weight_matching(
+    weights: List[List[float]],
+) -> List[Tuple[int, int]]:
+    """[EXACT ASSIGNMENT] Maximum-weight bipartite matching, solved exactly.
+
+    The sparse greedy + 2-opt below was a speed concession made when the
+    exact solver was a pure-Python Hungarian. It prunes the candidates PER
+    ROW (top 8), so
+      * a row whose eight best columns are all taken stays unmatched while a
+        column with a positive weight for it is still free (measured on the
+        ETH-80 EVAL pairs: 7.3 % / 5.4 % of the pairable node slots, in every
+        pair);
+      * matching(W) and matching(W transposed) differ, so the correspondence
+        of (Q, C) is not that of (C, Q);
+      * the total weight is below the maximum.
+    scipy.optimize.linear_sum_assignment (already a dependency of the tree
+    through core/spatial.py) solves the same problem exactly in compiled
+    code: the dense weight matrix is the cost, not the assignment.
+
+    Properties (pinned in tests_matcher/test_exact_assignment.py):
+      * the total weight is the maximum over all matchings;
+      * no row and column that are both unmatched have a positive weight;
+      * only strictly positive, finite weights are ever paired;
+      * the problem is solved in ONE orientation whatever the argument order
+        (the smaller side as rows; for a square matrix, the orientation whose
+        bytes sort first), so matching(W transposed) is matching(W)
+        transposed, ties included;
+      * same input -> same output; pairs are returned sorted by row.
+    Ties between equally good matchings are resolved by the solver.
+    """
+    n = len(weights)
+    m = len(weights[0]) if n else 0
+    if n == 0 or m == 0:
+        return []
+    import numpy as _np
+    from scipy.optimize import linear_sum_assignment
+
+    w = _np.asarray(weights, dtype=float)
+    w = _np.where(_np.isfinite(w) & (w > 0.0), w, 0.0)
+    if not w.any():
+        return []
+    transposed = n > m or (n == m and w.T.tobytes() < w.tobytes())
+    if transposed:
+        w = _np.ascontiguousarray(w.T)
+    rows, cols = linear_sum_assignment(w, maximize=True)
+    pairs = [
+        ((int(c), int(r)) if transposed else (int(r), int(c)))
+        for r, c in zip(rows, cols)
+        if w[r, c] > 0.0
+    ]
+    pairs.sort()
+    return pairs
+
+
 def _max_weight_bipartite_matching(
     weights: List[List[float]],
     top_k: int = 8,
@@ -645,6 +699,12 @@ def _max_weight_bipartite_matching(
     m = len(weights[0]) if weights else 0
     if m == 0:
         return []
+
+    # [EXACT ASSIGNMENT] P.MATCH_ASSIGNMENT_EXACT: solve the assignment
+    # exactly instead of approximating it. False = the historical sparse
+    # greedy + 2-opt below (top_k / max_local_opt_passes apply to it only).
+    if getattr(P, "MATCH_ASSIGNMENT_EXACT", True):
+        return _exact_max_weight_matching(weights)
 
     positive_entries: List[List[Tuple[float, int]]] = []
     for i in range(n):

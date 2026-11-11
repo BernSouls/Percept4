@@ -222,11 +222,24 @@ def _assign(sim: List[List[float]],
             nodes_a: List[int],
             nodes_b: List[int],
             rel_weight: Optional[Callable[[int, int], float]] = None,
-            beta: float = 0.0) -> Dict[int, int]:
+            beta: float = 0.0,
+            skip_zero: bool = False) -> Dict[int, int]:
     """One bipartite assignment. When rel_weight is given, the matrix is
-    ``sim * (1 - beta + beta * rel)`` (relational modulation)."""
+    ``sim * (1 - beta + beta * rel)`` (relational modulation).
+
+    `skip_zero`: a candidate of similarity 0 keeps the weight 0.0 without
+    its relational agreement being evaluated -- the product is 0.0 whatever
+    the agreement is, so the matrix is the same and the evaluation is
+    saved."""
     if rel_weight is None:
         w = sim
+    elif skip_zero:
+        w = [
+            [(sim[i][j] * (1.0 - beta + beta * rel_weight(i, j)))
+             if sim[i][j] != 0.0 else 0.0
+             for j in range(len(nodes_b))]
+            for i in range(len(nodes_a))
+        ]
     else:
         w = [
             [sim[i][j] * (1.0 - beta + beta * rel_weight(i, j))
@@ -253,8 +266,23 @@ def global_consistency_alignment(
     rounds: int = 6,
     max_pair_evals: Optional[int] = None,
     sim: Optional[Sequence[Sequence[float]]] = None,
+    budget_refinement_only: bool = False,
+    seed_evals_charged: int = 0,
 ) -> Alignment:
     """Global-consistency alignment seeded from the approximate Hungarian.
+
+    [D2 PREREQUISITES] `max_pair_evals` is the budget of the REFINEMENT
+    (P.MATCH_ALIGN_MAX_PAIR_EVALS: "pair-evaluation budget for the
+    refinement"). Historically the seed's similarity matrix was charged to
+    it when this function built the matrix (`sim_fn`) and not when the
+    caller supplied one (`sim`), so the same inputs gave two answers by
+    entry point, and on any pair with more candidates than the budget the
+    `sim_fn` route returned the unrefined seed. With
+    `budget_refinement_only=True` the seed is never charged, and a candidate
+    of similarity 0 is neither evaluated nor charged (its weight is 0.0
+    whatever its agreement). False (default) is the historical accounting;
+    `seed_evals_charged` lets a caller that supplies `sim` reproduce the
+    `sim_fn` charge exactly.
 
     Steps:
       1. Build the node-similarity matrix (or use a supplied `sim`, indexed
@@ -286,6 +314,10 @@ def global_consistency_alignment(
             for j, v in enumerate(nodes_b):
                 sim[i][j] = float(sim_fn(u, v))
                 pair_evals += 1
+    else:
+        pair_evals = int(seed_evals_charged)
+    if budget_refinement_only:
+        pair_evals = 0
     matrix: List[List[float]] = [
         [(0.0 if float(sim[i][j]) < unmatched_cost else float(sim[i][j]))
          for j in range(len(nodes_b))]
@@ -324,6 +356,7 @@ def global_consistency_alignment(
             new_mapping = _assign(
                 matrix, nodes_a, nodes_b, rel_weight,
                 beta=float(systematicity_weight),
+                skip_zero=bool(budget_refinement_only),
             )
             rounds_used += 1
             if new_mapping == mapping:

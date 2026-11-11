@@ -1,0 +1,133 @@
+PHASE 4 step 0 -- what the matched-edge similarity is made of (EVAL-75, read-only)
+source digest 90cac7b21a9c   EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True   EVIDENCE_GRADED_NODE_CREDIT=True
+every row is a VERIFIABLE core edge (both endpoints mapped); the census totals are asserted against the matcher's own trace
+
+====================================================================================================
+window = full   own-class pairs (75)   verifiable core edges 43373   matched_rel_sim_sum 6876.0
+====================================================================================================
+  bin                            edges  % edges    sim_sum  % of sum   sim==1  mean sim
+  no query edge                  30571    70.5%        0.0      0.0%        0     0.000
+  no same-kind edge               2090     4.8%        0.0      0.0%        0     0.000
+  same kind, sim 0                1185     2.7%        0.0      0.0%        0     0.000
+  PARAM-LESS                        14     0.0%       14.0      0.2%       14     1.000
+  CROSS-SCHEMA                     506     1.2%      155.8      2.3%        0     0.308
+  MEASURED 1                      3351     7.7%     2923.6     42.5%     2647     0.872
+  MEASURED 2                      2634     6.1%     1792.9     26.1%      776     0.681
+  MEASURED 3                      1893     4.4%     1278.7     18.6%      230     0.675
+  MEASURED 4                      1129     2.6%      710.9     10.3%       32     0.630
+
+  per core-edge type: edges in each bin (sim_sum)
+  edge type                      no query edge   no same-kind edge    same kind, sim 0          PARAM-LESS        CROSS-SCHEMA          MEASURED 1          MEASURED 2          MEASURED 3          MEASURED 4
+  CONTOUR_ORIENTATION                 5631 (0)                   .                   .                   .                   .         1198 (1198)                   .                   .                   .
+  CO_LOCATED                         11165 (0)              48 (0)              68 (0)                   .                   .         1593 (1166)                   .                   .                   .
+  CONTOUR_CONTINUITY                   633 (0)             149 (0)                   .                   .             77 (25)                   .                   .          1017 (774)                   .
+  JUNCTION_CONTOUR                      19 (0)                   .             319 (0)                   .                   .                   .          1205 (698)                   .                   .
+  CURVATURE_SIGN_CONTINUIT             438 (0)             230 (0)                   .                   .                   .                   .           913 (619)                   .                   .
+  REGION_CONTENT                      3715 (0)              88 (0)                   .                   .                   .           531 (531)                   .                   .                   .
+  CURVE_CONTAINMENT                    330 (0)              12 (0)                   .                   .                   .                   .           421 (421)                   .                   .
+  COLOR_OPPONENT_BORDER               2333 (0)               2 (0)                   .                   .                   .                   .                   .                   .           536 (337)
+  SYMMETRY                             470 (0)                   .                   .                   .                   .                   .                   .           415 (211)                   .
+  RADIALITY                            285 (0)             314 (0)                   .                   .                   .                   .                   .                   .           355 (210)
+  ORIENTATION_CONTINUITY              1766 (0)             136 (0)             739 (0)                   .                   .                   .                   .                   .           227 (155)
+  ORIENTATION_BEND                     709 (0)              40 (0)                   .                   .             77 (36)                   .                   .            110 (87)                   .
+  ORIENTATION_JUNCTION                 612 (0)               8 (0)                   .                   .             80 (35)                   .                   .            113 (86)                   .
+  COCIRCULAR                           221 (0)              54 (0)               5 (0)                   .            272 (60)                   .             66 (36)                   .                   .
+  PARALLEL                             168 (0)             306 (0)               3 (0)                   .                   .                   .                   .            152 (83)                   .
+  SPIRALITY                            180 (0)             324 (0)              44 (0)                   .                   .                   .                   .             82 (34)                   .
+  JUNCTION_ORIENTATION                 166 (0)                   .                   .                   .                   .             29 (29)                   .                   .                   .
+  AMODAL_LINK                           89 (0)             179 (0)               2 (0)                   .                   .                   .             29 (19)                   .                   .
+  TOPOLOGY                             836 (0)                   .                   .             14 (14)                   .                   .                   .                   .                   .
+  CONCENTRICITY                        296 (0)             156 (0)                   .                   .                   .                   .                   .                   .              11 (9)
+  CONTACT                              255 (0)               1 (0)                   .                   .                   .                   .                   .               3 (3)                   .
+  LINE_TERMINATION                       1 (0)              43 (0)               5 (0)                   .                   .                   .                   .               1 (1)                   .
+  BORDER_OWNERSHIP_EDGE                253 (0)                   .                   .                   .                   .                   .                   .                   .                   .
+
+====================================================================================================
+window = full   every pair (300)   verifiable core edges 160425   matched_rel_sim_sum 23478.0
+====================================================================================================
+  bin                            edges  % edges    sim_sum  % of sum   sim==1  mean sim
+  no query edge                 115151    71.8%        0.0      0.0%        0     0.000
+  no same-kind edge               7688     4.8%        0.0      0.0%        0     0.000
+  same kind, sim 0                4017     2.5%        0.0      0.0%        0     0.000
+  PARAM-LESS                        30     0.0%       30.0      0.1%       30     1.000
+  CROSS-SCHEMA                    1836     1.1%      576.2      2.5%        0     0.314
+  MEASURED 1                     11014     6.9%     9190.5     39.1%     8095     0.834
+  MEASURED 2                     10262     6.4%     6910.5     29.4%     2827     0.673
+  MEASURED 3                      6829     4.3%     4581.7     19.5%      830     0.671
+  MEASURED 4                      3598     2.2%     2189.0      9.3%       98     0.608
+
+  per core-edge type: edges in each bin (sim_sum)
+  edge type                      no query edge   no same-kind edge    same kind, sim 0          PARAM-LESS        CROSS-SCHEMA          MEASURED 1          MEASURED 2          MEASURED 3          MEASURED 4
+  CONTOUR_ORIENTATION                20529 (0)                   .                   .                   .                   .         3808 (3808)                   .                   .                   .
+  CO_LOCATED                         41335 (0)             166 (0)             224 (0)                   .                   .         5476 (3653)                   .                   .                   .
+  JUNCTION_CONTOUR                     108 (0)                   .            1193 (0)                   .                   .                   .         5018 (2898)                   .                   .
+  CONTOUR_CONTINUITY                  2494 (0)             523 (0)                   .                   .            284 (92)                   .                   .         3630 (2756)                   .
+  CURVATURE_SIGN_CONTINUIT            1828 (0)             858 (0)                   .                   .                   .                   .         3295 (2240)                   .                   .
+  REGION_CONTENT                     13541 (0)             269 (0)                   .                   .                   .         1642 (1642)                   .                   .                   .
+  CURVE_CONTAINMENT                   1268 (0)              34 (0)                   .                   .                   .                   .         1575 (1575)                   .                   .
+  COLOR_OPPONENT_BORDER               8570 (0)               7 (0)                   .                   .                   .                   .                   .                   .          1585 (955)
+  RADIALITY                           1263 (0)            1144 (0)                   .                   .                   .                   .                   .                   .          1282 (737)
+  SYMMETRY                            1799 (0)               4 (0)                   .                   .                   .                   .                   .          1461 (721)                   .
+  ORIENTATION_BEND                    3036 (0)             264 (0)                   .                   .           274 (127)                   .                   .           454 (353)                   .
+  ORIENTATION_JUNCTION                2820 (0)              29 (0)                   .                   .           302 (138)                   .                   .           434 (338)                   .
+  ORIENTATION_CONTINUITY              6340 (0)             539 (0)            2373 (0)                   .                   .                   .                   .                   .           670 (445)
+  COCIRCULAR                           953 (0)             205 (0)              19 (0)                   .           976 (219)                   .           260 (138)                   .                   .
+  PARALLEL                             683 (0)            1063 (0)              12 (0)                   .                   .                   .                   .           558 (291)                   .
+  SPIRALITY                            813 (0)            1114 (0)             155 (0)                   .                   .                   .                   .           278 (112)                   .
+  JUNCTION_ORIENTATION                 704 (0)                   .                   .                   .                   .             88 (88)                   .                   .                   .
+  AMODAL_LINK                          387 (0)             680 (0)              13 (0)                   .                   .                   .            114 (60)                   .                   .
+  CONCENTRICITY                       1083 (0)             572 (0)                   .                   .                   .                   .                   .                   .             61 (51)
+  TOPOLOGY                            3629 (0)                   .                   .             30 (30)                   .                   .                   .                   .                   .
+  CONTACT                             1097 (0)               1 (0)                   .                   .                   .                   .                   .               7 (6)                   .
+  LINE_TERMINATION                       5 (0)             216 (0)              28 (0)                   .                   .                   .                   .               7 (4)                   .
+  BORDER_OWNERSHIP_EDGE                866 (0)                   .                   .                   .                   .                   .                   .                   .                   .
+
+====================================================================================================
+window = v1   own-class pairs (75)   verifiable core edges 25348   matched_rel_sim_sum 2460.5
+====================================================================================================
+  bin                            edges  % edges    sim_sum  % of sum   sim==1  mean sim
+  no query edge                  20912    82.5%        0.0      0.0%        0     0.000
+  no same-kind edge                327     1.3%        0.0      0.0%        0     0.000
+  same kind, sim 0                 809     3.2%        0.0      0.0%        0     0.000
+  PARAM-LESS                        14     0.1%       14.0      0.6%       14     1.000
+  CROSS-SCHEMA                     159     0.6%       72.2      2.9%        0     0.454
+  MEASURED 1                      2143     8.5%     1711.2     69.5%     1430     0.799
+  MEASURED 3                       224     0.9%      173.6      7.1%       29     0.775
+  MEASURED 4                       760     3.0%      489.4     19.9%       24     0.644
+
+  per core-edge type: edges in each bin (sim_sum)
+  edge type                      no query edge   no same-kind edge    same kind, sim 0          PARAM-LESS        CROSS-SCHEMA          MEASURED 1          MEASURED 3          MEASURED 4
+  CO_LOCATED                         11152 (0)              48 (0)              68 (0)                   .                   .         1614 (1182)                   .                   .
+  REGION_CONTENT                      3285 (0)              91 (0)                   .                   .                   .           529 (529)                   .                   .
+  COLOR_OPPONENT_BORDER               2330 (0)               2 (0)                   .                   .                   .                   .                   .           537 (337)
+  ORIENTATION_CONTINUITY              1769 (0)             136 (0)             741 (0)                   .                   .                   .                   .           223 (152)
+  ORIENTATION_BEND                     706 (0)              41 (0)                   .                   .             79 (37)                   .            108 (85)                   .
+  ORIENTATION_JUNCTION                 615 (0)               8 (0)                   .                   .             80 (35)                   .            113 (86)                   .
+  TOPOLOGY                             804 (0)                   .                   .             14 (14)                   .                   .                   .                   .
+  CONTACT                              251 (0)               1 (0)                   .                   .                   .                   .               3 (3)                   .
+
+====================================================================================================
+window = v1   every pair (300)   verifiable core edges 93377   matched_rel_sim_sum 7693.8
+====================================================================================================
+  bin                            edges  % edges    sim_sum  % of sum   sim==1  mean sim
+  no query edge                  78578    84.2%        0.0      0.0%        0     0.000
+  no same-kind edge               1291     1.4%        0.0      0.0%        0     0.000
+  same kind, sim 0                2605     2.8%        0.0      0.0%        0     0.000
+  PARAM-LESS                        30     0.0%       30.0      0.4%       30     1.000
+  CROSS-SCHEMA                     576     0.6%      264.6      3.4%        0     0.459
+  MEASURED 1                      7148     7.7%     5304.0     68.9%     4194     0.742
+  MEASURED 3                       890     1.0%      693.0      9.0%      116     0.779
+  MEASURED 4                      2259     2.4%     1402.2     18.2%       76     0.621
+
+  per core-edge type: edges in each bin (sim_sum)
+  edge type                      no query edge   no same-kind edge    same kind, sim 0          PARAM-LESS        CROSS-SCHEMA          MEASURED 1          MEASURED 3          MEASURED 4
+  CO_LOCATED                         41330 (0)             167 (0)             224 (0)                   .                   .         5511 (3667)                   .                   .
+  REGION_CONTENT                     11853 (0)             274 (0)                   .                   .                   .         1637 (1637)                   .                   .
+  COLOR_OPPONENT_BORDER               8567 (0)               7 (0)                   .                   .                   .                   .                   .          1601 (965)
+  ORIENTATION_BEND                    3030 (0)             270 (0)                   .                   .           277 (128)                   .           449 (349)                   .
+  ORIENTATION_JUNCTION                2815 (0)              29 (0)                   .                   .           299 (136)                   .           434 (338)                   .
+  ORIENTATION_CONTINUITY              6335 (0)             543 (0)            2381 (0)                   .                   .                   .                   .           658 (438)
+  TOPOLOGY                            3563 (0)                   .                   .             30 (30)                   .                   .                   .                   .
+  CONTACT                             1085 (0)               1 (0)                   .                   .                   .                   .               7 (6)                   .
+
+written: /home/user/Percept4/diagnostics/results/phase4_edge_census.txt

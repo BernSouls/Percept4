@@ -1519,6 +1519,24 @@ class EdgeParams:
         # tuple is not evidence of ANYTHING — if every value is unmeasured,
         # sim = 0 rather than 1. A single measured slot is enough to put the
         # pair through the Gaussian instead of the flat 1.0 fallback.
+        #
+        # [PHASE 4 / EDGE HONESTY] The rule above was only half in the code:
+        # an all-UNKNOWN pair read 0.2 (the branch just below), and a pair
+        # whose tuples DIFFER but share no measured slot read 1.0 (the
+        # `evaluated_graded_count == 0` fallback further down, or whatever
+        # the population path made of two unmeasured axes). Both are a
+        # comparison in which nothing was compared. With no slot measured on
+        # BOTH sides the similarity is 0.0: no physical evidence. Whether the
+        # two edges are the same relation at all is a topological fact the
+        # caller already holds (the pair exists); it is not physics.
+        # A slot measured on both sides -- categorical or graded -- keeps the
+        # pair on the historical path, so categorical agreement that passed
+        # the gate above still reads 1.0.
+        # P.EDGE_UNMEASURED_IS_NOT_EVIDENCE = False restores the floors.
+        if getattr(P, "EDGE_UNMEASURED_IS_NOT_EVIDENCE", True) and not any(
+                a != UNKNOWN and b != UNKNOWN
+                for a, b in zip(self.quantized, other.quantized)):
+            return 0.0
         _n_measured_self = sum(1 for v in self.quantized if v != UNKNOWN)
         _n_measured_other = sum(1 for v in other.quantized if v != UNKNOWN)
         if self.quantized == other.quantized:
@@ -1657,14 +1675,116 @@ def edge_measured_axes(qp: "EdgeParams", cp: "EdgeParams") -> int:
         id_slots = set(EDGE_IDENTITY_SLOTS.get(qp.class_, ()))
     if _is_u30_edge_params(qp):
         id_slots = set(U30_EDGE_IDENTITY_SLOTS.get(qp.class_, ()))
+    # [P4b] A slot the unit table declares a categorical LOOKUP KEY is not a
+    # graded axis either. EDGE_SCHEMAS (which derives the identity slots
+    # above) agrees with the unit table on 8 of its 12 lookup keys and
+    # declares the other four linear or ungated: the membership flag of
+    # CONTOUR_ORIENTATION / JUNCTION_ORIENTATION / REGION_CONTENT (a literal
+    # containment = 1.0, EDGE_INDEX_ONLY) and OCCLUSION.source. Those four
+    # were counted as a measured axis, so a bare membership flag earned
+    # f(1) = 2 of edge mass. P.EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS
+    # (default False = the historical count) leaves them out.
+    key_slots: FrozenSet[int] = frozenset()
+    if getattr(P, "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS", False):
+        key_slots = _edge_lookup_key_slots(qp) | _edge_lookup_key_slots(cp)
     n = 0
     for i, (a, b) in enumerate(zip(qp.quantized, cp.quantized)):
         if a == UNKNOWN or b == UNKNOWN:
             continue                      # unmeasured axes never penalize
         if i in id_slots:
             continue                      # categorical gates are not graded axes
+        if i in key_slots:
+            continue                      # nor are lookup keys [P4b]
         n += 1
     return n
+
+
+def _edge_lookup_key_slots(ep: Any) -> FrozenSet[int]:
+    """[P4b] Slot indices of `ep` that its unit table declares a categorical
+    LOOKUP KEY (`quantiser == "lookup_key"`): an index, not a graded
+    quantity. The table is chosen as `_is_u30_edge_params` chooses the
+    layout; an arity the table does not describe yields none."""
+    table = U30_EDGE_UNIT_TABLE if _is_u30_edge_params(ep) else EDGE_UNIT_TABLE
+    specs = table.get(ep.class_, ())
+    if len(specs) != len(ep.quantized):
+        return frozenset()
+    return frozenset(
+        i for i, s in enumerate(specs) if s.quantiser == "lookup_key")
+
+
+def _edge_categorical_slots(ep: "EdgeParams") -> FrozenSet[int]:
+    """[P4b] Every slot of `ep` that is categorical: its identity (NAP)
+    slots, resolved as `EdgeParams.similarity` resolves them, and its lookup
+    keys."""
+    if ep.identity_slots is not None:
+        ids = set(ep.identity_slots)
+    else:
+        ids = set(EDGE_IDENTITY_SLOTS.get(ep.class_, ()))
+    if _is_u30_edge_params(ep):
+        ids = set(U30_EDGE_IDENTITY_SLOTS.get(ep.class_, ()))
+    ids.update(_edge_lookup_key_slots(ep))
+    return frozenset(ids)
+
+
+def _graded_axes_plain(a: "EdgeParams", b: "EdgeParams") -> int:
+    if not isinstance(a, EdgeParams) or not isinstance(b, EdgeParams):
+        return 0
+    cat_a = _edge_categorical_slots(a)
+    cat_b = _edge_categorical_slots(b)
+    if a.class_ == b.class_:
+        if len(a.quantized) != len(b.quantized):
+            return 0
+        n = 0
+        for i, (x, y) in enumerate(zip(a.quantized, b.quantized)):
+            if x == UNKNOWN or y == UNKNOWN:
+                continue
+            if i in cat_a or i in cat_b:
+                continue
+            n += 1
+        return n
+    # cross-schema: the shared axes polymorphic_edge_similarity compares
+    if b.class_ not in get_compatible_types(a.class_):
+        return 0
+    n = 0
+    for idx_a, idx_b, _tag in get_shared_subspace(a.class_, b.class_):
+        if idx_a >= len(a.quantized) or idx_b >= len(b.quantized):
+            continue
+        if a.quantized[idx_a] == UNKNOWN or b.quantized[idx_b] == UNKNOWN:
+            continue
+        if idx_a in cat_a or idx_b in cat_b:
+            continue
+        n += 1
+    return n
+
+
+def edge_graded_axes(ep1: Any, ep2: Any) -> int:
+    """[P4b] Number of GRADED axes measured on BOTH sides of an edge pair:
+    the quantities a similarity of the two can be a PHYSICAL reading of.
+
+    A slot counts when neither side holds UNKNOWN in it and it is neither an
+    identity (NAP) slot nor a lookup key of the unit table. Same schema: the
+    slots themselves. Cross-schema (a compatible family): the shared axes
+    `polymorphic_edge_similarity` compares, under the same conditions. A
+    mixture: the best over its prototypes. No parameters on either side: 0.
+
+    0 means the pair has no physics to read: whatever similarity it earned
+    is the TOPOLOGICAL fact that the relation exists on both sides (a
+    membership flag, a parameter-less predicate, a categorical agreement) --
+    a count. `evidence_score` uses this to keep the count apart from the
+    physics (P.EVIDENCE_RELATION_COUNT_APART). Unlike `edge_measured_axes`
+    it does not depend on any switch and it reads cross-schema pairs.
+    """
+    if ep1 is None or ep2 is None:
+        return 0
+    protos1 = ep1.protos if isinstance(ep1, EdgeParamsMixture) else (ep1,)
+    protos2 = ep2.protos if isinstance(ep2, EdgeParamsMixture) else (ep2,)
+    best = 0
+    for a in protos1:
+        for b in protos2:
+            n = _graded_axes_plain(a, b)
+            if n > best:
+                best = n
+    return best
 
 
 #: [U31 / M2] Endpoint reversal for the U30 categories.  The legacy spec
@@ -1834,13 +1954,47 @@ def polymorphic_edge_similarity(
         # EdgeTypes are topology-only and never receive params, so this is
         # the common case rather than an edge case. Missing the edge-type
         # pair (default) keeps the old strict-0.0 behaviour.
-        if edge_types is not None and edge_types[0] == edge_types[1]:
-            return 0.0
+        #
+        # [F6 / PHASE 1] The branch below used to `return 0.0` as well, so
+        # the fix described above was inert: a topology-only core edge could
+        # never be matched, whatever the query held. It now returns 1.0 when
+        #   * the caller supplied the predicate pair and the two are EQUAL, and
+        #   * BOTH sides carry no params (the "carry no EdgeParams" case).
+        # A pair with params on ONE side only stays 0.0: a missing
+        # measurement must not read as a perfect one, and it keeps
+        # EdgeParams.similarity(None) == 0.0 true from either direction.
+        # The result is a structural (topological) match with zero measured
+        # axes -- edge_measured_axes(None, None) == 0 -- so it earns no
+        # coverage facilitation in the matcher's edge mass.
+        # P.EDGE_UNPARAMETERISED_STRUCTURAL_MATCH = False restores the
+        # historical strict 0.0.
+        if (
+            ep1 is None
+            and ep2 is None
+            and edge_types is not None
+            and edge_types[0] is not None
+            and edge_types[0] == edge_types[1]
+            and getattr(P, "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH", True)
+        ):
+            return 1.0
         return 0.0
 
     # 1. Same schema: full multi-slot Gaussian fidelity
     if ep1.class_ == ep2.class_:
-        return float(ep1.similarity(ep2, use_confidence=use_confidence))
+        same = float(ep1.similarity(ep2, use_confidence=use_confidence))
+        # [SPECIFICITY CAP, SAME SCHEMA] The [P2] matching-time cap on the
+        # generic proximity edges "lives at the comparison site" (see
+        # EdgeParams.similarity) but is applied only at the END of this
+        # function, in the cross-schema branch -- and no generic class has a
+        # cross-schema partner, so it never acts. Under
+        # P.EDGE_SPECIFICITY_CAP_SAME_SCHEMA (default False = as it is) the
+        # same-schema result is capped by the class's specificity too.
+        # Dark: the [U32] note in memory/cores.py records that deflating
+        # the low-information mass inverted the benchmark it was tried on.
+        if same != 0.0 and getattr(P, "EDGE_SPECIFICITY_CAP_SAME_SCHEMA",
+                                   False):
+            same *= edge_match_weight(ep1.class_)
+        return same
 
     # 2. Family compatibility gate (symmetric — enforced by
     # verify_schema_consistency)
@@ -1862,6 +2016,7 @@ def polymorphic_edge_similarity(
     cycles1 = CIRCULAR_EDGE_CYCLE_LENGTHS.get(ep1.class_, {})
 
     total_sq = 0.0
+    n_compared = 0
     for idx_a, idx_b, _tag in shared:
         if idx_a >= len(ep1.quantized) or idx_b >= len(ep2.quantized):
             continue
@@ -1869,6 +2024,7 @@ def polymorphic_edge_similarity(
         vb = ep2.quantized[idx_b]
         if va == UNKNOWN or vb == UNKNOWN:
             continue
+        n_compared += 1
         d = abs(va - vb)
         if idx_a in cycles1:
             n = cycles1[idx_a]
@@ -1876,7 +2032,18 @@ def polymorphic_edge_similarity(
         sigma = (ranges1[idx_a] / 3.0) if idx_a < len(ranges1) and ranges1[idx_a] > 0 else 1.0
         total_sq += (d / sigma) ** 2
 
-    base_sim = math.exp(-total_sq / float(max(1, n_shared)))
+    if getattr(P, "EDGE_UNMEASURED_IS_NOT_EVIDENCE", True):
+        # [PHASE 4 / EDGE HONESTY] The mean runs over the shared axes that
+        # were MEASURED ON BOTH SIDES, as the same-schema Gaussian already
+        # does. Dividing by n_shared counted every unmeasured shared axis as
+        # a perfect agreement, and a pair with no measured shared axis read
+        # exp(0) = 1.0. The dimensional discount below is structure, not
+        # measurement, and is unchanged.
+        if n_compared == 0:
+            return 0.0
+        base_sim = math.exp(-total_sq / float(n_compared))
+    else:
+        base_sim = math.exp(-total_sq / float(max(1, n_shared)))
     conf_factor = min(ep1.confidence, ep2.confidence) if use_confidence else 1.0
     # [P2] The matching-time specificity cap (see EDGE_SPECIFICITY).
     spec_w = min(edge_match_weight(ep1.class_),

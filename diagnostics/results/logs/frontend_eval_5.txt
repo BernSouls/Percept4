@@ -1,0 +1,9 @@
+front-end source digest cfaca6d6b9151503
+  front end 10/79  (74s)
+  front end 20/79  (149s)
+  front end 30/79  (218s)
+  front end 40/79  (290s)
+  front end 50/79  (362s)
+  front end 60/79  (441s)
+  front end 70/79  (521s)
+done: 79 graphs

@@ -1,0 +1,196 @@
+PHASE 1 (F6) + D1 -- before / after, EVAL-75 (in-sample)
+source digest d12ee4b3370d   harness digest fa2953114b00
+defaults in this tree: EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True  EVIDENCE_GRADED_NODE_CREDIT=True
+settings: OFF(EDGE=False, EVIDENCE=False)   F6(EDGE=True, EVIDENCE=False)   D1(EDGE=False, EVIDENCE=True)   F6+D1(EDGE=True, EVIDENCE=True)
+paired figures: +gained/-lost queries against the setting named, exact two-sided McNemar p
+
+====================================================================================================
+0. REPRODUCTION -- the OFF setting against the frozen Phase 0 baseline (pre-fix source)
+====================================================================================================
+  [full] Phase 0 source 5b261f429596 / front end ca87bf41d0eb   ->   now d12ee4b3370d / 891ff7ff5fce
+         per-pair values compared 6900 (stored to 10 significant digits)   differing 0   largest difference 0
+         same answer 75/75   per-type edge and node tables identical: True   =>  REPRODUCED EXACTLY
+  [v1  ] Phase 0 source 5b261f429596 / front end ca87bf41d0eb   ->   now d12ee4b3370d / 891ff7ff5fce
+         per-pair values compared 6900 (stored to 10 significant digits)   differing 0   largest difference 0
+         same answer 75/75   per-type edge and node tables identical: True   =>  REPRODUCED EXACTLY
+
+====================================================================================================
+1. ACCURACY PER SETTING  (evidence score; paired against OFF)
+====================================================================================================
+  window = full
+  OFF                            36/75 =  48.0%   apple  2/16  car  6/24  cup 16/18  horse 12/17   answers 2/12/30/31   ties 0
+  F6                             36/75 =  48.0%   apple  2/16  car  6/24  cup 16/18  horse 12/17   answers 2/12/30/31   ties 0   +0/-0 p=1.000
+  D1                             38/75 =  50.7%   apple  2/16  car  6/24  cup 16/18  horse 14/17   answers 2/11/29/33   ties 0   +2/-0 p=0.500
+  F6+D1                          38/75 =  50.7%   apple  2/16  car  6/24  cup 16/18  horse 14/17   answers 2/11/29/33   ties 0   +2/-0 p=0.500
+    confusion, OFF
+      true\answer   apple    car    cup  horse
+      apple              2      1     12      1
+      car                0      6      1     17
+      cup                0      1     16      1
+      horse              0      4      1     12
+    confusion, F6+D1
+      true\answer   apple    car    cup  horse
+      apple              2      1     12      1
+      car                0      6      1     17
+      cup                0      1     16      1
+      horse              0      3      0     14
+
+  window = v1
+  OFF                            34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   answers 0/12/20/43   ties 0
+  F6                             34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   answers 0/12/21/42   ties 0   +0/-0 p=1.000
+  D1                             34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   answers 0/12/20/43   ties 0   +0/-0 p=1.000
+  F6+D1                          34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   answers 0/12/20/43   ties 0   +0/-0 p=1.000
+    confusion, OFF
+      true\answer   apple    car    cup  horse
+      apple              0      1      5     10
+      car                0      7      0     17
+      cup                0      1     14      3
+      horse              0      3      1     13
+    confusion, F6+D1
+      true\answer   apple    car    cup  horse
+      apple              0      1      5     10
+      car                0      7      0     17
+      cup                0      1     14      3
+      horse              0      3      1     13
+
+====================================================================================================
+2. F6 -- unparameterised same-predicate edges (OFF -> F6; node credit binary in both)
+====================================================================================================
+  window = full   core-edge types with at least one param-less core edge: TOPOLOGY
+    own-class pairs (75) -- OFF
+      TOPOLOGY     core   1032  verifiable    850  no query edge    836  matched     0  sim_sum      0.0  no-param core edges   1032
+      ALL TYPES    core  67600  verifiable  43373                        matched  9513  sim_sum   6862.0
+    own-class pairs (75) -- F6
+      TOPOLOGY     core   1032  verifiable    850  no query edge    836  matched    14  sim_sum     14.0  no-param core edges   1032
+      ALL TYPES    core  67600  verifiable  43373                        matched  9527  sim_sum   6876.0
+    every pair (300) -- OFF
+      TOPOLOGY     core   4200  verifiable   3659  no query edge   3629  matched     0  sim_sum      0.0  no-param core edges   4200
+      ALL TYPES    core 270075  verifiable 160425                        matched 33539  sim_sum  23448.0
+    every pair (300) -- F6
+      TOPOLOGY     core   4200  verifiable   3659  no query edge   3629  matched    30  sim_sum     30.0  no-param core edges   4200
+      ALL TYPES    core 270075  verifiable 160425                        matched 33569  sim_sum  23478.0
+    pairs whose score moved: 13 of 300   largest |change| 0.004944   mean change over moved pairs +0.002563
+    answers that changed: 0 of 75
+  OFF                            36/75 =  48.0%   apple  2/16  car  6/24  cup 16/18  horse 12/17   answers 2/12/30/31   ties 0
+  F6                             36/75 =  48.0%   apple  2/16  car  6/24  cup 16/18  horse 12/17   answers 2/12/30/31   ties 0   +0/-0 p=1.000
+
+  window = v1   core-edge types with at least one param-less core edge: TOPOLOGY
+    own-class pairs (75) -- OFF
+      TOPOLOGY     core   1032  verifiable    818  no query edge    804  matched     0  sim_sum      0.0  no-param core edges   1032
+      ALL TYPES    core  34217  verifiable  25348                        matched  3286  sim_sum   2446.5
+    own-class pairs (75) -- F6
+      TOPOLOGY     core   1032  verifiable    818  no query edge    804  matched    14  sim_sum     14.0  no-param core edges   1032
+      ALL TYPES    core  34217  verifiable  25348                        matched  3300  sim_sum   2460.5
+    every pair (300) -- OFF
+      TOPOLOGY     core   4200  verifiable   3593  no query edge   3563  matched     0  sim_sum      0.0  no-param core edges   4200
+      ALL TYPES    core 135675  verifiable  93377                        matched 10873  sim_sum   7663.8
+    every pair (300) -- F6
+      TOPOLOGY     core   4200  verifiable   3593  no query edge   3563  matched    30  sim_sum     30.0  no-param core edges   4200
+      ALL TYPES    core 135675  verifiable  93377                        matched 10903  sim_sum   7693.8
+    pairs whose score moved: 13 of 300   largest |change| 0.012856   mean change over moved pairs +0.005009
+    answers that changed: 1 of 75
+  OFF                            34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   answers 0/12/20/43   ties 0
+  F6                             34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   answers 0/12/21/42   ties 0   +0/-0 p=1.000
+
+====================================================================================================
+3. D1 -- similarity-weighted node credit (OFF -> D1; F6 off in both)
+====================================================================================================
+  window = full
+    3a node term (mean over pairs)       binary credit   graded credit   graded/binary
+       own-class pairs (75)                   0.7993        0.7115        0.8902
+       every pair (300)                       0.7552        0.6660        0.8818
+       unchanged by D1: binary coverage of the correspondence (max |diff| 0), edge term (max |diff| 0)
+    3b offline prediction (Phase 0 record: graded node observable x edge term - 0.15 x absence)
+       against the implemented D1 score, 300 pairs: largest |difference| 7e-11
+    3c SUCCESS SIGNAL -- "the count-only classifier must fall far below baseline after D1"
+       COUNT-ONLY reads the two per-lens node censuses and nothing else; it never calls the
+       matcher, so its own accuracy cannot move. The signal is the GAP to it.
+  evidence score, OFF            36/75 =  48.0%   apple  2/16  car  6/24  cup 16/18  horse 12/17   answers 2/12/30/31   ties 0
+  evidence score, D1             38/75 =  50.7%   apple  2/16  car  6/24  cup 16/18  horse 14/17   answers 2/11/29/33   ties 0   +2/-0 p=0.500
+  COUNT-ONLY (no matcher)        34/75 =  45.3%   apple  0/16  car 10/24  cup 18/18  horse  6/17   answers 0/22/39/14   ties 0
+  node term alone, OFF           31/75 =  41.3%   apple  0/16  car  4/24  cup 18/18  horse  9/17   answers 0/6/51/18   ties 0
+  node term alone, D1            37/75 =  49.3%   apple  1/16  car  6/24  cup 18/18  horse 12/17   answers 1/8/46/20   ties 0   +6/-0 p=0.031
+  mean similarity alone (*)      47/75 =  62.7%   apple 11/16  car 13/24  cup 13/18  horse 10/17   answers 13/20/16/26   ties 0   +19/-8 p=0.052
+       (*) OBSERVABLE, not a proposal: argmax of the boost-weighted mean signature similarity of the
+           credited pairs (graded / binary coverage). It ignores every unmatched node. Paired against
+           the OFF evidence score.
+       gap to COUNT-ONLY, paired on the same 75 queries (+ = queries the first gets right and COUNT-ONLY wrong):
+         evidence OFF    +2 queries (+13/-11, p=0.839)   same answer as COUNT-ONLY on 42/75
+         evidence D1     +4 queries (+14/-10, p=0.541)   same answer as COUNT-ONLY on 43/75
+         node term OFF   -3 queries (+3/-6, p=0.508)   same answer as COUNT-ONLY on 59/75
+         node term D1    +3 queries (+9/-6, p=0.607)   same answer as COUNT-ONLY on 57/75
+       r(node term, COUNT-ONLY formula)      pooled 300 pairs   between references of one query
+         node term OFF (binary)                   0.978                  0.954
+         node term D1 (graded)                    0.974                  0.946
+         r(node term OFF, node term D1)           0.997                  0.994
+       READING
+         criterion written into this script BEFORE the run: evidence(D1) ahead of COUNT-ONLY, paired p < 0.05
+           with D1             +4 queries, p=0.541   -> does not hold
+           control, D1 OFF     +2 queries, p=0.839   -> does not hold
+         gap OPENED by D1      +2 queries   (answers that changed OFF -> D1: 2 of 75)
+         => SIGNAL NOT MET
+
+  window = v1
+    3a node term (mean over pairs)       binary credit   graded credit   graded/binary
+       own-class pairs (75)                   0.8963        0.8297        0.9258
+       every pair (300)                       0.8707        0.8011        0.9201
+       unchanged by D1: binary coverage of the correspondence (max |diff| 0), edge term (max |diff| 0)
+    3b offline prediction (Phase 0 record: graded node observable x edge term - 0.15 x absence)
+       against the implemented D1 score, 300 pairs: largest |difference| 6.86e-11
+    3c SUCCESS SIGNAL -- "the count-only classifier must fall far below baseline after D1"
+       COUNT-ONLY reads the two per-lens node censuses and nothing else; it never calls the
+       matcher, so its own accuracy cannot move. The signal is the GAP to it.
+  evidence score, OFF            34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   answers 0/12/20/43   ties 0
+  evidence score, D1             34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   answers 0/12/20/43   ties 0   +0/-0 p=1.000
+  COUNT-ONLY (no matcher)        19/75 =  25.3%   apple  1/16  car  0/24  cup  1/18  horse 17/17   answers 1/3/1/70   ties 5
+  node term alone, OFF           17/75 =  22.7%   apple  0/16  car  0/24  cup  0/18  horse 17/17   answers 0/0/0/75   ties 0
+  node term alone, D1            17/75 =  22.7%   apple  0/16  car  0/24  cup  0/18  horse 17/17   answers 0/0/0/75   ties 0   +0/-0 p=1.000
+  mean similarity alone (*)      27/75 =  36.0%   apple  1/16  car  8/24  cup 10/18  horse  8/17   answers 1/24/16/34   ties 0   +6/-13 p=0.167
+       (*) OBSERVABLE, not a proposal: argmax of the boost-weighted mean signature similarity of the
+           credited pairs (graded / binary coverage). It ignores every unmatched node. Paired against
+           the OFF evidence score.
+       gap to COUNT-ONLY, paired on the same 75 queries (+ = queries the first gets right and COUNT-ONLY wrong):
+         evidence OFF   +15 queries (+20/-5, p=0.004)   same answer as COUNT-ONLY on 42/75
+         evidence D1    +15 queries (+20/-5, p=0.004)   same answer as COUNT-ONLY on 42/75
+         node term OFF   -2 queries (+0/-2, p=0.500)   same answer as COUNT-ONLY on 70/75
+         node term D1    -2 queries (+0/-2, p=0.500)   same answer as COUNT-ONLY on 70/75
+       r(node term, COUNT-ONLY formula)      pooled 300 pairs   between references of one query
+         node term OFF (binary)                   0.957                  0.963
+         node term D1 (graded)                    0.942                  0.960
+         r(node term OFF, node term D1)           0.992                  0.995
+       READING
+         criterion written into this script BEFORE the run: evidence(D1) ahead of COUNT-ONLY, paired p < 0.05
+           with D1            +15 queries, p=0.004   -> holds
+           control, D1 OFF    +15 queries, p=0.004   -> holds
+         gap OPENED by D1      +0 queries   (answers that changed OFF -> D1: 0 of 75)
+         => SIGNAL NOT MET -- the gap is there with D1 off as well (it is the edge term's, not D1's). The
+            criterion as first written had no D1-off control and would have read "met"; the control was
+            added AFTER seeing this result, which is said here rather than hidden.
+
+====================================================================================================
+4. WHY -- how much the two factors of the graded node term vary BETWEEN the four references
+   graded node term = (binary coverage) x (mean similarity of the credited pairs)
+====================================================================================================
+  window = full
+    per reference (mean over 75 queries)   binary coverage   mean similarity   graded coverage
+      apple                                   0.6997          0.8792           0.6151
+      car                                     0.7599          0.8830           0.6711
+      cup                                     0.8349          0.8787           0.7337
+      horse                                   0.7265          0.8865           0.6440
+    between-reference variance of log(graded node term), 75 queries with all four references credited:
+      from binary coverage  96.0%   from mean similarity   1.1%   from their covariance  +2.9%
+      best/worst reference ratio, median over queries: binary coverage x1.193   mean similarity x1.024
+      mean similarity of credited pairs: own-class reference 0.8905   wrong-class references 0.8790
+
+  window = v1
+    per reference (mean over 75 queries)   binary coverage   mean similarity   graded coverage
+      apple                                   0.7969          0.9112           0.7260
+      car                                     0.8819          0.9240           0.8147
+      cup                                     0.8294          0.9158           0.7599
+      horse                                   0.9744          0.9274           0.9037
+    between-reference variance of log(graded node term), 75 queries with all four references credited:
+      from binary coverage  83.2%   from mean similarity   1.7%   from their covariance +15.1%
+      best/worst reference ratio, median over queries: binary coverage x1.233   mean similarity x1.028
+      mean similarity of credited pairs: own-class reference 0.9257   wrong-class references 0.9176
+
+written: /home/user/Percept4/diagnostics/results/phase1_f6_d1.txt

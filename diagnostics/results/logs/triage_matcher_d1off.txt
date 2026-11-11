@@ -1,0 +1,356 @@
+FFF.F.F....F.........F............FFFFFF.FFFF............                [100%]
+=================================== FAILURES ===================================
+_________________ test_identical_graphs_keep_a_full_node_term __________________
+
+    def test_identical_graphs_keep_a_full_node_term():
+        score, corr, tr = _ev(QUERY, QUERY)
+        assert corr == {1: 1, 2: 2, 3: 3}
+>       assert tr["node_credit"] == "graded"
+E       AssertionError: assert 'binary' == 'graded'
+E         
+E         - graded
+E         + binary
+
+tests_matcher/test_d1_graded_node_credit.py:67: AssertionError
+______________ test_credit_is_boost_times_weight_times_similarity ______________
+
+    def test_credit_is_boost_times_weight_times_similarity():
+        for core in (NEAR, FAR):
+            _score, corr, tr = _ev(QUERY, core)
+            assert len(corr) == 3
+            sims = [QUERY[1][q][1].similarity(core[1][c][1])
+                    for q, c in corr.items()]
+            assert all(0.0 < s < 1.0 for s in sims), sims     # a graded case
+>           assert tr["node_coverage"] == pytest.approx(
+                _expected_cov(QUERY, core, corr), abs=1e-9)
+E           assert 0.9999999996666666 == 0.9559974818331 ± 1.0e-09
+E             
+E             comparison failed
+E             Obtained: 0.9999999996666666
+E             Expected: 0.9559974818331 ± 1.0e-09
+
+tests_matcher/test_d1_graded_node_credit.py:80: AssertionError
+________________ test_equal_census_the_more_alike_core_now_wins ________________
+
+    def test_equal_census_the_more_alike_core_now_wins():
+        s_near, _c, tr_near = _ev(QUERY, NEAR)
+        s_far, _c, tr_far = _ev(QUERY, FAR)
+>       assert tr_near["node_coverage"] > tr_far["node_coverage"] + 0.05
+E       assert 0.9999999996666666 > (0.9999999996666666 + 0.05)
+
+tests_matcher/test_d1_graded_node_credit.py:90: AssertionError
+_______________ test_node_weight_and_lens_boost_enter_the_credit _______________
+
+    def test_node_weight_and_lens_boost_enter_the_credit():
+        assert GESTALT_LENS_BOOST.get("Contour", 1.0) != 1.0   # a boosted lens
+        q = graph({1: ("Texture", tex(1, 1)), 2: ("Contour", tex(4, 4))})
+        c = graph({11: ("Texture", tex(1, 3)), 12: ("Contour", tex(4, 5))},
+                  node_weights={11: 0.25, 12: 2.0})
+        _score, corr, tr = _ev(q, c)
+        assert corr == {1: 11, 2: 12}
+        b = GESTALT_LENS_BOOST["Contour"]
+        s1 = tex(1, 1).similarity(tex(1, 3))
+        s2 = tex(4, 4).similarity(tex(4, 5))
+        want = (1.0 * 0.25 * s1 + b * 2.0 * s2) / (1.0 * 0.25 + b * 2.0)
+>       assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+E       assert 0.9999999996226415 == 0.9446081166989653 ± 1.0e-09
+E         
+E         comparison failed
+E         Obtained: 0.9999999996226415
+E         Expected: 0.9446081166989653 ± 1.0e-09
+
+tests_matcher/test_d1_graded_node_credit.py:118: AssertionError
+______________ test_graded_coverage_never_exceeds_binary_coverage ______________
+
+    def test_graded_coverage_never_exceeds_binary_coverage():
+        rng = random.Random(20261110)
+        for _ in range(40):
+            q = _random_graph(rng, rng.randrange(1, 9), 0)
+            c = _random_graph(rng, rng.randrange(1, 9), 100)
+            _s, corr, tr = _ev(q, c)
+            assert tr["node_coverage"] <= tr["node_coverage_binary"] + 1e-12
+            assert 0.0 <= tr["node_coverage"] <= 1.0
+            if corr:
+>               assert tr["node_coverage"] == pytest.approx(
+                    _expected_cov(q, c, corr), abs=1e-9)
+E               assert 0.7142857141836735 == 0.5615918381622702 ± 1.0e-09
+E                 
+E                 comparison failed
+E                 Obtained: 0.7142857141836735
+E                 Expected: 0.5615918381622702 ± 1.0e-09
+
+tests_matcher/test_d1_graded_node_credit.py:145: AssertionError
+___________________ test_node_term_carries_the_graded_credit ___________________
+
+params = <function params.<locals>._set at 0x7f66dba2bd80>
+
+    def test_node_term_carries_the_graded_credit(params):
+        params(EVIDENCE_QUERY_SIDE_TERMS=("node",))
+        q = graph({1: ("Texture", tex(1, 1)), 2: ("Texture", tex(5, 5))})
+        c = graph({11: ("Texture", tex(1, 2)), 12: ("Texture", tex(5, 6)),
+                   13: ("Texture", tex(9, 9))})
+        _s, corr, tr = _ev(q, c)
+        assert corr == {1: 11, 2: 12}
+        sims = [tex(1, 1).similarity(tex(1, 2)), tex(5, 5).similarity(tex(5, 6))]
+>       assert tr["node_coverage"] == pytest.approx(
+            2 * sum(sims) / (2 + 3), abs=1e-9)
+E       assert 0.79999999984 == 0.7647979854664799 ± 1.0e-09
+E         
+E         comparison failed
+E         Obtained: 0.79999999984
+E         Expected: 0.7647979854664799 ± 1.0e-09
+
+tests_matcher/test_d3_query_side_terms.py:106: AssertionError
+____________________________ test_declared_defaults ____________________________
+
+declared_defaults = {'EDGE_UNPARAMETERISED_STRUCTURAL_MATCH': True, 'EVIDENCE_GRADED_NODE_CREDIT': False, 'EVIDENCE_QUERY_SIDE_TERMS': (), 'EDGE_UNMEASURED_IS_NOT_EVIDENCE': True, ...}
+
+    def test_declared_defaults(declared_defaults):
+>       assert declared_defaults == {
+            # F6 -- landed on; a parameter-less pair matches as structure
+            "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True,
+            # D1 -- landed on; its success signal was NOT met
+            "EVIDENCE_GRADED_NODE_CREDIT": True,
+            # D3 -- in the tree, OFF: its pre-registered rule failed
+            "EVIDENCE_QUERY_SIDE_TERMS": (),
+            # Phase 4 -- on by the spec; never exercised on ETH-80
+            "EDGE_UNMEASURED_IS_NOT_EVIDENCE": True,
+            # null calibration -- in the tree, OFF: its rule failed
+            "EVIDENCE_NODE_NULL_CALIBRATED": False,
+        }
+E       AssertionError: assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+E         
+E         Omitting 4 identical items, use -vv to show
+E         Differing items:
+E         {'EVIDENCE_GRADED_NODE_CREDIT': False} != {'EVIDENCE_GRADED_NODE_CREDIT': True}
+E         Use -v to get more diff
+
+tests_matcher/test_declared_defaults.py:14: AssertionError
+_______________ test_chance_is_the_mean_of_the_candidate_matrix ________________
+
+params = <function params.<locals>._set at 0x7f66dba2af20>
+
+    def test_chance_is_the_mean_of_the_candidate_matrix(params):
+        params(EVIDENCE_NODE_NULL_CALIBRATED=True)
+        qb, cb = (1, 6), (2, 7, 12)
+        q, c = _g(qb), _g(cb, base=100)
+        _s, corr, tr = _ev(q, c)
+        assert corr == {0: 100, 1: 101}
+        total = sum(_sim(a, b) for a in qb for b in cb)
+        # a random maximum pairing of 2 with 3 holds a given pair with
+        # probability 1/3; every node's expected credit is its row/column sum / 3
+>       assert tr["c_chance_nm"] == pytest.approx(total / 3.0, abs=1e-12)
+E       assert 2.0 == 0.7143788543882946 ± 1.0e-12
+E         
+E         comparison failed
+E         Obtained: 2.0
+E         Expected: 0.7143788543882946 ± 1.0e-12
+
+tests_matcher/test_nullcal_node_coverage.py:94: AssertionError
+______________________ test_chance_carries_the_lens_boost ______________________
+
+params = <function params.<locals>._set at 0x7f66dba54e00>
+
+    def test_chance_carries_the_lens_boost(params):
+        params(EVIDENCE_NODE_NULL_CALIBRATED=True)
+        boost = GESTALT_LENS_BOOST["Contour"]
+        assert boost != 1.0
+        nodes_q = {0: ("Texture", tex(1, 1)), 1: ("Texture", tex(6, 6)),
+                   2: ("Contour", tex(3, 3)), 3: ("Contour", tex(9, 9))}
+        nodes_c = {100: ("Texture", tex(2, 2)), 101: ("Texture", tex(7, 7)),
+                   102: ("Contour", tex(4, 4))}
+        _s, corr, tr = _ev(graph(nodes_q), graph(nodes_c))
+        assert corr == {0: 100, 1: 101, 2: 102}
+        tex_sum = sum(_sim(a, b) for a in (1, 6) for b in (2, 7)) / 2.0
+        con_sum = sum(_sim(a, 4) for a in (3, 9)) / 2.0
+        c_total = 2.0 + boost
+        assert tr["c_node_total"] == pytest.approx(c_total)
+>       assert tr["c_chance_nm"] == pytest.approx(tex_sum + boost * con_sum,
+                                                  abs=1e-12)
+E       assert 3.2 == 1.663575258061638 ± 1.0e-12
+E         
+E         comparison failed
+E         Obtained: 3.2
+E         Expected: 1.663575258061638 ± 1.0e-12
+
+tests_matcher/test_nullcal_node_coverage.py:119: AssertionError
+_____________________ test_chance_carries_the_node_weights _____________________
+
+params = <function params.<locals>._set at 0x7f66dba54860>
+
+    def test_chance_carries_the_node_weights(params):
+        params(EVIDENCE_NODE_NULL_CALIBRATED=True)
+        qb, cb = (1, 6), (2, 7)
+        wq, wc = {0: 1.0, 1: 3.0}, {100: 2.0, 101: 0.5}
+        q = _g(qb, node_weights=wq)
+        c = _g(cb, base=100, node_weights=wc)
+        _s, corr, tr = _ev(q, c)
+        assert corr == {0: 100, 1: 101}
+        c_ch = sum(wc[100 + j] * sum(_sim(a, b) for a in qb) / 2.0
+                   for j, b in enumerate(cb))
+        q_ch = sum(wq[i] * sum(_sim(a, b) for b in cb) / 2.0
+                   for i, a in enumerate(qb))
+>       assert tr["c_chance_nm"] == pytest.approx(c_ch, abs=1e-12)
+E       assert 2.5 == 1.3891327140459038 ± 1.0e-12
+E         
+E         comparison failed
+E         Obtained: 2.5
+E         Expected: 1.3891327140459038 ± 1.0e-12
+
+tests_matcher/test_nullcal_node_coverage.py:142: AssertionError
+_____________ test_a_coverage_any_pairing_reaches_is_worth_nothing _____________
+
+params = <function params.<locals>._set at 0x7f66dba55440>
+
+    def test_a_coverage_any_pairing_reaches_is_worth_nothing(params):
+        # three interchangeable nodes on each side: every pairing scores the same
+        q, c = _g((1, 1, 1)), _g((2, 2, 2), base=100)
+        off, _c, tr_off = _ev(q, c)
+>       assert off == pytest.approx(_sim(1, 2), abs=1e-6)
+E       assert 0.9999999996666666 == 0.9139311852712282 ± 1.0e-06
+E         
+E         comparison failed
+E         Obtained: 0.9999999996666666
+E         Expected: 0.9139311852712282 ± 1.0e-06
+
+tests_matcher/test_nullcal_node_coverage.py:153: AssertionError
+_______________ test_a_specific_correspondence_keeps_its_credit ________________
+
+params = <function params.<locals>._set at 0x7f66dba54f40>
+
+    def test_a_specific_correspondence_keeps_its_credit(params):
+        params(EVIDENCE_NODE_NULL_CALIBRATED=True)
+        q, c = _g((1, 6, 12)), _g((1, 6, 12), base=100)
+        score, corr, tr = _ev(q, c)
+        assert corr == {0: 100, 1: 101, 2: 102}
+>       assert 0.3 < tr["node_coverage_chance"] < 0.5     # the matrix mean
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       assert 0.9999999996666666 < 0.5
+
+tests_matcher/test_nullcal_node_coverage.py:167: AssertionError
+___________ test_between_the_two_the_value_is_the_excess_over_chance ___________
+
+params = <function params.<locals>._set at 0x7f66dba54400>
+
+    def test_between_the_two_the_value_is_the_excess_over_chance(params):
+        params(EVIDENCE_NODE_NULL_CALIBRATED=True)
+        qb, cb = (1, 6), (2, 7)
+        score, corr, tr = _ev(_g(qb), _g(cb, base=100))
+        assert corr == {0: 100, 1: 101}
+        n = (_sim(1, 2) + _sim(6, 7)) / 2.0
+        n0 = sum(_sim(a, b) for a in qb for b in cb) / 4.0
+>       assert tr["node_coverage"] == pytest.approx((n - n0) / (1.0 - n0),
+                                                    abs=1e-9)
+E       assert 0.0 == 0.8184246250715185 ± 1.0e-09
+E         
+E         comparison failed
+E         Obtained: 0.0
+E         Expected: 0.8184246250715185 ± 1.0e-09
+
+tests_matcher/test_nullcal_node_coverage.py:179: AssertionError
+____________ test_a_homogeneous_graph_scores_nothing_against_itself ____________
+
+params = <function params.<locals>._set at 0x7f66dba56d40>
+
+    def test_a_homogeneous_graph_scores_nothing_against_itself(params):
+        """FLAGGED BEHAVIOUR CHANGE: with interchangeable nodes the null explains
+        the whole coverage, so a self-match carries no evidence."""
+        q = _g((4, 4, 4))
+        assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6)
+        params(EVIDENCE_NODE_NULL_CALIBRATED=True)
+        score, _c, tr = _ev(q, q)
+        assert tr["node_coverage_chance"] == pytest.approx(1.0, abs=1e-6)
+        assert score == 0.0
+        # one distinguishable node is enough to bring the evidence back
+        q2 = _g((4, 4, 9))
+>       assert _ev(q2, q2)[0] == pytest.approx(1.0, abs=1e-6)
+E       assert 0.0 == 1.0 ± 1.0e-06
+E         
+E         comparison failed
+E         Obtained: 0.0
+E         Expected: 1.0 ± 1.0e-06
+
+tests_matcher/test_nullcal_node_coverage.py:209: AssertionError
+____________ test_balanced_node_term_is_calibrated_over_both_sides _____________
+
+params = <function params.<locals>._set at 0x7f66dba56160>
+
+    def test_balanced_node_term_is_calibrated_over_both_sides(params):
+        params(EVIDENCE_NODE_NULL_CALIBRATED=True,
+               EVIDENCE_QUERY_SIDE_TERMS=("node",))
+        qb, cb = (1, 6, 12), (2, 7)
+        _s, corr, tr = _ev(_g(qb), _g(cb, base=100))
+        assert corr == {0: 100, 1: 101}
+        total = sum(_sim(a, b) for a in qb for b in cb)
+        n0 = (total / 3.0 + total / 3.0) / (3.0 + 2.0)
+        n = 2.0 * (_sim(1, 2) + _sim(6, 7)) / (3.0 + 2.0)
+>       assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+E       assert 0.79999999984 == 0.2945968878252688 ± 1.0e-09
+E         
+E         comparison failed
+E         Obtained: 0.79999999984
+E         Expected: 0.2945968878252688 ± 1.0e-09
+
+tests_matcher/test_nullcal_node_coverage.py:223: AssertionError
+_________________ test_calibrated_balanced_score_is_symmetric __________________
+
+params = <function params.<locals>._set at 0x7f66dba563e0>
+
+    def test_calibrated_balanced_score_is_symmetric(params):
+        params(EVIDENCE_NODE_NULL_CALIBRATED=True, EVIDENCE_QUERY_SIDE_TERMS=ALL)
+        q = _g((1, 6, 12, 3), edges=[(0, 1, T), (1, 2, T), (2, 3, T)])
+        c = _g((2, 7, 11), base=100, edges=[(100, 101, T)])
+        s_qc, _c1, tr_qc = _ev(q, c)
+        s_cq, _c2, tr_cq = _ev(c, q)
+        assert s_qc == pytest.approx(s_cq, abs=1e-9)
+        assert tr_qc["node_coverage_chance"] == pytest.approx(
+            tr_cq["node_coverage_chance"], abs=1e-9)
+>       assert 0.0 < s_qc < 1.0
+E       assert 0.0 < 0.0
+
+tests_matcher/test_nullcal_node_coverage.py:238: AssertionError
+_________ test_calibration_keeps_the_balanced_preference_for_the_whole _________
+
+params = <function params.<locals>._set at 0x7f66dba56520>
+
+    def test_calibration_keeps_the_balanced_preference_for_the_whole(params):
+        """D3 x null: the balanced node term still ranks the core that explains
+        the whole query above a fragment of it; only the size of the gap moves."""
+        q = _g((1, 4, 7, 10, 13, 16))
+        fragment = _g((1, 4, 7), base=100)
+        whole = _g((1, 4, 7, 10, 13, 16), base=200)
+        params(EVIDENCE_QUERY_SIDE_TERMS=("node",))
+        raw_frag, raw_whole = _ev(q, fragment)[0], _ev(q, whole)[0]
+        assert raw_whole == pytest.approx(1.0, abs=1e-6)
+        assert raw_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+        params(EVIDENCE_NODE_NULL_CALIBRATED=True)
+        cal_frag, cal_whole = _ev(q, fragment)[0], _ev(q, whole)[0]
+>       assert cal_whole == pytest.approx(1.0, abs=1e-6)
+E       assert 0.0 == 1.0 ± 1.0e-06
+E         
+E         comparison failed
+E         Obtained: 0.0
+E         Expected: 1.0 ± 1.0e-06
+
+tests_matcher/test_nullcal_node_coverage.py:253: AssertionError
+
+PARAMETER OVERRIDES for this session: EVIDENCE_GRADED_NODE_CREDIT=False
+=========================== short test summary info ============================
+FAILED tests_matcher/test_d1_graded_node_credit.py::test_identical_graphs_keep_a_full_node_term
+FAILED tests_matcher/test_d1_graded_node_credit.py::test_credit_is_boost_times_weight_times_similarity
+FAILED tests_matcher/test_d1_graded_node_credit.py::test_equal_census_the_more_alike_core_now_wins
+FAILED tests_matcher/test_d1_graded_node_credit.py::test_node_weight_and_lens_boost_enter_the_credit
+FAILED tests_matcher/test_d1_graded_node_credit.py::test_graded_coverage_never_exceeds_binary_coverage
+FAILED tests_matcher/test_d3_query_side_terms.py::test_node_term_carries_the_graded_credit
+FAILED tests_matcher/test_declared_defaults.py::test_declared_defaults - Asse...
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_chance_is_the_mean_of_the_candidate_matrix
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_chance_carries_the_lens_boost
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_chance_carries_the_node_weights
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_a_coverage_any_pairing_reaches_is_worth_nothing
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_a_specific_correspondence_keeps_its_credit
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_between_the_two_the_value_is_the_excess_over_chance
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_a_homogeneous_graph_scores_nothing_against_itself
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_balanced_node_term_is_calibrated_over_both_sides
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_calibrated_balanced_score_is_symmetric
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_calibration_keeps_the_balanced_preference_for_the_whole
+17 failed, 40 passed in 1.94s

@@ -1,0 +1,8 @@
+...............................................x........................ [ 69%]
+xxx............................                                          [100%]
+=========================== short test summary info ============================
+XFAIL tests_figground/test_occlusion_order_edges.py::test_the_control_rings_still_close - single_box closes 0 rings on the real tree: its silhouette fragments into 8 chains whose four remaining gaps are 11.05 px = 2.135 x median_wavelength against the FROZEN bridge bound chain_max_gap_factor = 2.0 (10.35 px), so the ring cannot close by 0.7 px. Measured, not a cue defect: the control emits no order edge (the test above). Repair would mean raising a frozen chain-layer constant -- measured elsewhere to fabricate (ledger: do-not-retry). single_disk still closes 3 rings.
+XFAIL tests_figground/test_ring_closure.py::test_corner_links_are_offered_and_survive_the_endstop_veto - B30 open: condition 1 rejects every true corner (chord >= spacing*sqrt(2)); both candidate repairs are refuted by measurement -- see this module's docstring
+XFAIL tests_figground/test_ring_closure.py::test_corner_link_gate_admits_a_chord_that_max_gap_admits - B30 open: condition 1 rejects every true corner (chord >= spacing*sqrt(2)); both candidate repairs are refuted by measurement -- see this module's docstring
+XFAIL tests_figground/test_ring_closure.py::test_rectangle_closes_as_one_ring_through_form_chains - B30 open: condition 1 rejects every true corner (chord >= spacing*sqrt(2)); both candidate repairs are refuted by measurement -- see this module's docstring
+99 passed, 4 xfailed in 138.84s (0:02:18)
