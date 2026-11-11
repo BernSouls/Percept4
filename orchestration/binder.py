@@ -1267,8 +1267,13 @@ class Binder:
 
         Directed completion -> inducer.  The inducers are named in the
         IllusoryContour's own `rho`, so there is nothing to guess: `gap` is
-        their separation in extraction scales, `alignment` the angle between
-        the inducer's tangent and the line that joins them."""
+        their separation in extraction scales, `alignment` the angle the LENS
+        tested when it paired them (the inducer's slot turned by 90 degrees,
+        against the line that joins them).  The EndStopped slot is the
+        terminating bar's orientation, so what the lens requires is that the
+        completion runs ACROSS the bars that end on it; `alignment` is how far
+        from square."""
+        from core.quantize import carrier_to_tangent
         from perception import attachment as _att
 
         scale = float(self._step_extraction_scale)
@@ -1298,9 +1303,15 @@ class Binder:
                 dd, nn = end_of[a]
                 if nn == nid:
                     continue
-                tang = _att.feature_tangent(dd, int(P.ORIENTATION_N_THETA))
-                align = (_att.axial_difference(tang, line)
-                         if tang is not None else None)
+                # the lens' own quantity: the angle it tested against its
+                # tolerance when it built the completion (lenses/v4.py)
+                qd = dd.sigma.quantized
+                align = None
+                if qd:
+                    lens_dir = carrier_to_tangent(
+                        (float(qd[0]) + 0.5) * math.pi
+                        / float(P.ORIENTATION_N_THETA))
+                    align = _att.axial_difference(lens_dir, line)
                 groups.setdefault((nid, nn), []).append((gap, align))
         candidates: List[Tuple[int, int, float, Tuple[int, int], EdgeParams]] = []
         for key in sorted(groups):
@@ -4729,6 +4740,16 @@ class Binder:
 
             nearby.sort(key=lambda x: (x[0], x[1]))
             n_seg = len(nearby)
+            if (bool(getattr(P, "BINDER_COMPLETE_POSITION_MAP", False))
+                    and n_seg >= 2
+                    and (nearby[1][0] - nearby[0][0]) < 0.5 * r_scale):
+                # [STAGE 6 / Amendment 2.4] THE AMBIGUITY RULE.  With the map
+                # completed, EndStopped terminators enter this writer; "the
+                # nearest parent" of two near-equidistant ones is a guess.
+                # Nothing is written (counted).  Off: the old writer.
+                self.diagnostics["stage6_attachment"][
+                    "line_termination|ambiguous_parent"] += 1
+                continue
 
             if n_seg == 1:
                 junction_type = 0.0

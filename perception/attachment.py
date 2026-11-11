@@ -25,8 +25,14 @@ THE AMBIGUITY RULE (pre-registered, diagnostics/results/
 phase6_preregistration.md, section 2).  A feature is attached to a host of a
 given kind only when that host is the feature's unambiguous nearest of that
 kind: d1 <= D_MAX and d2 - d1 >= AMBIGUITY_MARGIN, d1 <= d2 being the two
-smallest distances to DISTINCT hosts of the kind.  Otherwise nothing is
-written.  Two near-equally plausible hosts are not a measurement.
+smallest distances to DISTINCT hosts of the kind.  Two near-equally plausible
+hosts are not a measurement.
+
+TANGENT AGREEMENT (Amendment 2, section 2.3) is the one thing that can still
+decide between near-equidistant hosts: a feature that has a tangent attaches
+to the contender it PARALLELS (angle <= PARALLEL_MAX) when no other contender
+is nearly as parallel (the next angle is at least PARALLEL_MARGIN larger).
+Otherwise nothing is written.
 
 A host that the data structure itself names (a chain's listed member peak, a
 Corner's own chain, a Contour's listed member) is KNOWN: no test, it is a
@@ -55,8 +61,15 @@ D_MAX: float = 1.0
 #: cell-anchored feature.
 AMBIGUITY_MARGIN: float = 0.5
 
+#: "parallel": within one step of the peak's twelve orientation channels
+PARALLEL_MAX: float = math.pi / 12.0
+#: ... and the next contender at least one step less parallel
+PARALLEL_MARGIN: float = math.pi / 12.0
+
 #: outcomes of one (feature, host kind) attempt
 KNOWN, UNAMBIGUOUS, AMBIGUOUS, NO_HOST = "known", "unambiguous", "ambiguous", "no_host"
+#: the host was near-equidistant with another and was chosen by its tangent
+BY_TANGENT = "by_tangent"
 
 
 @dataclass(frozen=True)
@@ -93,6 +106,7 @@ class Attachment:
     perp_dist: float
     tangent_angle: Optional[float]
     known: bool
+    by_tangent: bool = False     # chosen among near-equidistant hosts by its tangent
 
 
 class _Poly:
@@ -167,19 +181,53 @@ def _measure(f: Feature, h: Host, poly: _Poly, scale: float, known: bool) -> Att
         perp_dist=d / scale, tangent_angle=ang, known=known)
 
 
+def _by_tangent(f: Feature, contenders: Sequence[Tuple[Host, _Poly]],
+                scale: float, parallel_max: float, parallel_margin: float,
+                known: bool) -> Optional[Attachment]:
+    """TANGENT AGREEMENT among near-equidistant contenders, or None.
+
+    The feature attaches to the contender it parallels (angle <= parallel_max)
+    when the next most parallel contender is at least `parallel_margin` less
+    so.  A contender whose angle cannot be measured cannot be ruled out, so it
+    blocks the decision."""
+    if f.tangent is None or not contenders:
+        return None
+    scored = []
+    for h, poly in contenders:
+        a = _measure(f, h, poly, scale, known)
+        if a.tangent_angle is None:
+            return None
+        scored.append((a.tangent_angle, a))
+    scored.sort(key=lambda t: t[0])
+    if scored[0][0] > parallel_max + 1e-12:
+        return None
+    if len(scored) > 1 and (scored[1][0] - scored[0][0]) < parallel_margin - 1e-12:
+        return None
+    best = scored[0][1]
+    return Attachment(feature=best.feature, host=best.host, arc_pos=best.arc_pos,
+                      arc_end_dist=best.arc_end_dist, perp_dist=best.perp_dist,
+                      tangent_angle=best.tangent_angle, known=known,
+                      by_tangent=True)
+
+
 def attach(
     features: Iterable[Feature],
     hosts: Iterable[Host],
     scale: float,
     d_max: float = D_MAX,
     margin: float = AMBIGUITY_MARGIN,
+    parallel_max: float = PARALLEL_MAX,
+    parallel_margin: float = PARALLEL_MARGIN,
+    use_tangent: bool = True,
 ) -> Tuple[List[Attachment], Dict[Tuple[str, str], Dict[str, int]]]:
     """Attach every feature to its host of each kind, or to none.
 
     Returns `(attachments, stats)`; `stats[(feature kind, host kind)]` counts
-    the outcomes KNOWN / UNAMBIGUOUS / AMBIGUOUS / NO_HOST.  Deterministic:
-    hosts and features are processed in the order given (the callers sort
-    canonically) and every tie is broken by that order.
+    the outcomes KNOWN / UNAMBIGUOUS / BY_TANGENT / AMBIGUOUS / NO_HOST.
+    `use_tangent=False` is the distance-only rule (for the before/after
+    report).  Deterministic: hosts and features are processed in the order
+    given (the callers sort canonically) and every tie is broken by that
+    order.
     """
     scale = float(scale)
     if not (scale > 0.0):
@@ -202,7 +250,8 @@ def attach(
         for hk in kinds:
             if f.only_known and hk not in named:
                 continue
-            st = stats.setdefault((f.kind, hk), {KNOWN: 0, UNAMBIGUOUS: 0, AMBIGUOUS: 0, NO_HOST: 0})
+            st = stats.setdefault((f.kind, hk), {
+                KNOWN: 0, UNAMBIGUOUS: 0, BY_TANGENT: 0, AMBIGUOUS: 0, NO_HOST: 0})
             keys = [k for k in named.get(hk, ()) if (hk, k) in by_key]
             if len(keys) == 1:
                 h, poly = by_key[(hk, keys[0])]
@@ -210,31 +259,48 @@ def attach(
                 st[KNOWN] += 1
                 continue
             if len(keys) > 1:
-                # the data names several hosts of one kind: not one fact
-                st[AMBIGUOUS] += 1
+                # the data names several hosts of one kind: not one fact,
+                # unless the feature parallels exactly one of them
+                got = (_by_tangent(f, [by_key[(hk, k)] for k in keys], scale,
+                                   parallel_max, parallel_margin, True)
+                       if use_tangent else None)
+                if got is None:
+                    st[AMBIGUOUS] += 1
+                else:
+                    out.append(got)
+                    st[BY_TANGENT] += 1
                 continue
             if f.only_known:
                 st[NO_HOST] += 1
                 continue
-            best = second = None
-            best_i = -1
+            dists: List[Tuple[float, int]] = []
             for i, (h, poly) in enumerate(by_kind[hk]):
                 if h.node is not None and h.node == f.node:
                     continue
-                d = poly.project(f.pos)[0] / scale
-                if best is None or d < best:
-                    second, best, best_i = best, d, i
-                elif second is None or d < second:
-                    second = d
-            if best is None or best > d_max:
+                dists.append((poly.project(f.pos)[0] / scale, i))
+            if not dists:
                 st[NO_HOST] += 1
                 continue
-            if second is not None and (second - best) < margin:
-                st[AMBIGUOUS] += 1
+            best, best_i = min(dists)
+            if best > d_max:
+                st[NO_HOST] += 1
                 continue
-            h, poly = by_kind[hk][best_i]
-            out.append(_measure(f, h, poly, scale, False))
-            st[UNAMBIGUOUS] += 1
+            rivals = [d for d, i in dists if i != best_i and (d - best) < margin]
+            if not rivals:
+                h, poly = by_kind[hk][best_i]
+                out.append(_measure(f, h, poly, scale, False))
+                st[UNAMBIGUOUS] += 1
+                continue
+            # near-equidistant hosts: the contenders are the admissible ones
+            contenders = [by_kind[hk][i] for d, i in sorted(dists, key=lambda t: t[1])
+                          if d <= d_max and (d - best) < margin]
+            got = (_by_tangent(f, contenders, scale, parallel_max,
+                               parallel_margin, False) if use_tangent else None)
+            if got is None:
+                st[AMBIGUOUS] += 1
+            else:
+                out.append(got)
+                st[BY_TANGENT] += 1
     return out, stats
 
 
@@ -307,17 +373,30 @@ def host_of(det: Any, positions: Dict[Any, Any], node: Optional[int],
 
 
 def feature_tangent(det: Any, n_theta: int) -> Optional[float]:
-    """The feature's own tangent (axial, radians), or None when it has none.
+    """The feature's own orientation (axial, radians), or None when it has none.
 
-    Conventions (each to be verified against renderer truth, see
-    diagnostics/phase6_tangent_truth.py):
-      CONTOUR_PEAK  slot 0 is the field's theta index over 12 channels; the
-                    field's theta is the ridge TANGENT
-      Orientation   slot 0 is the orientation bin over `n_theta` (bin
-                    centre); it is the edge TANGENT
-      EndStopped    slot 0 is the carrier bin over `n_theta`; tangent + pi/2
+    Sources (checked against renderer truth, diagnostics/phase6_tangent_truth.py):
+      CONTOUR_PEAK     slot 0, the field's theta index over 12 channels: the
+                       ridge tangent
+      Orientation      slot 0, the orientation bin over `n_theta` (bin
+                       centre): the edge tangent
+      EndStopped       slot 0, the bank channel of the terminating bar over
+                       `n_theta` ('round' quantiser): the BAR's orientation.
+                       It is NOT a carrier: on isolated bars the slot sits a
+                       median 7.5 degrees from the bar (0 of 138 detections
+                       beyond 67.5), so no 90-degree turn is applied
+      ContourFragment  the chord direction of the fragment, carried on the
+                       detection by the lens (`_frag_tangent`).  The signature
+                       alone leaves two candidates (theta +/- tvr)
+      Corner           the BISECTOR: the CORNER class' own `orient` slot (12
+                       bins over [0, pi), bin centre).  A junction-class
+                       Corner with two arms: ref_theta + gap0 / 2; with any
+                       other arm count it has no single direction
     """
     q = det.sigma.quantized
+    if det.k == "ContourFragment":
+        t = getattr(det, "_frag_tangent", None)
+        return None if t is None else float(t) % math.pi
     if not q:
         return None
     if det.k == "CONTOUR_PEAK":
@@ -325,8 +404,29 @@ def feature_tangent(det: Any, n_theta: int) -> Optional[float]:
     if det.k == "Orientation":
         return ((float(q[0]) + 0.5) * math.pi / float(n_theta)) % math.pi
     if det.k == "EndStopped":
-        return (float(q[0]) * math.pi / float(n_theta) + math.pi / 2.0) % math.pi
+        return (float(q[0]) * math.pi / float(n_theta)) % math.pi
+    if det.k == "Corner":
+        cls = getattr(det.sigma, "class_", "")
+        if cls == "CORNER" and len(q) > 1:
+            return ((float(q[1]) + 0.5) * math.pi / 12.0) % math.pi
+        if cls == "JUNCTION" and len(q) > 4 and int(round(float(q[0]))) == 2:
+            ref = (float(q[1]) + 0.5) * 2.0 * math.pi / 24.0
+            gap = (float(q[4]) + 0.5) * 2.0 * math.pi / 8.0
+            return (ref + gap / 2.0) % math.pi
+        return None
     return None
+
+
+def feature_position(det: Any, positions: Dict[Any, Any]) -> Optional[Tuple[float, float]]:
+    """Where the feature is.  A ContourFragment's anchor is its parent
+    contour's region (one position for all of that contour's fragments), so
+    its own midpoint, carried by the lens, is used; everything else is at its
+    anchor."""
+    if det.k == "ContourFragment":
+        mid = getattr(det, "_frag_mid", None)
+        if mid is not None and len(mid) >= 2:
+            return (float(mid[0]), float(mid[1]))
+    return _xy(positions, det.alpha)
 
 
 def hosts_and_features(
@@ -356,7 +456,7 @@ def hosts_and_features(
     for det, node in detections:
         if det.k not in FEATURE_KINDS and det.k not in KNOWN_ONLY_KINDS:
             continue
-        pos = _xy(positions, det.alpha)
+        pos = feature_position(det, positions)
         known: List[Tuple[str, Any]] = []
         if det.k == "RegionShape":
             # its anchor IS its chain's anchor; its position is the one the

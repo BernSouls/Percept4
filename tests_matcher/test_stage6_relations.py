@@ -153,7 +153,7 @@ def test_two_near_equal_hosts_are_not_a_measurement():
     far = _host("far", [(0.0, 20.0), (100.0, 20.0)])            # d = 1.7
     atts, stats = A.attach([f], [near, rival], R)
     assert atts == [] and stats[("EndStopped", "PEAK_CHAIN")] == {
-        A.KNOWN: 0, A.UNAMBIGUOUS: 0, A.AMBIGUOUS: 1, A.NO_HOST: 0}
+        A.KNOWN: 0, A.UNAMBIGUOUS: 0, A.BY_TANGENT: 0, A.AMBIGUOUS: 1, A.NO_HOST: 0}
     (a,), stats = A.attach([f], [near, far], R)
     assert a.host.key == "near" and stats[("EndStopped", "PEAK_CHAIN")][A.UNAMBIGUOUS] == 1
     # the margin is exactly AMBIGUITY_MARGIN: 0.3 against 0.8 passes
@@ -389,8 +389,11 @@ def test_a_closed_chain_has_a_closing_successor():
 
 def test_an_illusory_contour_is_tied_to_each_of_its_inducers():
     """RULE: the inducers are named in the completion's own `rho`: nothing to
-    guess.  `gap` is their separation in scales, `alignment` the angle between
-    the inducer's tangent and the line that joins them."""
+    guess.  `gap` is their separation in scales; `alignment` is the angle the
+    LENS tested when it paired them: the inducer's slot (bin centre) turned by
+    90 degrees, against the joining line.  The slot is the terminating bar's
+    orientation, so the completion runs ACROSS the bars; `alignment` is how
+    far from square that is."""
     pos = {"e1": (0.0, 0.0), "e2": (30.0, 0.0)}
     e1, e2 = _endstop("e1", 12), _endstop("e2", 13)
     ic = _det("IllusoryContour", "ic", (0, 0, 0),
@@ -401,12 +404,11 @@ def test_an_illusory_contour_is_tied_to_each_of_its_inducers():
     cands = b.seen[EdgeType.ILLUSORY_INDUCER]
     cls = "EDGE_ILLUSORY_INDUCER"
     assert [(c[0], c[1]) for c in cands] == [(50, 7), (50, 8)]
-    for c, det in zip(cands, (e1, e2)):
-        align = A.axial_difference(A.feature_tangent(det, N_THETA), 0.0)
+    half = 0.5 * math.pi / N_THETA
+    # bar at bin 12 (90 degrees): square to the horizontal line but for the
+    # lens' half-bin; bar at bin 13: one bin further
+    for c, align in zip(cands, (half, math.pi / N_THETA + half)):
         assert c[4].quantized == S.edge_quantise(cls, {"gap": 3.0, "alignment": align})
-    # the two inducers differ by one orientation bin, so their alignments differ
-    t1, t2 = (A.feature_tangent(d, N_THETA) for d in (e1, e2))
-    assert A.axial_difference(t1, t2) == pytest.approx(math.pi / N_THETA)
 
 
 # --------------------------------------------------------------------------
@@ -737,3 +739,180 @@ def test_switch_off_is_the_old_graph_and_switch_on_adds_only_the_relations(param
     eps = [on.subgraph.edge_params[(e[0], e[1], e[2])] for e in on.subgraph.edges
            if e[2] == EdgeType.BOUNDARY_ATTACHMENT]
     assert any(getattr(ep, "ordinal", None) is not None for ep in eps)
+
+
+# --------------------------------------------------------------------------
+# Amendment 2: the feature's own orientation, tangent agreement, terminators
+# --------------------------------------------------------------------------
+
+def test_the_endstopped_slot_is_the_bars_orientation_not_a_carrier():
+    """RULE: the ENDSTOPPED `theta` slot is the bank channel of the bar that
+    ends (measured on isolated bars: a median 7.5 degrees from the bar, none
+    beyond 67.5).  It is used as it is; a second 90-degree turn is a defect."""
+    for b in (0, 5, 12, 23):
+        assert A.feature_tangent(_endstop("e", b), N_THETA) == pytest.approx(
+            b * math.pi / N_THETA)
+    # a terminator whose bar runs ALONG the chain reads 0, one that abuts it 90
+    chain = _host("h", LINE)
+    along = _feat("a", (100.0, 3.0), tangent=A.feature_tangent(_endstop("a", 0), N_THETA))
+    abuts = _feat("b", (50.0, 3.0), tangent=A.feature_tangent(_endstop("b", 12), N_THETA))
+    a_along, a_abuts = A.attach([along, abuts], [chain], R)[0]
+    assert a_along.tangent_angle == pytest.approx(0.0)
+    assert a_abuts.tangent_angle == pytest.approx(math.pi / 2)
+
+
+def test_a_corners_orientation_is_its_bisector():
+    """RULE: two arms are not a reason for silence.  A Corner's direction is
+    its BISECTOR: the CORNER class' own `orient` slot (bin centre of 12 over
+    [0, pi)).  A junction-class Corner with two arms: ref_theta + gap0 / 2;
+    with three arms there is no one direction."""
+    def corner(cls, q):
+        sig = TypedSignature(kind="CANONICAL", class_=cls, relation="T",
+                             quantized=tuple(float(v) for v in q), population=())
+        return Detection(k="Corner", source_layer=1, scale=0, sigma=sig,
+                         alpha="c", z=1.0, t=0, rho=())
+
+    assert A.feature_tangent(corner("CORNER", (4, 3, 2, 1)), N_THETA) == pytest.approx(
+        3.5 * math.pi / 12.0)
+    ref, gap = 2.5 * 2 * math.pi / 24, 1.5 * 2 * math.pi / 8
+    assert A.feature_tangent(corner("JUNCTION", (2, 2, 0, 0, 1)), N_THETA) == pytest.approx(
+        (ref + gap / 2) % math.pi)
+    assert A.feature_tangent(corner("JUNCTION", (3, 2, 0, 0, 1)), N_THETA) is None
+    assert A.feature_tangent(corner("TEST", (4, 3, 2, 1)), N_THETA) is None
+    # on its own chain the bisector-to-arm angle is (pi - turn) / 2
+    square = [(0.0, 0.0), (40.0, 0.0), (40.0, 40.0)]
+    from lenses.corner_lens import _turn_and_bisector
+    turn, bisector = _turn_and_bisector(*square)
+    f = _feat("c", (40.0, 0.0), tangent=bisector, kind="Corner",
+              known=(("PEAK_CHAIN", "h"),))
+    (a,), _ = A.attach([f], [_host("h", square)], R)
+    assert a.tangent_angle == pytest.approx((math.pi - abs(turn)) / 2.0)
+
+
+def test_a_fragment_carries_its_own_place_and_chord_direction():
+    """RULE: the ContourFragment signature keeps the tangent only as an
+    UNSIGNED difference from the radial angle, so theta and tvr leave two
+    candidates; and the fragment's anchor is its parent contour's region.  The
+    lens measures both the chord direction and the midpoint: they ride on the
+    detection, outside its identity."""
+    from perception.polar import polar_boundary_fragments
+
+    def line(x0, y0, x1, y1, n=40):
+        return {"polyline": [(x0 + (x1 - x0) * i / (n - 1), y0 + (y1 - y0) * i / (n - 1))
+                             for i in range(n)]}
+
+    # a horizontal contour above the object's centre (the centre is the
+    # centroid of both contours, at (50, 100))
+    frs, _meta = polar_boundary_fragments([line(0, 0, 100, 0), line(0, 200, 100, 200)])
+    mine = [f for f in frs if f["contour"] == 0]
+    assert len(mine) >= 2
+    signs = set()
+    for f in mine:
+        assert A.axial_difference(f["tangent"], 0.0) == pytest.approx(0.0, abs=1e-9)
+        plus = A.axial_difference(f["theta"] + f["tvr_c"], 0.0)
+        minus = A.axial_difference(f["theta"] - f["tvr_c"], 0.0)
+        assert min(plus, minus) == pytest.approx(0.0, abs=1e-9)
+        if abs(plus - minus) > 1e-6:
+            signs.add(+1 if plus < minus else -1)
+    assert signs == {+1, -1}          # theta + tvr is right for some, wrong for others
+
+    frag = _det("ContourFragment", "region", (4, 16, 7, 2),
+                (("entity", "region", 0, "+"), ("fragment", 0, 0, "+")))
+    twin = _det("ContourFragment", "region", (4, 16, 7, 2),
+                (("entity", "region", 0, "+"), ("fragment", 0, 0, "+")))
+    pos = {"region": (500.0, 500.0)}
+    assert A.feature_tangent(frag, N_THETA) is None                    # nothing carried
+    assert A.feature_position(frag, pos) == (500.0, 500.0)
+    object.__setattr__(frag, "_frag_mid", (25.0, 4.0))
+    object.__setattr__(frag, "_frag_tangent", 0.25)
+    assert A.feature_tangent(frag, N_THETA) == 0.25
+    assert A.feature_position(frag, pos) == (25.0, 4.0)                # not the anchor
+    assert frag == twin and hash(frag) == hash(twin)                   # the same detection
+    hosts, feats = A.hosts_and_features(
+        [(_chain("C", ["a", "b"]), 1), (frag, 2)],
+        dict(pos, a=(0.0, 0.0), b=(100.0, 0.0)), N_THETA)
+    (a,), _ = A.attach(feats, hosts, R)
+    assert (a.arc_pos, a.perp_dist, a.tangent_angle) == pytest.approx((0.25, 0.4, 0.25))
+
+
+def test_a_feature_attaches_to_the_near_equidistant_host_it_parallels():
+    """RULE (tangent agreement).  Where distance cannot decide, a feature that
+    has a tangent attaches to the contender it parallels (within PARALLEL_MAX)
+    when no other contender is nearly as parallel (PARALLEL_MARGIN).  Otherwise
+    nothing is written."""
+    flat = _host("flat", [(0.0, 0.0), (100.0, 0.0)])
+    steep = _host("steep", [(50.0, -40.0), (50.0, 40.0)])        # crosses it
+    key = ("EndStopped", "PEAK_CHAIN")
+    p = (53.0, 3.0)                                              # 0.3 from each
+    (a,), stats = A.attach([_feat("f", p, tangent=0.05)], [flat, steep], R)
+    assert a.host.key == "flat" and a.by_tangent and not a.known
+    assert a.tangent_angle == pytest.approx(0.05) and stats[key][A.BY_TANGENT] == 1
+    (b,), _ = A.attach([_feat("f", p, tangent=math.pi / 2 - 0.05)], [flat, steep], R)
+    assert b.host.key == "steep" and b.by_tangent
+    # parallel to neither: 45 degrees from both
+    atts, stats = A.attach([_feat("f", p, tangent=math.pi / 4)], [flat, steep], R)
+    assert atts == [] and stats[key][A.AMBIGUOUS] == 1
+    # no tangent: nothing to agree with
+    assert A.attach([_feat("f", p, tangent=None)], [flat, steep], R)[0] == []
+    # the distance-only rule, for the before/after report
+    assert A.attach([_feat("f", p, tangent=0.05)], [flat, steep], R, use_tangent=False)[0] == []
+    # two PARALLEL near-equidistant hosts: the tangent cannot tell them apart
+    twin = _host("twin", [(0.0, 6.0), (100.0, 6.0)])
+    atts, stats = A.attach([_feat("f", (50.0, 3.0), tangent=0.0)], [flat, twin], R)
+    assert atts == [] and stats[key][A.AMBIGUOUS] == 1
+    # the rival must be a full PARALLEL_MARGIN less parallel
+    def crossing(alpha):
+        return _host("x", [(53.0 - 40 * math.cos(alpha), -40 * math.sin(alpha)),
+                           (53.0 + 40 * math.cos(alpha), 40 * math.sin(alpha))])
+
+    f = _feat("f", (53.0, 2.0), tangent=0.0)
+    assert A.attach([f], [flat, crossing(0.2)], R)[0] == []          # 11.5 degrees apart
+    (c,), _ = A.attach([f], [flat, crossing(0.4)], R)                # 22.9 degrees apart
+    assert c.host.key == "flat" and c.by_tangent
+    # a contender whose own tangent cannot be read cannot be ruled out
+    dot = A.Host(kind="PEAK_CHAIN", key="dot", node=None,
+                 pts=((53.0, 5.0), (53.0, 5.0), (60.0, 30.0)), closed=False)
+    atts, stats = A.attach([_feat("f", (53.0, 3.0), tangent=0.0)], [flat, dot], R)
+    assert atts == [] and stats[key][A.AMBIGUOUS] == 1
+
+
+def test_two_named_hosts_are_told_apart_by_the_tangent_or_not_at_all():
+    """RULE: a cell listed by two Contours belongs to the one it parallels."""
+    flat = _host("flat", [(0.0, 0.0), (100.0, 0.0)], kind="Contour", tangent=0.0)
+    steep = _host("steep", [(50.0, -40.0), (50.0, 40.0)], kind="Contour",
+                  tangent=math.pi / 2)
+    named = (("Contour", "flat"), ("Contour", "steep"))
+    f = _feat("f", (50.0, 0.0), tangent=0.1, kind="Orientation", known=named)
+    (a,), stats = A.attach([f], [flat, steep], R)
+    assert a.host.key == "flat" and a.known and a.by_tangent
+    assert stats[("Orientation", "Contour")] == {
+        A.KNOWN: 0, A.UNAMBIGUOUS: 0, A.BY_TANGENT: 1, A.AMBIGUOUS: 0, A.NO_HOST: 0}
+    g = _feat("g", (50.0, 0.0), tangent=math.pi / 4, kind="Orientation", known=named)
+    assert A.attach([g], [flat, steep], R)[0] == []
+
+
+def test_a_terminator_with_two_near_equal_parents_writes_nothing(params):
+    """RULE (Amendment 2.4).  With the position map completed, EndStopped
+    terminators enter LINE_TERMINATION; "the nearest parent" of two
+    near-equidistant ones is a guess, so nothing is written.  Switch off: the
+    old writer, which takes the nearest."""
+    term = _det("EndStopped", "t", (0, 0, 0, 7))
+    near = _contour("k1", ["k1"], mean_theta_bin=0)
+    rival = _contour("k2", ["k2"], mean_theta_bin=6)
+    far = _contour("k3", ["k3"], mean_theta_bin=6)
+    nodes = {term: 1, near: 2, rival: 3, far: 4}
+
+    def run(pos, dets):
+        b = _Capture()
+        b._run_line_termination(tuple(dets), nodes, pos)
+        return [(c[0], c[1]) for c in b.seen[EdgeType.LINE_TERMINATION]], b
+
+    close = {"t": (0.0, 0.0), "k1": (10.0, 0.0), "k2": (0.0, 12.0)}      # 1.0 and 1.2 scales
+    apart = {"t": (0.0, 0.0), "k1": (10.0, 0.0), "k3": (0.0, 20.0)}      # 1.0 and 2.0 scales
+    params(BINDER_COMPLETE_POSITION_MAP=False)
+    assert (1, 2) in run(close, [term, near, rival])[0]                  # the old writer guesses
+    params(BINDER_COMPLETE_POSITION_MAP=True)
+    edges, b = run(close, [term, near, rival])
+    assert edges == []
+    assert b.diagnostics["stage6_attachment"]["line_termination|ambiguous_parent"] == 1
+    assert (1, 2) in run(apart, [term, near, far])[0]                    # a clear nearest is kept

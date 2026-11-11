@@ -1265,9 +1265,20 @@ class LensExecutor:
             sig = TypedSignature(kind="CANONICAL", class_="CONTOUR_FRAGMENT",
                                  relation="OBJECT_CENTERED_V4", quantized=f["bins"],
                                  population=pop)
-            out.append(Detection(k="ContourFragment", source_layer=1, scale=0, sigma=sig, alpha=a,
-                                 z=min(1.0, f["arc"] / meta["R"]), t=getattr(S_t, "t", 0),
-                                 rho=(("entity", a, 0, "+"), ("fragment", f["frag"], 0, "+"))))
+            _fd = Detection(k="ContourFragment", source_layer=1, scale=0, sigma=sig, alpha=a,
+                            z=min(1.0, f["arc"] / meta["R"]), t=getattr(S_t, "t", 0),
+                            rho=(("entity", a, 0, "+"), ("fragment", f["frag"], 0, "+")))
+            # [STAGE 6 / R1] The fragment's OWN place and tangent.  Its anchor
+            # `a` is its parent contour's region, shared by every fragment of
+            # that contour, and its signature keeps the tangent only as an
+            # unsigned difference from the radial angle.  Both measurements
+            # exist here; they ride on the detection (not in the signature, so
+            # the node is the same node) for the attachment relation to read.
+            object.__setattr__(_fd, "_frag_mid",
+                               (float(f["mid"][0]), float(f["mid"][1])))
+            if f.get("tangent") is not None:
+                object.__setattr__(_fd, "_frag_tangent", float(f["tangent"]))
+            out.append(_fd)
         return out
 
     def _run_boundary(self, S_t: Any, obs: Any = None) -> List[Detection]:

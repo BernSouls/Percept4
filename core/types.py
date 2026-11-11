@@ -595,6 +595,12 @@ class Detection:
         "substrate_hash",
         "_hash_cache",
         "_curv_profile",
+        # [STAGE 6 / R1] a ContourFragment's own midpoint and chord direction.
+        # Carried like `_curv_profile`: not part of the signature, the
+        # equality or the hash, so the node is the same node.  Read by
+        # perception/attachment.py.
+        "_frag_mid",
+        "_frag_tangent",
     )
 
     def __init__(
@@ -619,6 +625,8 @@ class Detection:
         object.__setattr__(self, "rho", rho)
         object.__setattr__(self, "substrate_hash", substrate_hash)
         object.__setattr__(self, "_curv_profile", None)
+        object.__setattr__(self, "_frag_mid", None)
+        object.__setattr__(self, "_frag_tangent", None)
         object.__setattr__(
             self, "_hash_cache", hash_64_signed(serialize_detection(self))
         )
