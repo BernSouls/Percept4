@@ -44,6 +44,7 @@ PIN_BASELINE = {
     "EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS": False,   # P4b, edge mass
     "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY": True,        # D2 prerequisites
     "MATCH_GLOBAL_ANCHOR_PRIOR": False,                # D2 prerequisites
+    "EDGE_SPECIFICITY_CAP_SAME_SCHEMA": False,         # dark; your decision
 }
 
 #: the tree's own values, read once before any pin touches them

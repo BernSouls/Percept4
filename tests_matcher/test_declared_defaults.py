@@ -35,4 +35,6 @@ def test_declared_defaults(declared_defaults):
         # D2 prerequisites -- dark path only
         "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY": True,
         "MATCH_GLOBAL_ANCHOR_PRIOR": False,
+        # the documented specificity cap, wired -- OFF: dark, your decision
+        "EDGE_SPECIFICITY_CAP_SAME_SCHEMA": False,
     }

@@ -1981,7 +1981,20 @@ def polymorphic_edge_similarity(
 
     # 1. Same schema: full multi-slot Gaussian fidelity
     if ep1.class_ == ep2.class_:
-        return float(ep1.similarity(ep2, use_confidence=use_confidence))
+        same = float(ep1.similarity(ep2, use_confidence=use_confidence))
+        # [SPECIFICITY CAP, SAME SCHEMA] The [P2] matching-time cap on the
+        # generic proximity edges "lives at the comparison site" (see
+        # EdgeParams.similarity) but is applied only at the END of this
+        # function, in the cross-schema branch -- and no generic class has a
+        # cross-schema partner, so it never acts. Under
+        # P.EDGE_SPECIFICITY_CAP_SAME_SCHEMA (default False = as it is) the
+        # same-schema result is capped by the class's specificity too.
+        # Dark: the [U32] note in memory/cores.py records that deflating
+        # the low-information mass inverted the benchmark it was tried on.
+        if same != 0.0 and getattr(P, "EDGE_SPECIFICITY_CAP_SAME_SCHEMA",
+                                   False):
+            same *= edge_match_weight(ep1.class_)
+        return same
 
     # 2. Family compatibility gate (symmetric — enforced by
     # verify_schema_consistency)

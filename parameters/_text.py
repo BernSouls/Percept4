@@ -2057,6 +2057,16 @@ MATCH_ALIGN_BUDGET_REFINEMENT_ONLY: bool = True
 # Dark path only; exists so that turning the global alignment on can change
 # ONE thing (the relational refinement) instead of two.
 MATCH_GLOBAL_ANCHOR_PRIOR: bool = False
+# [SPECIFICITY CAP, SAME SCHEMA] core/schema.py polymorphic_edge_similarity:
+# apply the [P2] matching-time specificity cap (edge_match_weight: 0.282 for
+# CO_LOCATED, 0.576 for CONTOUR_ORIENTATION, ...) to a SAME-schema pair of
+# generic proximity edges. As built the cap sits in the cross-schema branch
+# only, and no generic class has a cross-schema partner: it never acts in
+# the matcher, although the schema documents it as the matching-time cap.
+# DARK and not to be flipped on a benchmark here: the [U32] note on
+# _effective_edge_weights records that deflating the low-information mass
+# inverted the winner where it was tried. False = as built.
+EDGE_SPECIFICITY_CAP_SAME_SCHEMA: bool = False
 
 # =============================================================================
 # LOCOMOTION BRIDGE & ANCHOR FALLBACK
