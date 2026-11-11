@@ -634,3 +634,43 @@ Section 6 stands except where a point below says otherwise.
   two candidates that agree equally the more similar one is the safer.  No
   result motivated it (the walker had run on the four reference graphs only,
   with this order, and nothing was compared).  Pinned.
+
+## Amendment 5 (R4, written before any raw slot value had been collected)
+
+WHAT HAD BEEN SEEN: the stage-5 bin census (which slots are frozen or
+saturated, as bins); the list of slots and units in `EDGE_UNIT_TABLE`.  NOT
+seen: any raw (continuous) value of any slot.
+
+Section 3 stands.  Made exact:
+
+* SCOPE.  The slots whose unit is `wavelengths` (the extraction scale: 18
+  slots) and `median_spacings` (3 slots: the same kind of quantity, a distance
+  in the writer's own length unit).  For the second group "0.5 scale" reads
+  "0.5 of its unit".  The signed slot `PARALLEL.stagger_dist` is judged and
+  ruled on |value|, symmetrically.
+* THE VALUES are the raw values the writer handed to the edge constructor for
+  the edges that are IN the 79 graphs (emitted edges, matched to their
+  constructor call by object identity; BOUNDARY_ATTACHMENT, whose writer
+  copies the object, by class and bins).  Graphs built with
+  GRAPH_STAGE6_RELATIONS on (the configuration that becomes the default if R6
+  holds on HELDOUT), so the new slots are judged with the old ones.
+* "IN ITS LAST BIN OR OUTSIDE ITS SPAN": value >= hi - (hi - lo) / n_bins, or
+  value < lo.
+* ENTROPY: Shannon entropy in bits of the histogram of the slot's bins over
+  its measured values.  "Edges that change bin": measured values whose bin
+  under the new span differs from their bin under the old span.
+* ADMISSION RADIUS: read from the writer's code for each slot that is
+  re-ruled, and stated next to the new span.
+* THE TWO FROZEN SLOTS (`CURVATURE_SIGN_CONTINUITY.curv_diff`,
+  `CONTACT.depth_step`) and, because Amendment 3.3 names the same suspect
+  (`_oriented_tangents`), `CONTOUR_CONTINUITY.curv_agree`: the raw values are
+  listed (count, distinct values, range).  VARIES AND FLATTENED iff the raw
+  values take at least 3 distinct values spanning more than one bin width of
+  a sensible span; CONSTANT BY CONSTRUCTION iff one value (or the writer's
+  code shows the argument is a literal).  The first is re-ruled by the
+  percentile rule on its own unit, the second is written ABSENT.
+* A slot that is NARROW (most values in its first bins because the span is
+  too wide) is reported and NOT changed: the registered rule is about
+  saturation.
+* THE SWITCH: `EDGE_RULERS_FROM_MEASUREMENT`, default OFF until its own bar
+  run (pins, figground) is green and R6 is recomputed with it.
