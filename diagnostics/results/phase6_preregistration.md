@@ -674,3 +674,34 @@ Section 3 stands.  Made exact:
   saturation.
 * THE SWITCH: `EDGE_RULERS_FROM_MEASUREMENT`, default OFF until its own bar
   run (pins, figground) is green and R6 is recomputed with it.
+
+## Amendment 6 (after M3-6 came in RED)
+
+WHAT HAD BEEN SEEN: R6 on EVAL (0.869, largest component 248; the two
+separate rows 0.869 and 0.895); the walker's pins (18 green, 9 mutations each
+caught); the synthetic harness (M1: identity on 18 of 18; M3-6: F1 lower than
+the old matcher on 9 of 9 pairs, precision higher on 4, recall lower on 9);
+one scratch trace of three pairs (seeds against truth).  NOT seen: any score
+of either matcher on EVAL-75 or HELDOUT-75 under the stage-6 graphs.
+
+* 6.1 THE FINAL MEASUREMENT DOES NOT RUN.  Section 9 and the brief: only if
+  R6 passes and every M3 pin is green.  M3-6 is red.  The script
+  (`phase6_final_measurement.py`) exists and has only been dry-run on the four
+  references.  Nothing in the walker is changed to turn the pin: its constants
+  are the registered ones and stay.
+* 6.2 THE DEFAULTS STAY OFF; section 8's rule is NOT applied.  Section 8 said
+  the relations switch and the rulers switch default ON iff R6 passes.  That
+  rule assumed the relations would have a reader.  They have none that is
+  adopted: the walker is not ahead, and the old matcher would receive some
+  31,000 new edges on the 79 graphs with no measurement of what they do to it
+  (that measurement was configuration A of the final measurement, which does
+  not run).  A default that changes the working matcher's input unmeasured is
+  not taken.  `GRAPH_STAGE6_RELATIONS`, `BINDER_COMPLETE_POSITION_MAP`,
+  `FIELD_BORDER_DISCARD_PER_CHANNEL`, `EDGE_RULERS_FROM_MEASUREMENT` and
+  `MATCH_RELATION_WALKER` are all OFF; with them off the graphs and the
+  matcher are the stage-5 ones.  Whether to measure the old matcher on the new
+  graphs is the user's call.
+* 6.3 WHAT IS REPORTED INSTEAD: the walker's seeds against renderer truth per
+  pair, its precision and recall apart, and the mechanism (which relation
+  carries a right pair and which a wrong one; how far the two images cut
+  their boundaries alike).  No constant is moved on the strength of it.
