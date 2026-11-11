@@ -705,3 +705,141 @@ of either matcher on EVAL-75 or HELDOUT-75 under the stage-6 graphs.
   pair, its precision and recall apart, and the mechanism (which relation
   carries a right pair and which a wrong one; how far the two images cut
   their boundaries alike).  No constant is moved on the strength of it.
+
+## Amendment 7 (the user's correction: forget Jaccard alone, marry the two halves; D0-D5)
+
+The user read the RED M3-6 and corrected the contract.  Recorded verbatim in
+substance, and MADE EXACT here, before any of it is measured.
+
+WHAT HAD BEEN SEEN when this was written: M3-6 RED (F1(new) - F1(old) mean
+-0.306, 0 of 9 pairs better); M1 green on 18 of 18; the seed table of the nine
+pairs; one scratch trace of three pairs (which relation class carried a right
+pair, which a wrong one, how far two images cut their boundaries alike).  NOT
+seen: any T2 number (no objective was ever scored against truth), any number
+of D0-D5, any score of any matcher on EVAL-75 or HELDOUT-75 under the stage-6
+graphs, and the relation-repeatability table (its script was written; its run
+was overtaken by this correction and is not reported).
+
+### 7.0 THE OBJECTIVE (D0), the exact formula
+
+One mapping M (one-to-one, FRAME -> FRAME) is scored by the MCS form over the
+two halves it marries:
+
+    Q(M) = [ W_N * S(M) + W_R * (P(M) + A(M)) ] / [ W_N * |M| + W_R * R(M) ]
+
+  S(M)  NODE half, graded: the sum over mapped pairs of the graded signature
+        similarity s(u, M(u)) in [0, 1] (matching.structural_similarity._sig_sim:
+        the same measure the old matcher weights node credit with).
+  P(M)  RELATION half, preserved: a measured growth edge (both ends FRAME,
+        declared, not PROXIMITY, at least one measured axis) between two mapped
+        nodes u, v counts 1 when the image edge exists in the same class and
+        no shared axis contradicts it, and it counts the FRACTION of its shared
+        measured axes that agree, agreement of one axis being
+        max(0, 1 - |difference in bins| / CONTRADICTION_MARGIN) for a circular
+        axis and the same on |difference| otherwise.  So exact agreement is 1,
+        a look-alike one bin off is 2/3, and at the margin it is 0.
+  A(M)  ATTRIBUTE half, graded: for every mapped pair whose frame nodes both
+        carry CO_LOCATED attributes, for every attribute lens type either side
+        has, the share of the finer side's attributes that pass the node gate
+        against the other side, summed over (pair, type).  Carried by W_R.
+  R(M)  the union's denominator, relations only: the number of measured growth
+        edges with at least one end in M (query side) plus the number with at
+        least one end in the reference image of M, minus the number with both
+        ends mapped (those are the P candidates, counted on both sides before
+        subtraction).
+  |M|   the number of mapped pairs.
+
+THE WEIGHT, stated now and never tuned: W_N = W_R = 1.  The two halves are
+made commensurable in their own units before they are added (a node pair
+contributes its similarity in [0, 1]; a relation contributes its agreement in
+[0, 1]) and neither is worth more than the other.  Q(M) is in [0, 1] when
+nothing is measured on one side (then that side's numerator and denominator
+terms are both 0).
+
+WHY THIS FIXES WHAT WAS WRONG: the old score (Jaccard on relations alone)
+threw away every node's own evidence; the old matcher's S is a coverage count
+over an assignment grown from node similarity, and its relation term is read
+after the fact.  Here admission is still the walk (relations), but what a
+mapping is WORTH is read on both halves, so a walk that drops most of the
+frame (recall 0.287) is now visibly worse than one that maps it.
+
+### 7.1 SEEDS (D1)
+
+A SEED TOKEN is topological: (lens type of the node, edge type, direction
+seen from the node, lens type of the far node, the far node's in-degree in
+the growth graph, whether the far node is a closed host).  No bins, no
+similarity.  A token is RARE when at most RARE_TOKEN_MAX_NODES (2) nodes carry
+it in each graph; a candidate pair shares at least SEED_MIN_SHARED_TOKENS (2)
+of them; the N_SEEDS (8) one-to-one pairs with the most shared tokens are
+taken, ranked by (shared tokens, descending; node similarity, descending;
+canonical keys).  The Amendment-4 tokens (class + exact bins) are still
+computed, as the SCORE's relation identity, and the seed precision of BOTH
+rules is reported (Amendment-7's own "before and after").
+
+### 7.2 ADMISSION (D2)
+
+A proposal reaching an unassigned node is admitted when the node gate (7.3)
+passes and no shared axis CONTRADICTS:
+
+    CONTRADICTION_MARGIN = 4.0 bins: a shared axis whose bin difference
+    exceeds 4 bins (a quarter of a turn on an 8-bin angular axis, half of a
+    distance span) contradicts; anything less only lowers the agreement
+    fraction of 7.0 and is ranked by it.
+
+So slack ranks and only a gross disagreement vetoes.  The FRONTIER is the
+number of pairs examined against the budget, reported per pair; it must no
+longer starve (it stood at 8 % of the dense matrix on the synthetic pairs).
+
+### 7.3 THE NODE GATE (D3), relative
+
+For a query node u and a candidate v:
+
+    s(u, v) > NODE_FLOOR (0.30)   AND
+    s(u, v) >= s(u, v*) - NODE_MARGIN (0.25), where v* is the most similar
+        FRAME node of the reference image to u, over the whole frame.
+
+Both numbers fixed now.  The old gate (absolute 0.5, and a similarity that
+never entered the score) is replaced; the relation that proposed the pair is
+what makes it an admission candidate at all.
+
+### 7.4 ORDER PROPOSES (D4)
+
+On two admitted boundary pairs (hosts h <-> h'), a feature f attached to h
+(arc p) and a feature f' attached to h' (arc p') with s(f, f') passing the node
+gate are PROPOSED as a pair when at least 3 features already admitted on that
+pair of hosts keep their order with them (the order test of 4.7, on the
+extended set).  Such proposals enter the frontier with the same rank as a
+relation proposal; the order constraint then applies to them as to everything
+else.
+
+### 7.5 THE BEAM (D5)
+
+The growth is a beam search of width BEAM_WIDTH = 4: from the seed set (a
+prefix of the seed list: the top 1, then the top 2, ... up to 8 seeds), up to
+four hypotheses are grown independently to exhaustion, each one-to-one inside
+itself; the hypothesis with the best Q(M) (7.0) is the walk's answer; ties go
+to the earlier seed set.  Budget and frontier are shared across the beam and
+reported.
+
+### 7.6 UNCHANGED
+
+Determinism (canonical keys; one answer under any hash seed), the budget
+(0.05 of the product, floor 8 looks per node, shared by the beam), the support
+floor (8 pairs and 10 % of the smaller frame; below it the pair is
+UNSUPPORTED and its score is None, which abstains), and the pins M1, the
+distractors, same signatures with another arrangement, the order reversal, the
+hash seeds.  M3-6 stays the verdict.  Accuracy is reported, never selected on.
+
+### 7.7 THE ORDER OF WORK, fixed
+
+1. T2: with the 7.0 objective, score (a) the walker's mapping as it is today
+   (the RED run's walker), (b) renderer truth restricted to FRAME, (c) the old
+   matcher's mapping, on all nine synthetic pairs.  If (b) does not beat (a),
+   the objective is wrong; STOP and say so (nothing of D0-D5 is built).
+2. Build D0-D5 behind MATCH_RELATION_WALKER (off by default); re-run M1 and
+   M3-6; the pins are extended for each of D0-D5.
+3. T1: the OLD matcher on the stage-6 graphs, EVAL-75, both windows, paired
+   against the stage-5 graphs.  Reported, no default changed.
+4. Only then, if M3-6 is green, the single final measurement, once.
+5. If M3-6 stays red after D0-D5: report which defect's fix moved which
+   number and stop.  No constant is tuned to turn the pin.
