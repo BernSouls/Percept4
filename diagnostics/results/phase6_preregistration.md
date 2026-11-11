@@ -331,3 +331,134 @@ the scope; they are recorded here before the work is done.
 
 Phase 0 ends when these three are reported.  R1 is next, and its ambiguity
 rate is the first number.
+
+## Amendment 2 (new branch, after the user's review of R1-R3 and R5)
+
+WHAT HAD BEEN SEEN when this amendment was written: the first attachment
+census (79 graphs: 39.2 % of geometric candidates ambiguous; Orientation ->
+Contour 18 unambiguous against 789 ambiguous; tangent_angle present on 86.2 %
+of edges, absent on every Corner and ContourFragment edge; EndStopped against
+chains at a 56-degree median); the R5 offline verdict (does not fail: 6 / 0 /
+0 graphs against a bound of 20); the map switch on one ETH image and on 18
+synthetic scenes; the closure census under the per-channel discard.  NOT seen:
+any reachability figure of a stage-6 graph, any tangent error against truth,
+any multi-step trajectory of a woken channel, any matcher output, HELDOUT.
+
+### 2.1 Three deviations already made, recorded
+
+a. THE MAP FIX HAS ITS OWN SWITCH (`BINDER_COMPLETE_POSITION_MAP`), apart from
+   the relations switch (`GRAPH_STAGE6_RELATIONS`).  Section 8 said "one
+   grouped switch".  Reason: completing the map wakes five EXISTING channels
+   (+1,195 edges on one image); that must be measurable alone.
+b. A CONTOUR HOST'S TANGENT IS ITS OWN `mean_theta` SLOT, not "the host segment
+   at the foot" (section 2).  Reason, measured: a Contour's vertices are
+   region-grid cells, so its segments only take the grid's directions and
+   every feature kind read a 45-degree median against them.  A PEAK_CHAIN host
+   keeps the segment at the foot (its vertices are pixel positions).
+c. R5 WAS WIRED INTO THE LENS BEFORE ITS OFFLINE VERDICT CAME IN (behind the
+   switch, off).  Section 4 said measure first, then build.  The verdict
+   passed; the rule is run on the ETH graphs through the real lens before any
+   default (2.7).
+
+### 2.2 The feature's own tangent, kind by kind
+
+* ContourFragment.  The signature's `theta` and `tangent_vs_radial` do NOT
+  determine the tangent: `tangent_vs_radial` is stored as an absolute value
+  (`abs(_axial_wrap_sf(chord - theta))`, perception/polar.py), so the tangent
+  is theta + tvr OR theta - tvr.  Two answers are not a measurement.  The lens
+  computes the chord direction itself and throws its sign away; the fix is to
+  carry the chord direction (axial) on the fragment and on its detection.
+  Also found: every fragment's anchor is its parent contour's REGION, so all
+  fragments of a contour share one position; the fragment's own midpoint is
+  carried the same way and is the position the attachment uses.
+* Corner.  The orientation is the corner's BISECTOR (the Corner signature's
+  own `orient` slot: the external-angle bisector folded to [0, pi), 12 bins,
+  bin centre).  Chosen over the turn angle because the bisector is a direction
+  in the image, comparable to a host tangent, while the turn is a scalar the
+  signature already holds.  On its own chain the angle between the bisector
+  and an arm is (pi - turn) / 2, so the slot is informative there too.  A
+  Corner of the JUNCTION class (emitted by the junction lens) with two arms:
+  bisector = ref_theta + gap0 / 2; with any other arm count: ABSENT.
+* EndStopped.  Hypothesis (the user's): the ENDSTOPPED `theta` slot is already
+  the terminating bar's orientation, and `carrier_to_tangent` adds a second
+  90 degrees.  THE TEST, fixed now: a rendered probe of isolated bars at known
+  orientations (every 15 degrees, plus the half-steps); for every EndStopped
+  detection within one scale of a bar END, the axial difference between the
+  slot's theta and the bar's orientation.  TANGENT iff the median is below
+  22.5 degrees; CARRIER iff above 67.5; otherwise undecided and the EndStopped
+  tangent is ABSENT.  The ILLUSORY_INDUCER `alignment` keeps the lens' own
+  quantity (the angle the lens tested), whatever the outcome.
+* Orientation and CONTOUR_PEAK: unchanged (slot 0, tangent), now CHECKED
+  against truth (2.6) instead of against a host.
+
+### 2.3 Tangent agreement as a disambiguator (the design gap)
+
+The ambiguity test of section 2 uses distance alone.  It leaves 39 % of the
+geometric candidates unattached and nearly all non-member Orientations.
+
+* MEMBERSHIP IDENTIFIES, ATTACHMENT MEASURES.  A membership flag (a peak
+  listed in a chain, an Orientation anchor listed in a Contour) says WHICH
+  host; it carries no geometry.  The attachment supplies where on the host,
+  how far and at what angle.  Reading the flag to choose the host and then
+  measuring against that host is not circular.
+* THE RULE.  It applies only where the distance test says "ambiguous" (or
+  where the data names several hosts of one kind), and only to a feature that
+  has a tangent.  CONTENDERS = the hosts of the kind with d <= D_max and
+  d - d1 < 0.5 scales (or the named hosts).  For each contender, a = the angle
+  between the feature's tangent and that host's tangent at the feature's foot
+  on it.  With a1 <= a2 the two smallest: the feature attaches to the
+  contender of a1 iff a1 <= pi/12 AND a2 - a1 >= pi/12.  Otherwise it stays
+  ambiguous and nothing is written.
+* The constants: pi/12 (15 degrees) is one step of the peak's orientation
+  channels and two Orientation bins: "parallel" means within one step, and
+  the rival must be at least one step further.  Not tuned on any count.
+* REPORTED: the outcome table with a fifth column "by tangent"; the recovery
+  among the 789 Orientation -> Contour cases and among all 7,597; the
+  `tangent_angle` of tangent-resolved edges separately (it is <= 15 degrees
+  by selection, which is a selection effect, not a finding).
+
+### 2.4 LINE_TERMINATION gets an ambiguity test
+
+`_run_line_termination` binds a terminator to its NEAREST parent within 2.5
+scales with no test.  With the map completed, EndStopped terminators enter
+it (3,399 candidates on the 79 graphs).  Under `BINDER_COMPLETE_POSITION_MAP`
+the parent choice follows the same rule as everywhere else: if a second parent
+is within 0.5 scales of the nearest in distance, the terminator writes
+nothing (counted).  Off, the writer is the old writer, byte for byte.
+
+### 2.5 R6: which graph the gate is computed on
+
+The gate (section 5, unchanged thresholds) is computed with
+`GRAPH_STAGE6_RELATIONS` ALONE.  The map switch is a separate row, reported,
+never part of the verdict.  The per-channel border switch is off.
+
+### 2.6 Tangent correctness (not presence)
+
+* TRUTH, on the synthetic figground scenes: the visible-label map (nearest
+  object in depth, else background); a boundary pixel is one whose label
+  differs from a 4-neighbour; the true tangent there is perpendicular to the
+  gradient of the Gaussian-blurred (sigma 2 px) indicator of the pixel's own
+  label.  A boundary pixel is SMOOTH when the true tangents of the boundary
+  pixels within 4 px of it all lie within 20 degrees of its own; the others
+  (corners, junctions) are reported apart.
+* REPORTED per feature kind: for features within one scale of a true
+  boundary, the axial error between the feature's tangent and the true
+  tangent at the nearest boundary pixel (median, p90, share under 15 and
+  under 30 degrees), on smooth pixels and on all.  Per host kind: the same
+  for the host's tangent at the foot.  For attachments: the error of
+  `tangent_angle` against the angle between the two true tangents.
+* On ETH-80 (no truth): the distribution of `tangent_angle` after the fixes,
+  per feature and host kind, with the known-host rows as the reference.
+
+### 2.7 Before any default
+
+* R5 through the real lens on the 79 ETH graphs: the three failure criteria of
+  section 4 recomputed on the built graphs (complex membership read from the
+  CurveComplex detections), beside the offline figures.
+* THE MAP SWITCH ON THE MULTI-STEP ROUTE.  The woken channels emit 76-95 % of
+  their candidates against a target rate of 0.2.  Protocol: 16 images (the 4
+  references and the first 3 EVAL images of each class), 8 presentations,
+  switch off and on; per affected channel and per step: theta, the emission
+  rate, candidates, emitted (median over images).  The switch cannot default
+  on while any affected channel's theta is still moving by more than 0.01 per
+  step at step 8, or has reached its ceiling.
