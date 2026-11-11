@@ -11,7 +11,8 @@ old keys to the new ones.  It refuses on the first difference.
     python diagnostics/_cache_carry.py [--rev HEAD] [--verify 4] [--routes 1,2,3]
                                        [--splits eval] [--verify-multi 1]
 
-Only for runs with no PERCEPT_SET override (the declared defaults).
+Run it under the same PERCEPT_SET as the cached graphs: the override is part
+of the key on both sides, and the sample is built fresh under it.
 """
 from __future__ import annotations
 
@@ -49,6 +50,9 @@ def digest_of_revision(rev: str) -> str:
 
 def _key(digest: str, img_digest: str, n_steps: int) -> str:
     route = "" if n_steps == 1 else "|steps=%d" % n_steps
+    ov = _bootstrap.switch_overrides_key()
+    if ov:
+        route += "|set=" + ov
     k = hashlib.sha256((digest + "|" + img_digest + route).encode()).hexdigest()
     return os.path.join(CACHE_DIR, k[:2], k + ".pkl")
 
@@ -73,8 +77,7 @@ def main(argv=None) -> int:
     ap.add_argument("--routes", default="1")
     ap.add_argument("--splits", default="eval")
     a = ap.parse_args(argv)
-    if _bootstrap.switch_overrides():
-        raise SystemExit("refusing: PERCEPT_SET is set")
+    print("PERCEPT_SET: %s" % (_bootstrap.switch_overrides_key() or "none"))
     old, new = digest_of_revision(a.rev), fe.frontend_source_digest()
     print("digest at %s: %s   working tree: %s" % (a.rev, old[:12], new[:12]))
     if old == new:
