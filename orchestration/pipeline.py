@@ -1538,12 +1538,16 @@ class Pipeline:
                         # whole v2 tier is bound (the chains, the
                         # terminators and the illusory completions), so the
                         # relations that read those nodes can fire.
+                        # [STAGE 6 / direction 1] the tier registered
+                        # positions after the binder's map was copied
+                        self.binder.note_tier_positions(anchor_positions)
                         self.binder.emit_pending_edges("v2")
                     elif _lens_name == "CurveComplex":
                         # Register BEFORE emitting, as at v2: the
                         # containment emitter reads the node ids
                         # bind_intra_step just minted.
                         self.binder.bind_intra_step(t, frozenset(_out))
+                        self.binder.note_tier_positions(anchor_positions)
                         self.binder.emit_pending_edges("v4")
 
                 D_peak = sorted(tier_dets.get("Peak", []),

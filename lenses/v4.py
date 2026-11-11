@@ -959,6 +959,49 @@ class CurveComplexLens(HigherLens):
             "candidates_evaluated": self._candidates_evaluated,
         }
 
+    @staticmethod
+    def _geometric_components(
+        node_id_to_detection: Dict[int, Detection],
+        node_id_to_kind: Dict[int, str],
+        anchor_positions: Optional[Dict[Any, Tuple[float, ...]]],
+        extraction_scale: float,
+    ) -> List[Set[int]]:
+        """[STAGE 6 / R5] Components by the geometric link rule.
+
+        One Contour per pattern node (the detection the lens already keeps),
+        keyed by its node id; Junction-kind nodes at their anchor position.
+        A Contour without a positioned member is its own component, as a
+        degree-0 node was before."""
+        from perception import complex_links as _cl
+        from perception.attachment import _members, _xy
+
+        pos = anchor_positions or {}
+        contours = []
+        junctions = []
+        alone: List[Set[int]] = []
+        for nid in sorted(node_id_to_detection):
+            det = node_id_to_detection[nid]
+            if node_id_to_kind[nid] == "Contour":
+                pts = [q for q in (_xy(pos, a) for a in _members(det))
+                       if q is not None]
+                cq = det.sigma.quantized
+                theta = (((float(cq[1]) + 0.5) * math.pi
+                          / float(P.ORIENTATION_N_THETA)) % math.pi
+                         if len(cq) > 1 else None)
+                ce = _cl.contour_ends(nid, pts, theta)
+                if ce is None:
+                    alone.append({nid})
+                else:
+                    contours.append(ce)
+            else:
+                q = _xy(pos, det.alpha)
+                if q is not None:
+                    junctions.append((nid, q))
+        comps, _stats = _cl.group(contours, junctions, float(extraction_scale))
+        out = [set(cc) | set(jj) for cc, jj in comps] + alone
+        out.sort(key=lambda c: min(c))
+        return out
+
     def step(
         self,
         t: int,
@@ -1051,6 +1094,19 @@ class CurveComplexLens(HigherLens):
                         visited.add(y)
                         stack.append(y)
             components.append(comp)
+
+        if bool(getattr(P, "GRAPH_STAGE6_RELATIONS", False)):
+            # [STAGE 6 / R5] THE LINK RULE IS ONE STEP OF GEOMETRY.  The
+            # components above come from `edge.weight`, a temporal EMA that
+            # is 0.0 on the first presentation (every complex is then one
+            # Contour) and, once it exists, links every pair within reach
+            # (one complex swallows the graph).  Here the grouping reads no
+            # weight: contour ENDS are linked by gap and bend, each end at
+            # most once, so a complex is a simple path or a cycle
+            # (perception/complex_links.py).
+            components = self._geometric_components(
+                node_id_to_detection, node_id_to_kind, anchor_positions,
+                extraction_scale)
 
         emitted: List[Detection] = []
         for comp in components:

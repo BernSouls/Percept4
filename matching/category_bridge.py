@@ -89,6 +89,10 @@ NO_U30_EQUIVALENT: Dict[str, str] = {
     "EDGE_CO_MOTION": "no U30 motion axis",
     "EDGE_CONTOUR_ORIENTATION": "single orientation scalar; no CONTAINMENT axis",
     "EDGE_JUNCTION_ORIENTATION": "single orientation scalar; no JUNCTION axis",
+    # [STAGE 6] the three measured relations have no U30 axis of their own
+    "EDGE_BOUNDARY_ATTACHMENT": "arc position / tangent angle on a host; no CONTAINMENT axis",
+    "EDGE_BOUNDARY_SUCCESSOR": "arc gap and unsigned turn between members; no CONTINUITY axis",
+    "EDGE_ILLUSORY_INDUCER": "inducer gap and alignment; no CONTINUITY axis",
 }
 
 #: Only slots whose NAMES differ need an entry; everything else projects by
