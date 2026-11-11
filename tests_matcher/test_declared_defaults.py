@@ -37,4 +37,13 @@ def test_declared_defaults(declared_defaults):
         "MATCH_GLOBAL_ANCHOR_PRIOR": False,
         # the documented specificity cap, wired -- OFF: dark, your decision
         "EDGE_SPECIFICITY_CAP_SAME_SCHEMA": False,
+        # [STAGE 6] per-channel border discard -- OFF: two figground index
+        # pins move when it is on
+        "FIELD_BORDER_DISCARD_PER_CHANNEL": False,
+        # [STAGE 6] the binder's position map completed from the lens tier --
+        # OFF until its channels' multi-step behaviour is measured
+        "BINDER_COMPLETE_POSITION_MAP": False,
+        # [STAGE 6] the measured relations (R1-R3, R5) -- OFF until the R6
+        # gate passes on EVAL and HELDOUT (pre-registration, section 8)
+        "GRAPH_STAGE6_RELATIONS": False,
     }
