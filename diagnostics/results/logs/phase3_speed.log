@@ -1,0 +1,14 @@
+STAGE 4 -- seconds per evidence_score call: Python loops against the numpy kernels (MATCH_SIGNATURE_MATRIX_BLOCKS), EVAL-75
+source f66ea9ac0eea  front end c1ea81ae1b6c   environment {'python': '3.11.2', 'PYTHONHASHSEED': '0', 'numpy': '2.4.6', 'scipy': '1.17.1', 'PIL': '13.0.0'}
+
+window = full: 300 calls; node pairs compared per call (same lens type): 26756 to 79521, median 47129
+  results differing between the two (score, correspondence, every trace value): 0
+  Python loops   total   183.0 s   per call: mean 0.610 s, median 0.572 s, slowest 1.296 s
+  numpy kernels  total    22.2 s   per call: mean 0.074 s, median 0.071 s, slowest 0.176 s
+  ratio of the totals x8.2; per call: median x7.8, smallest x2.2, largest x15.3
+
+window = v1: 300 calls; node pairs compared per call (same lens type): 14157 to 25951, median 19629
+  results differing between the two (score, correspondence, every trace value): 0
+  Python loops   total    40.8 s   per call: mean 0.136 s, median 0.134 s, slowest 0.251 s
+  numpy kernels  total    10.2 s   per call: mean 0.034 s, median 0.032 s, slowest 0.138 s
+  ratio of the totals x4.0; per call: median x4.1, smallest x1.1, largest x5.7

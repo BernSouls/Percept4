@@ -1,0 +1,53 @@
+CONTINUITY -- fresh run against the stored record, value by value (both rounded to 10 significant digits)
+environment now: python 3.11.2  numpy 2.4.6  scipy 1.17.1  pillow 13.0.0  PYTHONHASHSEED=1
+digests now:     source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+
+p2_R0 full   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=False; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=False; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=False; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p2_R0 v1   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=False; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=False; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=False; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p2x_DEF full   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p2x_DEF v1   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p2x_D3 full   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence'); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 12300   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p2x_D3 v1   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence'); EVIDENCE_RELATION_COUNT_APART=False; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 12300   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p3_CA full   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=True; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p3_CA v1   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); EVIDENCE_RELATION_COUNT_APART=True; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 10500   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p3_D3_CA full   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence'); EVIDENCE_RELATION_COUNT_APART=True; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 12300   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True
+
+p3_D3_CA v1   stored under source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c
+  overrides: EDGE_LOOKUP_KEY_IS_NOT_A_MEASURED_AXIS=False; EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_SPECIFICITY_CAP_SAME_SCHEMA=False; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence'); EVIDENCE_RELATION_COUNT_APART=True; MATCH_ALIGN_BUDGET_REFINEMENT_ONLY=True; MATCH_ASSIGNMENT_EXACT=True; MATCH_GLOBAL_ANCHOR_PRIOR=False; MATCH_SIGNATURE_MATRIX_BLOCKS=True
+  values compared 12300   differing 0   scores differing 0   answers differing 0 of 75   largest difference 0
+  aggregated breakdown tables identical: True

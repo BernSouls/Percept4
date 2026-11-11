@@ -1,0 +1,234 @@
+BUG HUNT -- identities and invariants of the matcher changes, EVAL-75 (in-sample)
+tree now: source 94f7f71f7f09  harness 2feef46f0125  front end cfaca6d6b915
+
+========================================================================================================
+A. LEDGER -- every stored pair recomputed from its own stored components
+========================================================================================================
+   constants read from the tree: EPSILON 1e-09, conjunction floor alpha 0, absence weight 0.15; tolerance 5e-09
+   stored configurations read: 32, pairs 9600; digests (source, harness, front end): 94f7f71f7f09/2feef46f0125/cfaca6d6b915
+
+   identity                                                          pairs failing   largest difference
+   binary credit: matched mass = binary mass                             0   0
+   core_coverage = node term x multiplier                                0   9.04e-11
+   core_node_coverage = c_matched / c_total                              0   2.7e-10
+   edge_absence = uncovered edges / edges                                0   5e-11
+   node_coverage = calibrate(raw, chance)                                0   1.07e-10
+   node_coverage = node_coverage_raw (calibration off)                   0   0
+   node_coverage_binary = binary twin of the form in use                 0   4.99e-11
+   node_coverage_chance = form(chance masses)                            0   2.57e-10
+   node_coverage_raw = form(matched masses)                              0   2.7e-10
+   query-side edge keys present iff an edge term is two-sided            0   0
+   query_node_coverage = q_matched / q_total                             0   2.22e-10
+   relational_consistency = sim sum / verifiable                         0   1.4e-10
+   relational_multiplier = alpha + (1 - alpha) x consistency             0   0
+   score = clamp(node term x multiplier - absence)                       0   8.37e-11
+   total_absence = lambda x edge_absence                                 0   5e-11
+
+   invariant                                                         pairs failing
+   0 <= chance level <= 1                                                0
+   0 <= score, node term, relation, absence <= 1                         0
+   binary mass <= total, each side                                       0
+   graded mass <= binary mass, each side                                 0
+   node_coverage <= node_coverage_raw                                    0
+   node_coverage_raw <= binary twin (recomputed) <= 1                    0
+   node_coverage_raw <= node_coverage_binary (as stored)                 0
+   verifiable <= edges; sim sum <= verifiable (core side)                0
+   verifiable <= edges; sim sum <= verifiable (query side)               0
+
+   answers: stored `pred`/`tie` re-derived from the stored scores (first class on an exact tie): 0 queries differ
+
+========================================================================================================
+B. SWITCH INDEPENDENCE -- what a score-level switch must not move, across the stored configurations
+========================================================================================================
+   window = full
+     the correspondence and the binary accumulation (all 10 configurations)                   values  29700  differing     0
+     the graded node masses (the 8 graded-credit configurations)                              values   8400  differing     0
+     the core-side edge evidence, Phase 4 OFF (R0, D3n, D3na, D3, D3b)                        values   6000  differing     0
+     the core-side edge evidence, Phase 4 ON (P4, D3P4, NULL, NULLD3, NULLb)                  values   6000  differing     0
+     the core-side edge evidence across Phase 4 (R0 against P4): what Phase 4 moved           values   1500  differing     0
+     the query-side edge evidence, Phase 4 OFF (D3na, D3, D3b)                                values   1800  differing     0
+     the query-side edge evidence across Phase 4 (D3 against D3P4, NULLD3)                    values   1800  differing     0
+     the chance masses (NULL against NULLD3)                                                  values    600  differing     0
+   window = v1
+     the correspondence and the binary accumulation (all 10 configurations)                   values  29700  differing     0
+     the graded node masses (the 8 graded-credit configurations)                              values   8400  differing     0
+     the core-side edge evidence, Phase 4 OFF (R0, D3n, D3na, D3, D3b)                        values   6000  differing     0
+     the core-side edge evidence, Phase 4 ON (P4, D3P4, NULL, NULLD3, NULLb)                  values   6000  differing     0
+     the core-side edge evidence across Phase 4 (R0 against P4): what Phase 4 moved           values   1500  differing     0
+     the query-side edge evidence, Phase 4 OFF (D3na, D3, D3b)                                values   1800  differing     0
+     the query-side edge evidence across Phase 4 (D3 against D3P4, NULLD3)                    values   1800  differing     0
+     the chance masses (NULL against NULLD3)                                                  values    600  differing     0
+
+========================================================================================================
+C. GRAPH STORAGE -- what the edge loops assume about stored edges (79 EVAL graphs)
+========================================================================================================
+   window = full
+     edges                                                                66951
+     directed                                                             19488
+     undirected                                                           47463
+     self loops                                                               0
+     undirected stored with src > dst                                         0
+     undirected stored in both orientations                                   0
+     undirected src > dst, parameters only under the canonical key            0
+     parameters found only under the REVERSED key                             0
+     parameter entries with no edge                                           0
+     edges without parameters                                              1090
+     mixtures                                                              3525
+     mixture prototypes                                                    3939
+     mixtures reverse_edge_params returns unchanged                        3525
+     undirected plain parameters a reversal changes                        9026
+     undirected mixtures a reversal would change                            198
+       of those, by relation: ORIENTATION_CONTINUITY 198
+   window = v1
+     edges                                                                36319
+     directed                                                              1055
+     undirected                                                           35264
+     self loops                                                               0
+     undirected stored with src > dst                                         0
+     undirected stored in both orientations                                   0
+     undirected src > dst, parameters only under the canonical key            0
+     parameters found only under the REVERSED key                             0
+     parameter entries with no edge                                           0
+     edges without parameters                                              1090
+     mixtures                                                              3295
+     mixture prototypes                                                    3709
+     mixtures reverse_edge_params returns unchanged                        3295
+     undirected plain parameters a reversal changes                        4256
+     undirected mixtures a reversal would change                            198
+       of those, by relation: ORIENTATION_CONTINUITY 198
+
+========================================================================================================
+D. WALK -- the matcher on all 300 (query, reference) pairs of each window
+========================================================================================================
+   settings (every switch on, so every loop runs): EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=True; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence'); MATCH_ASSIGNMENT_EXACT=True
+
+   window = full   (300 pairs, 133 s)
+   D1 the mirror loop, called in the core direction, is the matcher's own loop
+     pairs whose counts differ from the trace                                               0
+     pairs whose similarity sum is not bit-identical to the trace                           0
+   D2 this instrument against the library function
+     pairs differing, core direction                                                        0
+     pairs differing, query direction                                                       0
+     pairs whose query-side verifiable count differs from its definition                    0
+   D3 every edge pair the two loops evaluate, read from both ends
+     verifiable core edges                                                             184307
+     verifiable query edges                                                            179410
+     candidate evaluations, core direction                                              90562
+     candidate evaluations, query direction                                             90562
+     edge pairs evaluated from both sides                                               90562
+       of which the two readings differ (> 1e-12)                                           0
+       largest difference between the two readings: 0
+       ... and with every mixture read through flipped_copy (attribution)                   0
+       core: reversed entry / query: reversed entry                                     33111
+       core: reversed entry / query: stored entry, second lookup                         1040
+       core: stored entry / query: stored entry                                         55692
+       core: stored entry, second lookup / query: reversed entry                          719
+     edge pairs evaluated from the core side only                                           0
+       of which with similarity > 0                                                         0
+     edge pairs evaluated from the query side only                                          0
+       of which with similarity > 0                                                         0
+     edge pairs evaluated more than once from one side                                      0
+   D4 mixtures read in reverse (reverse_edge_params returns a mixture unchanged; flipped_copy reverses it). The loops FLIP them here; the lines below say what the other value of the switch would change
+     core direction: evaluations of a reversal-sensitive mixture read in reverse          106
+     core direction: of which it is the best match of its edge                             25
+     query direction: evaluations of a reversal-sensitive mixture read in reverse          69
+     query direction: of which it is the best match of its edge                            29
+     pairs whose core-side similarity sum flipping would change                            27
+     pairs whose query-side similarity sum flipping would change                           27
+       change of the similarity sum per pair, other value - as is: core side mean +0.0008 min -0.8688 max +0.8620; query side mean +0.0046 min -0.6266 max +0.9659
+       one-sided score (F6+D1 form)           scores changed  25 of 300 (largest 0.0010); answers changed 0; hits 37 -> 37
+       balanced score (D3, all three terms)   scores changed  45 of 300 (largest 0.0004); answers changed 0; hits 37 -> 37
+   D5 the correspondence
+     kept node pairs                                                                   179474
+     correspondence not one-to-one                                                          0
+     a pair joins two lens types                                                            0
+     a paired node is not in its graph                                                      0
+     kept pairs with signature similarity <= 0                                              0
+     trace correspondence differs from the returned one                                     0
+   D6 a traced call against an untraced one
+     pairs compared                                                                        60
+     untraced score differs                                                                 0
+   D7 the chance masses against 2000 sampled random maximum pairings (first query of each class x 4 references)
+     independent masses compared 16   z = (closed form - sample mean) / standard error: mean -0.36  sd 1.05  largest |z| 2.78  |z| > 3: 0
+     (unbiased closed form: mean z within +-0.50, sd within 1 +- 0.37 at two standard errors)
+     relative difference closed form against sample mean: mean 0.0283%  largest 0.0881%
+     chance masses of the two sides differ where every pairing gives them equal             0
+
+   window = v1   (300 pairs, 32 s)
+   D1 the mirror loop, called in the core direction, is the matcher's own loop
+     pairs whose counts differ from the trace                                               0
+     pairs whose similarity sum is not bit-identical to the trace                           0
+   D2 this instrument against the library function
+     pairs differing, core direction                                                        0
+     pairs differing, query direction                                                       0
+     pairs whose query-side verifiable count differs from its definition                    0
+   D3 every edge pair the two loops evaluate, read from both ends
+     verifiable core edges                                                             107190
+     verifiable query edges                                                            103202
+     candidate evaluations, core direction                                              16429
+     candidate evaluations, query direction                                             16429
+     edge pairs evaluated from both sides                                               16429
+       of which the two readings differ (> 1e-12)                                           0
+       largest difference between the two readings: 0
+       ... and with every mixture read through flipped_copy (attribution)                   0
+       core: reversed entry / query: reversed entry                                      4532
+       core: reversed entry / query: stored entry, second lookup                            8
+       core: stored entry / query: stored entry                                         11880
+       core: stored entry, second lookup / query: reversed entry                            9
+     edge pairs evaluated from the core side only                                           0
+       of which with similarity > 0                                                         0
+     edge pairs evaluated from the query side only                                          0
+       of which with similarity > 0                                                         0
+     edge pairs evaluated more than once from one side                                      0
+   D4 mixtures read in reverse (reverse_edge_params returns a mixture unchanged; flipped_copy reverses it). The loops FLIP them here; the lines below say what the other value of the switch would change
+     core direction: evaluations of a reversal-sensitive mixture read in reverse          105
+     core direction: of which it is the best match of its edge                             25
+     query direction: evaluations of a reversal-sensitive mixture read in reverse          69
+     query direction: of which it is the best match of its edge                            29
+     pairs whose core-side similarity sum flipping would change                            27
+     pairs whose query-side similarity sum flipping would change                           27
+       change of the similarity sum per pair, other value - as is: core side mean +0.0008 min -0.8688 max +0.8620; query side mean +0.0046 min -0.6266 max +0.9659
+       one-sided score (F6+D1 form)           scores changed  25 of 300 (largest 0.0017); answers changed 0; hits 39 -> 39
+       balanced score (D3, all three terms)   scores changed  44 of 300 (largest 0.0009); answers changed 0; hits 40 -> 40
+   D5 the correspondence
+     kept node pairs                                                                    76844
+     correspondence not one-to-one                                                          0
+     a pair joins two lens types                                                            0
+     a paired node is not in its graph                                                      0
+     kept pairs with signature similarity <= 0                                              0
+     trace correspondence differs from the returned one                                     0
+   D6 a traced call against an untraced one
+     pairs compared                                                                        60
+     untraced score differs                                                                 0
+   D7 the chance masses against 2000 sampled random maximum pairings (first query of each class x 4 references)
+     independent masses compared 16   z = (closed form - sample mean) / standard error: mean +0.12  sd 0.98  largest |z| 1.97  |z| > 3: 0
+     (unbiased closed form: mean z within +-0.50, sd within 1 +- 0.37 at two standard errors)
+     relative difference closed form against sample mean: mean 0.0595%  largest 0.1633%
+     chance masses of the two sides differ where every pairing gives them equal             0
+
+========================================================================================================
+E. ORDER DEPENDENCE -- does a result depend on the iteration order of an edge set (the process hash seed)?
+========================================================================================================
+   the edge loop keeps the first candidate that reaches the best similarity; candidates are listed in frozenset order
+   EDGE_REVERSE_FLIPS_MIXTURE=True  MATCH_ASSIGNMENT_EXACT=True
+   window = full
+     pairs                                                                          300
+     verifiable core edges                                                       184307
+     ... with more than one candidate query edge                                  17154
+     ... whose best similarity is reached by several candidates                       0
+     ... and the tied candidates carry different mass                                 0
+     pairs whose edge mass depends on the candidate order                             0
+     largest difference in one edge's mass between tied candidates: 0.0000
+   window = v1
+     pairs                                                                          300
+     verifiable core edges                                                       107190
+     ... with more than one candidate query edge                                     79
+     ... whose best similarity is reached by several candidates                       0
+     ... and the tied candidates carry different mass                                 0
+     pairs whose edge mass depends on the candidate order                             0
+     largest difference in one edge's mass between tied candidates: 0.0000
+   (the similarity SUM, and so the evidence score, does not depend on which tied candidate is kept; its float
+    summation order does: phase2_continuity.py under another PYTHONHASHSEED measures both)
+
+========================================================================================================
+checks with a finding, per section: A=0  B=0  C=2  D=0  E=0   total 2

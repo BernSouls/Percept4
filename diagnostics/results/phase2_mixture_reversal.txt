@@ -1,0 +1,65 @@
+MIXTURE REVERSAL -- EDGE_REVERSE_FLIPS_MIXTURE, EVAL-75 (in-sample)
+source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c   environment {'python': '3.11.2', 'PYTHONHASHSEED': '0', 'numpy': '2.4.6', 'scipy': '1.17.1', 'PIL': '13.0.0'}
+declared defaults: EDGE_REVERSE_FLIPS_MIXTURE=True; EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=False; EVIDENCE_QUERY_SIDE_TERMS=(); MATCH_ASSIGNMENT_EXACT=True
+
+====================================================================================================
+window = full
+====================================================================================================
+                hits  (ties split)  per class a/c/c/h    answers a/c/c/h
+  F6+D1         38    (38.00)        2/ 6/16/14       2/11/29/33
+  F6+D1 +flip   38    (38.00)        2/ 6/16/14       2/11/29/33
+  D3            41    (41.00)       10/12/14/ 5      14/25/19/17
+  D3 +flip      41    (41.00)       10/12/14/ 5      14/24/20/17
+  BASE          38    (38.00)        2/ 6/16/14       2/11/29/33
+
+  one-sided score: F6+D1 +flip against F6+D1
+    scores moved 19 of 300 (largest 0.0011); answers moved 0; hits 38 -> 38, paired +0/-0 vs baseline, McNemar p=1.000
+    PREDICTED by the census: scores moved 19 (largest 0.0011); answers moved 0; hits 38
+    -> reproduced
+    pairs whose core-side similarity sum moved 21 (largest 0.8688)
+    PREDICTED: core side 21 -> reproduced
+    node masses, counts and the absence term moved: none
+
+  balanced score: D3 +flip against D3
+    scores moved 41 of 300 (largest 0.0005); answers moved 1; hits 41 -> 41, paired +0/-0 vs baseline, McNemar p=1.000
+    PREDICTED by the census: scores moved 41 (largest 0.0005); answers moved 1; hits 41
+    -> reproduced
+    pairs whose core-side similarity sum moved 21 (largest 0.8688); query-side 28 (largest 0.9659)
+    PREDICTED: core side 21, query side 28 -> reproduced
+    node masses, counts and the absence term moved: none
+
+  BASE against F6+D1 (adds Phase 4 and the mixture reversal): scores moved 19 (largest 0.0011); paired +0/-0 vs baseline, McNemar p=1.000
+  BASE against F6+D1 +flip (adds Phase 4 only): scores moved 0
+
+====================================================================================================
+window = v1
+====================================================================================================
+                hits  (ties split)  per class a/c/c/h    answers a/c/c/h
+  F6+D1         34    (34.00)        0/ 7/14/13       0/12/20/43
+  F6+D1 +flip   34    (34.00)        0/ 7/14/13       0/12/20/43
+  D3            39    (39.00)        6/16/16/ 1       6/34/25/10
+  D3 +flip      39    (39.00)        6/16/16/ 1       6/34/25/10
+  BASE          34    (34.00)        0/ 7/14/13       0/12/20/43
+
+  one-sided score: F6+D1 +flip against F6+D1
+    scores moved 18 of 300 (largest 0.0020); answers moved 0; hits 34 -> 34, paired +0/-0 vs baseline, McNemar p=1.000
+    PREDICTED by the census: scores moved 18 (largest 0.0020); answers moved 0; hits 34
+    -> reproduced
+    pairs whose core-side similarity sum moved 21 (largest 0.8688)
+    PREDICTED: core side 21 -> reproduced
+    node masses, counts and the absence term moved: none
+
+  balanced score: D3 +flip against D3
+    scores moved 34 of 300 (largest 0.0011); answers moved 0; hits 39 -> 39, paired +0/-0 vs baseline, McNemar p=1.000
+    PREDICTED by the census: scores moved 34 (largest 0.0011); answers moved 0; hits 39
+    -> reproduced
+    pairs whose core-side similarity sum moved 21 (largest 0.8688); query-side 27 (largest 0.9659)
+    PREDICTED: core side 21, query side 27 -> reproduced
+    node masses, counts and the absence term moved: none
+
+  BASE against F6+D1 (adds Phase 4 and the mixture reversal): scores moved 18 (largest 0.0020); paired +0/-0 vs baseline, McNemar p=1.000
+  BASE against F6+D1 +flip (adds Phase 4 only): scores moved 0
+
+====================================================================================================
+DEFAULT RULE (pre-registered): pins green, census figures reproduced, no paired fall with p < 0.05
+  census figures reproduced and no fall: YES   (the pins are run separately: python -m pytest tests_matcher)

@@ -1,0 +1,186 @@
+STAGE 2 addendum -- descriptive re-reads of the stored records (not pre-registered criteria)
+
+####################################################################################################
+# window = full   (source digest 94f7f71f7f09)
+####################################################################################################
+
+A. each term deciding ALONE, and the score, per configuration (paired against that configuration's score)
+  F6+D1
+    evidence score                         38/75   apple  2/16 car  6/24 cup 16/18 horse 14/17   answers 2/11/29/33 
+    node term alone                        37/75   apple  1/16 car  6/24 cup 18/18 horse 12/17   answers 1/8/46/20     +6/-7 p=1.000 vs score
+    relational term alone                  29/75   apple 14/16 car 12/24 cup  2/18 horse  1/17   answers 36/21/8/10    +20/-29 p=0.253 vs score
+    absence alone (least absence wins)     29/75   apple  0/16 car  0/24 cup 12/18 horse 17/17   answers 0/1/17/57     +3/-12 p=0.035 vs score
+    node x relation (no absence penalty)   36/75   apple  7/16 car 12/24 cup 16/18 horse  1/17   answers 11/21/32/11   +12/-14 p=0.845 vs score
+  D3:node
+    evidence score                         39/75   apple  3/16 car  6/24 cup 15/18 horse 15/17   answers 4/9/27/35  
+    node term alone                        48/75   apple  6/16 car 12/24 cup 18/18 horse 12/17   answers 10/16/28/21   +16/-7 p=0.093 vs score
+    relational term alone                  29/75   apple 14/16 car 12/24 cup  2/18 horse  1/17   answers 36/21/8/10    +19/-29 p=0.193 vs score
+    absence alone (least absence wins)     29/75   apple  0/16 car  0/24 cup 12/18 horse 17/17   answers 0/1/17/57     +3/-13 p=0.021 vs score
+    node x relation (no absence penalty)   37/75   apple 14/16 car 12/24 cup 10/18 horse  1/17   answers 32/19/13/11   +18/-20 p=0.871 vs score
+  D3
+    evidence score                         41/75   apple 10/16 car 12/24 cup 14/18 horse  5/17   answers 14/25/19/17
+    node term alone                        48/75   apple  6/16 car 12/24 cup 18/18 horse 12/17   answers 10/16/28/21   +18/-11 p=0.265 vs score
+    relational term alone                  27/75   apple 11/16 car 13/24 cup  2/18 horse  1/17   answers 24/27/12/12   +6/-20 p=0.009 vs score
+    absence alone (least absence wins)     35/75   apple  4/16 car 10/24 cup 14/18 horse  7/17   answers 7/25/23/20    +6/-12 p=0.238 vs score
+    node x relation (no absence penalty)   38/75   apple 11/16 car 12/24 cup 12/18 horse  3/17   answers 19/24/18/14   +3/-6 p=0.508 vs score
+  NULL
+    evidence score                         39/75   apple  0/16 car  6/24 cup 17/18 horse 16/17   answers 0/7/31/37  
+    node term alone                        33/75   apple  1/16 car  5/24 cup 18/18 horse  9/17   answers 1/5/52/17     +3/-9 p=0.146 vs score
+    relational term alone                  29/75   apple 14/16 car 12/24 cup  2/18 horse  1/17   answers 36/21/8/10    +22/-32 p=0.220 vs score
+    absence alone (least absence wins)     29/75   apple  0/16 car  0/24 cup 12/18 horse 17/17   answers 0/1/17/57     +1/-11 p=0.006 vs score
+    node x relation (no absence penalty)   36/75   apple  4/16 car 11/24 cup 18/18 horse  3/17   answers 5/17/39/14    +10/-13 p=0.678 vs score
+  NULL+D3
+    evidence score                         41/75   apple  8/16 car 10/24 cup 16/18 horse  7/17   answers 12/18/24/21 ties 2 (split 41.50)
+    node term alone                        50/75   apple  6/16 car 12/24 cup 18/18 horse 14/17   answers 8/15/28/24    +16/-7 p=0.093 vs score
+    relational term alone                  27/75   apple 11/16 car 13/24 cup  2/18 horse  1/17   answers 24/27/12/12   +10/-24 p=0.024 vs score
+    absence alone (least absence wins)     35/75   apple  4/16 car 10/24 cup 14/18 horse  7/17   answers 7/25/23/20    +3/-9 p=0.146 vs score
+    node x relation (no absence penalty)   42/75   apple  9/16 car 11/24 cup 16/18 horse  6/17   answers 12/20/25/18   +5/-4 p=1.000 vs score
+
+B. per-class movement, paired (queries gained / lost per true class)
+  F6+D1        -> D3:node      apple +1/-0  car +0/-0  cup +0/-1  horse +1/-0   total +2/-1 p=1.000
+  F6+D1        -> D3:node+abs  apple +10/-0  car +6/-1  cup +1/-5  horse +0/-9   total +17/-15 p=0.860
+  F6+D1        -> D3           apple +8/-0  car +6/-0  cup +1/-3  horse +0/-9   total +15/-12 p=0.701
+  F6+D1        -> NULL         apple +0/-2  car +0/-0  cup +1/-0  horse +2/-0   total +3/-2 p=1.000
+  D3           -> NULL+D3      apple +0/-2  car +0/-2  cup +2/-0  horse +2/-0   total +4/-4 p=1.000
+
+C. sizes -- each reference against the queries of its own class (D3 record: boost-weighted node mass, edge count)
+  apple  reference: node mass   885.4  edges  1297   |  its 16 queries: node mass median   605.1 (min  509.8, max  806.6)  edges median   846 (min  680, max  1290)   reference/median edges 1.53
+  car    reference: node mass   754.6  edges   973   |  its 24 queries: node mass median   813.0 (min  581.5, max  918.7)  edges median   727 (min  444, max  1235)   reference/median edges 1.34
+  cup    reference: node mass   612.1  edges   869   |  its 18 queries: node mass median   627.1 (min  464.9, max  826.9)  edges median   958 (min  546, max  1703)   reference/median edges 0.91
+  horse  reference: node mass   763.2  edges   462   |  its 17 queries: node mass median   826.8 (min  708.1, max  931.1)  edges median   761 (min  587, max  1185)   reference/median edges 0.61
+  all 75 queries: edges median 791 (min 444, max 1703)
+  absence, means per reference (own-class queries only / all queries):
+    F6+D1    apple 0.461 / 0.538   car 0.441 / 0.378   cup 0.222 / 0.360   horse 0.113 / 0.179
+    D3       apple 0.369 / 0.420   car 0.371 / 0.364   cup 0.295 / 0.373   horse 0.367 / 0.439
+  relational term, means per reference (own-class queries only / all queries):
+    F6+D1    apple 0.184 / 0.159   car 0.150 / 0.144   cup 0.162 / 0.142   horse 0.111 / 0.117
+    D3       apple 0.186 / 0.152   car 0.149 / 0.150   cup 0.168 / 0.146   horse 0.117 / 0.125
+
+D. what the correspondence leaves unpaired -- one-sided binary coverage (matched core mass / core mass) against the count a
+   maximum pairing inside each lens type reaches (COUNT-ONLY formula), F6+D1 record
+  mean binary coverage 0.7552   mean count formula 0.8173   shortfall: mean 0.0621  median 0.0567  max 0.1633  min 0.0026   pairs with a shortfall > 0.01: 292 of 300
+
+E. queries the calibrated score cannot decide (four equal scores)
+  NULL     0 
+  NULL+D3  2 horse2-090-248.png (true horse; node term 0.386/0.449/0.429/0.436; N*R 0.057/0.050/0.059/0.046; 0.15*A 0.062/0.051/0.059/0.061); horse3-090-112.png (true horse; node term 0.414/0.464/0.415/0.486; N*R 0.051/0.053/0.042/0.043; 0.15*A 0.071/0.056/0.069/0.050)
+
+F. is the chance level class-neutral?  N0 is the coverage of a random pairing on the two graphs' own similarity matrix
+  NULL
+    N0 alone (the chance level decides)    42/75   apple  2/16 car 13/24 cup 18/18 horse  9/17   answers 2/21/34/18 
+    N alone                                37/75   apple  1/16 car  6/24 cup 18/18 horse 12/17   answers 1/8/46/20     +4/-9 p=0.267 vs N0 alone
+    calibrated node term alone             33/75   apple  1/16 car  5/24 cup 18/18 horse  9/17   answers 1/5/52/17     +3/-12 p=0.035 vs N0 alone
+    r(N, N0): pooled 0.973   between references of one query 0.951
+    mean similarity of the pairs kept      own-class 0.8905   wrong-class 0.8790   difference +0.0115   variance: which reference   8.4%, own class  21.0%
+    mean similarity of a random pairing    own-class 0.5132   wrong-class 0.5032   difference +0.0101   variance: which reference  31.2%, own class   8.8%
+    selection gain (kept - random)         own-class 0.3773   wrong-class 0.3758   difference +0.0014   variance: which reference  41.0%, own class   0.2%
+    share of the mass paired (binary)      own-class 0.7993   wrong-class 0.7405   difference +0.0587   variance: which reference  20.5%, own class   5.2%
+    share a maximum pairing covers         own-class 0.8652   wrong-class 0.8014   difference +0.0638   variance: which reference  16.9%, own class   4.5%
+    decided by similarity of the pairs kept 47/75   apple 11/16 car 13/24 cup 13/18 horse 10/17   answers 13/20/16/26
+    decided by similarity of a random pairing 34/75   apple 15/16 car  4/24 cup 15/18 horse  0/17   answers 48/4/15/8  
+    decided by selection gain              25/75   apple  0/16 car 18/24 cup  7/18 horse  0/17   answers 1/50/16/8  
+  NULL+D3
+    N0 alone (the chance level decides)    40/75   apple  6/16 car 14/24 cup 15/18 horse  5/17   answers 21/18/25/11
+    N alone                                48/75   apple  6/16 car 12/24 cup 18/18 horse 12/17   answers 10/16/28/21   +10/-2 p=0.039 vs N0 alone
+    calibrated node term alone             50/75   apple  6/16 car 12/24 cup 18/18 horse 14/17   answers 8/15/28/24    +13/-3 p=0.021 vs N0 alone
+    r(N, N0): pooled 0.953   between references of one query 0.959
+    mean similarity of the pairs kept      own-class 0.8905   wrong-class 0.8790   difference +0.0115   variance: which reference   8.4%, own class  21.0%
+    mean similarity of a random pairing    own-class 0.5132   wrong-class 0.5032   difference +0.0101   variance: which reference  31.2%, own class   8.8%
+    selection gain (kept - random)         own-class 0.3773   wrong-class 0.3758   difference +0.0014   variance: which reference  41.0%, own class   0.2%
+    share of the mass paired (binary)      own-class 0.8079   wrong-class 0.7493   difference +0.0586   variance: which reference   4.2%, own class  15.1%
+    share a maximum pairing covers         own-class 0.8738   wrong-class 0.8106   difference +0.0632   variance: which reference   9.6%, own class  10.5%
+    decided by similarity of the pairs kept 47/75   apple 11/16 car 13/24 cup 13/18 horse 10/17   answers 13/20/16/26
+    decided by similarity of a random pairing 34/75   apple 15/16 car  4/24 cup 15/18 horse  0/17   answers 48/4/15/8  
+    decided by selection gain              25/75   apple  0/16 car 18/24 cup  7/18 horse  0/17   answers 1/50/16/8  
+
+####################################################################################################
+# window = v1   (source digest 94f7f71f7f09)
+####################################################################################################
+
+A. each term deciding ALONE, and the score, per configuration (paired against that configuration's score)
+  F6+D1
+    evidence score                         34/75   apple  0/16 car  7/24 cup 14/18 horse 13/17   answers 0/12/20/43 
+    node term alone                        17/75   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75      +4/-21 p=0.001 vs score
+    relational term alone                  41/75   apple  6/16 car 18/24 cup 14/18 horse  3/17   answers 12/31/25/7    +19/-12 p=0.281 vs score
+    absence alone (least absence wins)     21/75   apple  0/16 car  0/24 cup  4/18 horse 17/17   answers 0/0/4/71      +4/-17 p=0.007 vs score
+    node x relation (no absence penalty)   40/75   apple  6/16 car 14/24 cup 15/18 horse  5/17   answers 7/27/24/17    +14/-8 p=0.286 vs score
+  D3:node
+    evidence score                         38/75   apple  1/16 car  9/24 cup 16/18 horse 12/17   answers 1/16/26/32 
+    node term alone                        38/75   apple  3/16 car 14/24 cup 18/18 horse  3/17   answers 3/32/27/13    +9/-9 p=1.000 vs score
+    relational term alone                  41/75   apple  6/16 car 18/24 cup 14/18 horse  3/17   answers 12/31/25/7    +16/-13 p=0.711 vs score
+    absence alone (least absence wins)     21/75   apple  0/16 car  0/24 cup  4/18 horse 17/17   answers 0/0/4/71      +5/-22 p=0.002 vs score
+    node x relation (no absence penalty)   44/75   apple  6/16 car 19/24 cup 15/18 horse  4/17   answers 8/34/24/9     +15/-9 p=0.307 vs score
+  D3
+    evidence score                         39/75   apple  6/16 car 16/24 cup 16/18 horse  1/17   answers 6/34/25/10 
+    node term alone                        38/75   apple  3/16 car 14/24 cup 18/18 horse  3/17   answers 3/32/27/13    +7/-8 p=1.000 vs score
+    relational term alone                  44/75   apple  6/16 car 19/24 cup 15/18 horse  4/17   answers 7/33/26/9     +7/-2 p=0.180 vs score
+    absence alone (least absence wins)     43/75   apple 10/16 car 13/24 cup 18/18 horse  2/17   answers 10/27/26/12   +11/-7 p=0.481 vs score
+    node x relation (no absence penalty)   46/75   apple  6/16 car 20/24 cup 16/18 horse  4/17   answers 6/36/25/8     +7/-0 p=0.016 vs score
+  NULL
+    evidence score                         36/75   apple  0/16 car  6/24 cup 14/18 horse 16/17   answers 0/8/17/50  
+    node term alone                        17/75   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75      +1/-20 p=0.000 vs score
+    relational term alone                  41/75   apple  6/16 car 18/24 cup 14/18 horse  3/17   answers 12/31/25/7    +20/-15 p=0.500 vs score
+    absence alone (least absence wins)     21/75   apple  0/16 car  0/24 cup  4/18 horse 17/17   answers 0/0/4/71      +1/-16 p=0.000 vs score
+    node x relation (no absence penalty)   38/75   apple  6/16 car 12/24 cup 14/18 horse  6/17   answers 6/25/23/21    +12/-10 p=0.832 vs score
+  NULL+D3
+    evidence score                         40/75   apple  6/16 car 16/24 cup 17/18 horse  1/17   answers 6/35/25/9  
+    node term alone                        34/75   apple  1/16 car 15/24 cup 17/18 horse  1/17   answers 1/37/27/10    +2/-8 p=0.109 vs score
+    relational term alone                  44/75   apple  6/16 car 19/24 cup 15/18 horse  4/17   answers 7/33/26/9     +7/-3 p=0.344 vs score
+    absence alone (least absence wins)     43/75   apple 10/16 car 13/24 cup 18/18 horse  2/17   answers 10/27/26/12   +10/-7 p=0.629 vs score
+    node x relation (no absence penalty)   44/75   apple  5/16 car 20/24 cup 16/18 horse  3/17   answers 5/37/26/7     +6/-2 p=0.289 vs score
+
+B. per-class movement, paired (queries gained / lost per true class)
+  F6+D1        -> D3:node      apple +1/-0  car +2/-0  cup +2/-0  horse +0/-1   total +5/-1 p=0.219
+  F6+D1        -> D3:node+abs  apple +8/-0  car +8/-0  cup +3/-0  horse +0/-12   total +19/-12 p=0.281
+  F6+D1        -> D3           apple +6/-0  car +9/-0  cup +2/-0  horse +0/-12   total +17/-12 p=0.458
+  F6+D1        -> NULL         apple +0/-0  car +0/-1  cup +0/-0  horse +3/-0   total +3/-1 p=0.625
+  D3           -> NULL+D3      apple +0/-0  car +0/-0  cup +1/-0  horse +0/-0   total +1/-0 p=1.000
+
+C. sizes -- each reference against the queries of its own class (D3 record: boost-weighted node mass, edge count)
+  apple  reference: node mass   324.0  edges   569   |  its 16 queries: node mass median   321.0 (min  308.0, max  355.0)  edges median   529 (min  415, max   624)   reference/median edges 1.08
+  car    reference: node mass   280.0  edges   503   |  its 24 queries: node mass median   264.0 (min  247.0, max  281.0)  edges median   373 (min  250, max   516)   reference/median edges 1.35
+  cup    reference: node mass   308.0  edges   512   |  its 18 queries: node mass median   312.0 (min  280.0, max  346.0)  edges median   550 (min  332, max   769)   reference/median edges 0.93
+  horse  reference: node mass   214.0  edges   225   |  its 17 queries: node mass median   272.0 (min  256.0, max  301.0)  edges median   412 (min  346, max   580)   reference/median edges 0.55
+  all 75 queries: edges median 448 (min 250, max 769)
+  absence, means per reference (own-class queries only / all queries):
+    F6+D1    apple 0.297 / 0.427   car 0.371 / 0.293   cup 0.156 / 0.305   horse 0.067 / 0.077
+    D3       apple 0.282 / 0.338   car 0.302 / 0.305   cup 0.217 / 0.310   horse 0.360 / 0.405
+  relational term, means per reference (own-class queries only / all queries):
+    F6+D1    apple 0.092 / 0.079   car 0.103 / 0.089   cup 0.106 / 0.085   horse 0.070 / 0.067
+    D3       apple 0.093 / 0.075   car 0.105 / 0.094   cup 0.110 / 0.089   horse 0.071 / 0.070
+
+D. what the correspondence leaves unpaired -- one-sided binary coverage (matched core mass / core mass) against the count a
+   maximum pairing inside each lens type reaches (COUNT-ONLY formula), F6+D1 record
+written: /home/user/Percept4/diagnostics/results/phase2_addendum.txt
+  mean binary coverage 0.8707   mean count formula 0.9213   shortfall: mean 0.0507  median 0.0500  max 0.1201  min 0.0047   pairs with a shortfall > 0.01: 292 of 300
+
+E. queries the calibrated score cannot decide (four equal scores)
+  NULL     0 
+  NULL+D3  0 
+
+F. is the chance level class-neutral?  N0 is the coverage of a random pairing on the two graphs' own similarity matrix
+  NULL
+    N0 alone (the chance level decides)    17/75   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75   
+    N alone                                17/75   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75      +0/-0 p=1.000 vs N0 alone
+    calibrated node term alone             17/75   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75      +0/-0 p=1.000 vs N0 alone
+    r(N, N0): pooled 0.943   between references of one query 0.985
+    mean similarity of the pairs kept      own-class 0.9257   wrong-class 0.9176   difference +0.0081   variance: which reference  27.5%, own class   8.2%
+    mean similarity of a random pairing    own-class 0.4593   wrong-class 0.4527   difference +0.0066   variance: which reference  51.0%, own class   1.6%
+    selection gain (kept - random)         own-class 0.4664   wrong-class 0.4648   difference +0.0015   variance: which reference  45.5%, own class   0.1%
+    share of the mass paired (binary)      own-class 0.8963   wrong-class 0.8621   difference +0.0341   variance: which reference  69.2%, own class   3.4%
+    share a maximum pairing covers         own-class 0.9502   wrong-class 0.9117   difference +0.0385   variance: which reference  53.3%, own class   5.1%
+    decided by similarity of the pairs kept 27/75   apple  1/16 car  8/24 cup 10/18 horse  8/17   answers 1/24/16/34 
+    decided by similarity of a random pairing 17/75   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75   
+    decided by selection gain              16/75   apple  0/16 car  8/24 cup  8/18 horse  0/17   answers 2/24/49/0  
+  NULL+D3
+    N0 alone (the chance level decides)    47/75   apple 12/16 car  9/24 cup 17/18 horse  9/17   answers 12/18/21/24
+    N alone                                38/75   apple  3/16 car 14/24 cup 18/18 horse  3/17   answers 3/32/27/13    +7/-16 p=0.093 vs N0 alone
+    calibrated node term alone             34/75   apple  1/16 car 15/24 cup 17/18 horse  1/17   answers 1/37/27/10    +8/-21 p=0.024 vs N0 alone
+    r(N, N0): pooled 0.825   between references of one query 0.916
+    mean similarity of the pairs kept      own-class 0.9257   wrong-class 0.9176   difference +0.0081   variance: which reference  27.5%, own class   8.2%
+    mean similarity of a random pairing    own-class 0.4593   wrong-class 0.4527   difference +0.0066   variance: which reference  51.0%, own class   1.6%
+    selection gain (kept - random)         own-class 0.4664   wrong-class 0.4648   difference +0.0015   variance: which reference  45.5%, own class   0.1%
+    share of the mass paired (binary)      own-class 0.8742   wrong-class 0.8357   difference +0.0385   variance: which reference  16.2%, own class  23.0%
+    share a maximum pairing covers         own-class 0.9278   wrong-class 0.8852   difference +0.0426   variance: which reference  42.6%, own class  16.2%
+    decided by similarity of the pairs kept 27/75   apple  1/16 car  8/24 cup 10/18 horse  8/17   answers 1/24/16/34 
+    decided by similarity of a random pairing 17/75   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75   
+    decided by selection gain              16/75   apple  0/16 car  8/24 cup  8/18 horse  0/17   answers 2/24/49/0  

@@ -1,0 +1,352 @@
+STAGE 2 -- D3, Phase 4, null calibration of node coverage -- EVAL-75 (in-sample)
+source digest f66ea9ac0eea   harness digest 6e3efcabb263   front-end digest c1ea81ae1b6c
+defaults in this tree: EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True  EVIDENCE_GRADED_NODE_CREDIT=True  EVIDENCE_QUERY_SIDE_TERMS=()  EDGE_UNMEASURED_IS_NOT_EVIDENCE=True  EVIDENCE_NODE_NULL_CALIBRATED=False
+configurations (explicit values; independent of the defaults):
+  F6+D1       D1=True  query-side=()                           P4=False null=False  stage-1 state: every stage-2 switch off
+  P4          D1=True  query-side=()                           P4=True  null=False  Phase 4 on
+  D3:node     D1=True  query-side=node                         P4=False null=False  decomposition arm: node term two-sided
+  D3:node+abs D1=True  query-side=node,absence                 P4=False null=False  decomposition arm: node and absence two-sided
+  D3          D1=True  query-side=node,relation,absence        P4=False null=False  PRIMARY: all three terms two-sided
+  D3+P4       D1=True  query-side=node,relation,absence        P4=True  null=False  D3 primary with Phase 4 on
+  D3,D1off    D1=False query-side=node,relation,absence        P4=False null=False  control: D3 primary with binary node credit
+  NULL        D1=True  query-side=()                           P4=True  null=True   null calibration, one-sided score (Phase 4 on)
+  NULL+D3     D1=True  query-side=node,relation,absence        P4=True  null=True   null calibration with D3 primary (Phase 4 on)
+  NULL,D1off  D1=False query-side=()                           P4=True  null=True   mechanism check: null calibration of BINARY credit
+
+##############################################################################################################
+# window = full
+##############################################################################################################
+
+0. CONTINUITY -- F6+D1 with every stage-2 switch off, against the stored stage-1 record (p1_F6_D1_full.json)
+  7800 stored per-pair values compared (every key the two records share): 0 differ, largest difference 0; same answer on 75/75 queries
+  stage-1 source digest d12ee4b3370d -> this source digest f66ea9ac0eea
+  self-check: score recomputed from its stored terms, every configuration, largest deviation 7.8e-11
+
+==============================================================================================================
+1. PHASE 4 -- an unmeasured edge pair is not evidence  (switch off -> on)
+==============================================================================================================
+  query-side terms off:    12300 stored per-pair values compared: 0 differ (largest 0); pairs whose SCORE differs 0 of 300; answers changed 0; accuracy 38 -> 38 (+0/-0 p=1.000)
+      core-side similarity sum per relation, own-class pairs: no relation moved
+      core-side similarity sum per relation, all pairs: no relation moved
+  query-side terms all on: 14100 stored per-pair values compared: 0 differ (largest 0); pairs whose SCORE differs 0 of 300; answers changed 0; accuracy 41 -> 41 (+0/-0 p=1.000)
+      core-side similarity sum per relation, own-class pairs: no relation moved
+      core-side similarity sum per relation, all pairs: no relation moved
+      query-side similarity sum, all pairs: 23495.156 -> 23495.156
+
+==============================================================================================================
+2. D3 -- query-side terms  (Phase 4 off, null off; against F6+D1)
+==============================================================================================================
+2.1 accuracy, per class, answers apple/car/cup/horse
+  F6+D1                              38/75 =  50.7%   apple  2/16 car  6/24 cup 16/18 horse 14/17   answers 2/11/29/33  ties  0
+  D3:node                            39/75 =  52.0%   apple  3/16 car  6/24 cup 15/18 horse 15/17   answers 4/9/27/35   ties  0   +2/-1 p=1.000 vs F6+D1
+  D3:node+abs                        40/75 =  53.3%   apple 12/16 car 11/24 cup 12/18 horse  5/17   answers 19/23/16/17 ties  0   +17/-15 p=0.860 vs F6+D1
+  D3  [PRIMARY]                      41/75 =  54.7%   apple 10/16 car 12/24 cup 14/18 horse  5/17   answers 14/25/19/17 ties  0   +15/-12 p=0.701 vs F6+D1
+  D3,D1off  [control]                39/75 =  52.0%   apple 10/16 car 12/24 cup 12/18 horse  5/17   answers 15/25/18/17 ties  0   +15/-14 p=1.000 vs F6+D1
+
+2.2 PRE-REGISTERED MEASURE 1 -- share of the variance over the 300 pairs explained by which reference / by own class
+  evidence score
+    F6+D1                            which reference  10.1%   own class  10.0%   mean own 0.0609  wrong 0.0356   per reference apple 0.0237 car 0.0433 cup 0.0522 horse 0.0485
+    D3:node                          which reference   4.4%   own class  11.6%   mean own 0.0620  wrong 0.0361   per reference apple 0.0314 car 0.0436 cup 0.0452 horse 0.0502
+    D3:node+abs                      which reference  12.4%   own class  12.3%   mean own 0.0561  wrong 0.0318   per reference apple 0.0455 car 0.0446 cup 0.0418 horse 0.0197
+    D3                               which reference  10.5%   own class  12.6%   mean own 0.0580  wrong 0.0328   per reference apple 0.0410 car 0.0482 cup 0.0448 horse 0.0223
+  node term
+    F6+D1                            which reference  19.6%   own class   7.0%   mean own 0.7115  wrong 0.6508   per reference apple 0.6151 car 0.6711 cup 0.7337 horse 0.6440
+    D3:node                          which reference   3.0%   own class  19.8%   mean own 0.7193  wrong 0.6586   per reference apple 0.6751 car 0.6848 cup 0.6781 horse 0.6571
+    D3:node+abs                      which reference   3.0%   own class  19.8%   mean own 0.7193  wrong 0.6586   per reference apple 0.6751 car 0.6848 cup 0.6781 horse 0.6571
+    D3                               which reference   3.0%   own class  19.8%   mean own 0.7193  wrong 0.6586   per reference apple 0.6751 car 0.6848 cup 0.6781 horse 0.6571
+  relational term
+    F6+D1                            which reference  21.6%   own class   3.7%   mean own 0.1516  wrong 0.1370   per reference apple 0.1594 car 0.1444 cup 0.1418 horse 0.1169
+    D3                               which reference  11.4%   own class   3.9%   mean own 0.1541  wrong 0.1395   per reference apple 0.1518 car 0.1499 cup 0.1461 horse 0.1249
+  absence term
+    F6+D1                            which reference  56.6%   own class   2.4%   mean own 0.3184  wrong 0.3792   per reference apple 0.5385 car 0.3784 cup 0.3596 horse 0.1794
+    D3:node+abs                      which reference  13.9%   own class  11.0%   mean own 0.3514  wrong 0.4149   per reference apple 0.4196 car 0.3645 cup 0.3734 horse 0.4386
+
+2.3 OBSERVABLE (Audit B6, transductive): each score minus the mean its reference receives from the other 74 queries
+    F6+D1, offset removed            40/75 =  53.3%   apple  7/16 car  6/24 cup 15/18 horse 12/17   answers 9/11/24/31  ties  0   +5/-3 p=0.727 vs as is
+    D3:node, offset removed          43/75 =  57.3%   apple  9/16 car  6/24 cup 15/18 horse 13/17   answers 11/10/23/31 ties  0   +6/-2 p=0.289 vs as is
+    D3:node+abs, offset removed      40/75 =  53.3%   apple 12/16 car  6/24 cup 12/18 horse 10/17   answers 19/12/17/27 ties  0   +6/-6 p=1.000 vs as is
+    D3, offset removed               40/75 =  53.3%   apple 12/16 car  6/24 cup 12/18 horse 10/17   answers 19/12/17/27 ties  0   +7/-8 p=1.000 vs as is
+
+2.4 the D1 signal again -- each rule against the count-only stand-in of the SAME node formula
+    (one-sided: sum b*min(nq,nc) / sum b*nc;   two-sided: 2*sum b*min(nq,nc) / (sum b*nq + sum b*nc))
+  F6+D1
+      COUNT-ONLY, same formula       34/75 =  45.3%   apple  0/16 car 10/24 cup 18/18 horse  6/17   answers 0/22/39/14  ties  0
+      node term alone                37/75 =  49.3%   apple  1/16 car  6/24 cup 18/18 horse 12/17   answers 1/8/46/20   ties  0   +9/-6 p=0.607 vs COUNT-ONLY
+      evidence score                 38/75 =  50.7%   apple  2/16 car  6/24 cup 16/18 horse 14/17   answers 2/11/29/33  ties  0   +14/-10 p=0.541 vs COUNT-ONLY
+    r(node term, count formula): pooled 0.974   between references of one query 0.946
+  D3
+      COUNT-ONLY, same formula       41/75 =  54.7%   apple  3/16 car 16/24 cup 15/18 horse  7/17   answers 4/31/25/15  ties  0
+      node term alone                48/75 =  64.0%   apple  6/16 car 12/24 cup 18/18 horse 12/17   answers 10/16/28/21 ties  0   +11/-4 p=0.118 vs COUNT-ONLY
+      evidence score                 41/75 =  54.7%   apple 10/16 car 12/24 cup 14/18 horse  5/17   answers 14/25/19/17 ties  0   +16/-16 p=1.000 vs COUNT-ONLY
+    r(node term, count formula): pooled 0.934   between references of one query 0.931
+  D3 with binary credit (control: the gap that is NOT D1's)
+      node term alone                47/75 =  62.7%   apple  6/16 car 12/24 cup 18/18 horse 11/17   answers 11/16/28/20 ties  0   +10/-4 p=0.180 vs COUNT-ONLY
+      evidence score                 39/75 =  52.0%   apple 10/16 car 12/24 cup 12/18 horse  5/17   answers 15/25/18/17 ties  0   +15/-17 p=0.860 vs COUNT-ONLY
+    D1 under D3 (binary -> graded credit), evidence score: 39 -> 41  +2/-0 p=0.500
+
+2.5 the three terms, means over own-class / wrong-class pairs
+  F6+D1          node 0.7115 / 0.6508   relation 0.1516 / 0.1370   absence 0.3184 / 0.3792   score 0.0609 / 0.0356
+  D3:node        node 0.7193 / 0.6586   relation 0.1516 / 0.1370   absence 0.3184 / 0.3792   score 0.0620 / 0.0361
+  D3:node+abs    node 0.7193 / 0.6586   relation 0.1516 / 0.1370   absence 0.3514 / 0.4149   score 0.0561 / 0.0318
+  D3             node 0.7193 / 0.6586   relation 0.1541 / 0.1395   absence 0.3514 / 0.4149   score 0.0580 / 0.0328
+
+2.6 absolute scale (the thresholds were set on the one-sided score: EVIDENCE_MIN_BALANCED 0.15, THETA_EVIDENCE_POS 0.35)
+  F6+D1          own-class score: median 0.0604  max 0.1425   pairs >= 0.15: 0 of 300   >= 0.35: 0   exactly 0: 53   undecidable queries: 0
+  D3:node        own-class score: median 0.0638  max 0.1251   pairs >= 0.15: 0 of 300   >= 0.35: 0   exactly 0: 42   undecidable queries: 0
+  D3:node+abs    own-class score: median 0.0562  max 0.1245   pairs >= 0.15: 0 of 300   >= 0.35: 0   exactly 0: 48   undecidable queries: 0
+  D3             own-class score: median 0.0575  max 0.1332   pairs >= 0.15: 0 of 300   >= 0.35: 0   exactly 0: 47   undecidable queries: 0
+
+==============================================================================================================
+3. NULL CALIBRATION of node coverage  (Phase 4 on; against the same configuration without calibration)
+==============================================================================================================
+3.1 PRE-REGISTERED MEASURE 1 -- the chance level N0 next to the uncalibrated node term N (means)
+  one-sided score  own-class: N 0.7115  N0 0.4433 (62% of N)  calibrated 0.4925   |   wrong-class: N 0.6508  N0 0.4034 (62% of N)  calibrated 0.4243
+                   per reference: N 0.615 0.671 0.734 0.644   N0 0.393 0.420 0.445 0.395   calibrated 0.373 0.441 0.523 0.428
+  D3 primary       own-class: N 0.7193  N0 0.4482 (62% of N)  calibrated 0.4939   |   wrong-class: N 0.6586  N0 0.4081 (62% of N)  calibrated 0.4264
+                   per reference: N 0.675 0.685 0.678 0.657   N0 0.431 0.427 0.412 0.403   calibrated 0.432 0.451 0.457 0.433
+
+3.2 PRE-REGISTERED MEASURE 2 -- variance explained by which reference / by own class
+  one-sided score
+      score, uncalibrated            which reference  10.1%   own class  10.0%   mean own 0.0609  wrong 0.0356   per reference apple 0.0237 car 0.0433 cup 0.0522 horse 0.0485
+      score, calibrated              which reference  12.9%   own class  12.2%   mean own 0.0335  wrong 0.0139   per reference apple 0.0050 car 0.0177 cup 0.0268 horse 0.0257
+      node term, uncalibrated        which reference  19.6%   own class   7.0%   mean own 0.7115  wrong 0.6508   per reference apple 0.6151 car 0.6711 cup 0.7337 horse 0.6440
+      node term, calibrated          which reference  27.1%   own class   8.3%   mean own 0.4925  wrong 0.4243   per reference apple 0.3735 car 0.4412 cup 0.5229 horse 0.4278
+      chance level N0                which reference   9.8%   own class   6.6%   mean own 0.4433  wrong 0.4034   per reference apple 0.3932 car 0.4196 cup 0.4452 horse 0.3955
+  D3 primary
+      score, uncalibrated            which reference  10.5%   own class  12.6%   mean own 0.0580  wrong 0.0328   per reference apple 0.0410 car 0.0482 cup 0.0448 horse 0.0223
+      score, calibrated              which reference   5.5%   own class  15.2%   mean own 0.0259  wrong 0.0094   per reference apple 0.0114 car 0.0169 cup 0.0182 horse 0.0075
+      node term, uncalibrated        which reference   3.0%   own class  19.8%   mean own 0.7193  wrong 0.6586   per reference apple 0.6751 car 0.6848 cup 0.6781 horse 0.6571
+      node term, calibrated          which reference   3.4%   own class  24.8%   mean own 0.4939  wrong 0.4264   per reference apple 0.4321 car 0.4513 cup 0.4567 horse 0.4331
+      chance level N0                which reference   6.0%   own class  13.7%   mean own 0.4482  wrong 0.4081   per reference apple 0.4308 car 0.4275 cup 0.4118 horse 0.4026
+
+3.3 PRE-REGISTERED MEASURE 3 -- r(node term, count formula)
+  one-sided score  pooled 0.974 -> 0.918   between references of one query 0.946 -> 0.869
+  D3 primary       pooled 0.934 -> 0.824   between references of one query 0.931 -> 0.841
+
+3.4 PRE-REGISTERED MEASURE 4 -- accuracy, ties split, and where the score stops deciding
+  one-sided score, uncalibrated      38/75 =  50.7%   apple  2/16 car  6/24 cup 16/18 horse 14/17   answers 2/11/29/33  ties  0
+  one-sided score, calibrated        39/75 =  52.0%   apple  0/16 car  6/24 cup 17/18 horse 16/17   answers 0/7/31/37   ties  0   +3/-2 p=1.000 vs uncalibrated
+      pairs scoring exactly 0: 53 -> 128 of 300   own-class pairs at 0: 8 -> 19 of 75   queries with four equal scores: 0 -> 0
+        calibrated, offset removed (B6 observable) 43/75 =  57.3%   apple  9/16 car  6/24 cup 15/18 horse 13/17   answers 14/9/23/29  ties  0   +9/-5 p=0.424 vs as is
+  D3 primary, uncalibrated           41/75 =  54.7%   apple 10/16 car 12/24 cup 14/18 horse  5/17   answers 14/25/19/17 ties  0
+  D3 primary, calibrated             41/75 =  54.7%   apple  8/16 car 10/24 cup 16/18 horse  7/17   answers 12/18/24/21 ties  2 (split 41.50)   +4/-4 p=1.000 vs uncalibrated
+      pairs scoring exactly 0: 47 -> 140 of 300   own-class pairs at 0: 1 -> 16 of 75   queries with four equal scores: 0 -> 2
+        calibrated, offset removed (B6 observable) 43/75 =  57.3%   apple 10/16 car  9/24 cup 14/18 horse 10/17   answers 15/15/20/25 ties  0   +5/-3 p=0.727 vs as is
+
+3.5 PRE-REGISTERED MEASURE 5 -- the node term alone against COUNT-ONLY (uncalibrated count formula)
+  one-sided score
+      COUNT-ONLY                     34/75 =  45.3%   apple  0/16 car 10/24 cup 18/18 horse  6/17   answers 0/22/39/14  ties  0
+      node term, uncalibrated        37/75 =  49.3%   apple  1/16 car  6/24 cup 18/18 horse 12/17   answers 1/8/46/20   ties  0   +9/-6 p=0.607 vs COUNT-ONLY
+      node term, calibrated          33/75 =  44.0%   apple  1/16 car  5/24 cup 18/18 horse  9/17   answers 1/5/52/17   ties  0   +6/-7 p=1.000 vs COUNT-ONLY
+      node term, calibrated vs uncalibrated: +0/-4 p=0.125
+  D3 primary
+      COUNT-ONLY                     41/75 =  54.7%   apple  3/16 car 16/24 cup 15/18 horse  7/17   answers 4/31/25/15  ties  0
+      node term, uncalibrated        48/75 =  64.0%   apple  6/16 car 12/24 cup 18/18 horse 12/17   answers 10/16/28/21 ties  0   +11/-4 p=0.118 vs COUNT-ONLY
+      node term, calibrated          50/75 =  66.7%   apple  6/16 car 12/24 cup 18/18 horse 14/17   answers 8/15/28/24  ties  0   +14/-5 p=0.064 vs COUNT-ONLY
+      node term, calibrated vs uncalibrated: +3/-1 p=0.625
+
+3.6 PRE-REGISTERED MEASURE 6 -- interaction with D3, and the two halves of the calibration (offline, not selected between)
+  evidence score, hits of 75:
+                         null off   null on
+    query-side off           38         39
+    query-side all           41         41
+    interaction (both - D3 only - null only + neither): -1 queries
+  reference share of the score's variance:
+    query-side off         10.1%      12.9%
+    query-side all         10.5%       5.5%
+  one-sided score -- node term alone, then the score built on it
+      N (uncalibrated)               37/75 =  49.3%   apple  1/16 car  6/24 cup 18/18 horse 12/17   answers 1/8/46/20   ties  0
+      N - N0                         26/75 =  34.7%   apple  0/16 car  5/24 cup 18/18 horse  3/17   answers 0/5/64/6    ties  0   +1/-12 p=0.003 vs N
+      (N - N0) / (1 - N0)            33/75 =  44.0%   apple  1/16 car  5/24 cup 18/18 horse  9/17   answers 1/5/52/17   ties  0   +0/-4 p=0.125 vs N
+      score with N                   38/75 =  50.7%   apple  2/16 car  6/24 cup 16/18 horse 14/17   answers 2/11/29/33  ties  0
+      score with N - N0              39/75 =  52.0%   apple  5/16 car  5/24 cup 13/18 horse 16/17   answers 12/5/21/37  ties 12 (split 37.00)   +8/-7 p=1.000 vs N
+      score with (N - N0)/(1 - N0)   39/75 =  52.0%   apple  0/16 car  6/24 cup 17/18 horse 16/17   answers 0/7/31/37   ties  0   +3/-2 p=1.000 vs N
+  D3 primary -- node term alone, then the score built on it
+      N (uncalibrated)               48/75 =  64.0%   apple  6/16 car 12/24 cup 18/18 horse 12/17   answers 10/16/28/21 ties  0
+      N - N0                         44/75 =  58.7%   apple  4/16 car  8/24 cup 18/18 horse 14/17   answers 5/10/32/28  ties  0   +4/-8 p=0.388 vs N
+      (N - N0) / (1 - N0)            50/75 =  66.7%   apple  6/16 car 12/24 cup 18/18 horse 14/17   answers 8/15/28/24  ties  0   +3/-1 p=0.625 vs N
+      score with N                   41/75 =  54.7%   apple 10/16 car 12/24 cup 14/18 horse  5/17   answers 14/25/19/17 ties  0
+      score with N - N0              31/75 =  41.3%   apple 13/16 car  5/24 cup 13/18 horse  0/17   answers 48/7/16/4   ties 44 (split 33.00)   +6/-16 p=0.052 vs N
+      score with (N - N0)/(1 - N0)   41/75 =  54.7%   apple  8/16 car 10/24 cup 16/18 horse  7/17   answers 12/18/24/21 ties  2 (split 41.50)   +4/-4 p=1.000 vs N
+
+3.7 mechanism check -- BINARY credit, calibrated (a count is what a random pairing earns)
+  mean N 0.7993 / 0.7405 (own / wrong)   N0 0.8500 / 0.7873   calibrated node term 0.0000 / 0.0002
+    evidence score                   16/75 =  21.3%   apple 16/16 car  0/24 cup  0/18 horse  0/17   answers 75/0/0/0    ties 75 (split 18.75)
+      pairs scoring exactly 0: 300 of 300   queries with four equal scores: 75
+
+##############################################################################################################
+# window = v1
+##############################################################################################################
+
+0. CONTINUITY -- F6+D1 with every stage-2 switch off, against the stored stage-1 record (p1_F6_D1_v1.json)
+  7800 stored per-pair values compared (every key the two records share): 0 differ, largest difference 0; same answer on 75/75 queries
+  stage-1 source digest d12ee4b3370d -> this source digest f66ea9ac0eea
+  self-check: score recomputed from its stored terms, every configuration, largest deviation 6.5e-11
+
+==============================================================================================================
+1. PHASE 4 -- an unmeasured edge pair is not evidence  (switch off -> on)
+==============================================================================================================
+  query-side terms off:    12300 stored per-pair values compared: 0 differ (largest 0); pairs whose SCORE differs 0 of 300; answers changed 0; accuracy 34 -> 34 (+0/-0 p=1.000)
+      core-side similarity sum per relation, own-class pairs: no relation moved
+      core-side similarity sum per relation, all pairs: no relation moved
+  query-side terms all on: 14100 stored per-pair values compared: 0 differ (largest 0); pairs whose SCORE differs 0 of 300; answers changed 0; accuracy 39 -> 39 (+0/-0 p=1.000)
+      core-side similarity sum per relation, own-class pairs: no relation moved
+      core-side similarity sum per relation, all pairs: no relation moved
+      query-side similarity sum, all pairs: 7696.692 -> 7696.692
+
+==============================================================================================================
+2. D3 -- query-side terms  (Phase 4 off, null off; against F6+D1)
+==============================================================================================================
+2.1 accuracy, per class, answers apple/car/cup/horse
+  F6+D1                              34/75 =  45.3%   apple  0/16 car  7/24 cup 14/18 horse 13/17   answers 0/12/20/43  ties  0
+  D3:node                            38/75 =  50.7%   apple  1/16 car  9/24 cup 16/18 horse 12/17   answers 1/16/26/32  ties  0   +5/-1 p=0.219 vs F6+D1
+  D3:node+abs                        41/75 =  54.7%   apple  8/16 car 15/24 cup 17/18 horse  1/17   answers 8/32/25/10  ties  0   +19/-12 p=0.281 vs F6+D1
+  D3  [PRIMARY]                      39/75 =  52.0%   apple  6/16 car 16/24 cup 16/18 horse  1/17   answers 6/34/25/10  ties  0   +17/-12 p=0.458 vs F6+D1
+  D3,D1off  [control]                39/75 =  52.0%   apple  6/16 car 16/24 cup 16/18 horse  1/17   answers 6/34/25/10  ties  0   +17/-12 p=0.458 vs F6+D1
+
+2.2 PRE-REGISTERED MEASURE 1 -- share of the variance over the 300 pairs explained by which reference / by own class
+  evidence score
+    F6+D1                            which reference  29.4%   own class  10.3%   mean own 0.0433  wrong 0.0235   per reference apple 0.0083 car 0.0296 cup 0.0268 horse 0.0492
+    D3:node                          which reference  21.1%   own class  13.7%   mean own 0.0418  wrong 0.0209   per reference apple 0.0089 car 0.0284 cup 0.0268 horse 0.0403
+    D3:node+abs                      which reference  13.2%   own class  19.7%   mean own 0.0342  wrong 0.0122   per reference apple 0.0144 car 0.0263 cup 0.0236 horse 0.0066
+    D3                               which reference  18.3%   own class  19.5%   mean own 0.0358  wrong 0.0131   per reference apple 0.0119 car 0.0297 cup 0.0265 horse 0.0070
+  node term
+    F6+D1                            which reference  71.7%   own class   4.4%   mean own 0.8297  wrong 0.7915   per reference apple 0.7260 car 0.8147 cup 0.7599 horse 0.9037
+    D3:node                          which reference  14.4%   own class  25.7%   mean own 0.8092  wrong 0.7669   per reference apple 0.7638 car 0.7991 cup 0.7796 horse 0.7674
+    D3:node+abs                      which reference  14.4%   own class  25.7%   mean own 0.8092  wrong 0.7669   per reference apple 0.7638 car 0.7991 cup 0.7796 horse 0.7674
+    D3                               which reference  14.4%   own class  25.7%   mean own 0.8092  wrong 0.7669   per reference apple 0.7638 car 0.7991 cup 0.7796 horse 0.7674
+  relational term
+    F6+D1                            which reference  12.2%   own class  11.8%   mean own 0.0938  wrong 0.0752   per reference apple 0.0787 car 0.0890 cup 0.0847 horse 0.0672
+    D3                               which reference  17.7%   own class  12.1%   mean own 0.0960  wrong 0.0770   per reference apple 0.0746 car 0.0937 cup 0.0891 horse 0.0696
+  absence term
+    F6+D1                            which reference  60.9%   own class   2.2%   mean own 0.2345  wrong 0.2893   per reference apple 0.4271 car 0.2928 cup 0.3053 horse 0.0772
+    D3:node+abs                      which reference  26.5%   own class  13.4%   mean own 0.2904  wrong 0.3556   per reference apple 0.3377 car 0.3048 cup 0.3101 horse 0.4047
+
+2.3 OBSERVABLE (Audit B6, transductive): each score minus the mean its reference receives from the other 74 queries
+    F6+D1, offset removed            43/75 =  57.3%   apple  7/16 car 11/24 cup 16/18 horse  9/17   answers 11/21/22/21 ties  0   +13/-4 p=0.049 vs as is
+    D3:node, offset removed          46/75 =  61.3%   apple  9/16 car 11/24 cup 16/18 horse 10/17   answers 11/19/22/23 ties  0   +10/-2 p=0.039 vs as is
+    D3:node+abs, offset removed      43/75 =  57.3%   apple 10/16 car 12/24 cup 16/18 horse  5/17   answers 13/22/21/19 ties  0   +6/-4 p=0.754 vs as is
+    D3, offset removed               42/75 =  56.0%   apple 10/16 car 11/24 cup 16/18 horse  5/17   answers 12/21/23/19 ties  0   +8/-5 p=0.581 vs as is
+
+2.4 the D1 signal again -- each rule against the count-only stand-in of the SAME node formula
+    (one-sided: sum b*min(nq,nc) / sum b*nc;   two-sided: 2*sum b*min(nq,nc) / (sum b*nq + sum b*nc))
+  F6+D1
+      COUNT-ONLY, same formula       19/75 =  25.3%   apple  1/16 car  0/24 cup  1/18 horse 17/17   answers 1/3/1/70    ties  5 (split 17.83)
+      node term alone                17/75 =  22.7%   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75    ties  0   +0/-2 p=0.500 vs COUNT-ONLY
+      evidence score                 34/75 =  45.3%   apple  0/16 car  7/24 cup 14/18 horse 13/17   answers 0/12/20/43  ties  0   +20/-5 p=0.004 vs COUNT-ONLY
+    r(node term, count formula): pooled 0.942   between references of one query 0.960
+  D3
+      COUNT-ONLY, same formula       48/75 =  64.0%   apple  9/16 car 21/24 cup 18/18 horse  0/17   answers 9/34/29/3   ties  0
+      node term alone                38/75 =  50.7%   apple  3/16 car 14/24 cup 18/18 horse  3/17   answers 3/32/27/13  ties  0   +3/-13 p=0.021 vs COUNT-ONLY
+      evidence score                 39/75 =  52.0%   apple  6/16 car 16/24 cup 16/18 horse  1/17   answers 6/34/25/10  ties  0   +5/-14 p=0.064 vs COUNT-ONLY
+    r(node term, count formula): pooled 0.753   between references of one query 0.784
+  D3 with binary credit (control: the gap that is NOT D1's)
+      node term alone                44/75 =  58.7%   apple  7/16 car 16/24 cup 18/18 horse  3/17   answers 7/31/26/11  ties  0   +3/-7 p=0.344 vs COUNT-ONLY
+      evidence score                 39/75 =  52.0%   apple  6/16 car 16/24 cup 16/18 horse  1/17   answers 6/34/25/10  ties  0   +5/-14 p=0.064 vs COUNT-ONLY
+    D1 under D3 (binary -> graded credit), evidence score: 39 -> 39  +0/-0 p=1.000
+
+2.5 the three terms, means over own-class / wrong-class pairs
+  F6+D1          node 0.8297 / 0.7915   relation 0.0938 / 0.0752   absence 0.2345 / 0.2893   score 0.0433 / 0.0235
+  D3:node        node 0.8092 / 0.7669   relation 0.0938 / 0.0752   absence 0.2345 / 0.2893   score 0.0418 / 0.0209
+  D3:node+abs    node 0.8092 / 0.7669   relation 0.0938 / 0.0752   absence 0.2904 / 0.3556   score 0.0342 / 0.0122
+  D3             node 0.8092 / 0.7669   relation 0.0960 / 0.0770   absence 0.2904 / 0.3556   score 0.0358 / 0.0131
+
+2.6 absolute scale (the thresholds were set on the one-sided score: EVIDENCE_MIN_BALANCED 0.15, THETA_EVIDENCE_POS 0.35)
+  F6+D1          own-class score: median 0.0420  max 0.1132   pairs >= 0.15: 0 of 300   >= 0.35: 0   exactly 0: 88   undecidable queries: 0
+  D3:node        own-class score: median 0.0398  max 0.1137   pairs >= 0.15: 0 of 300   >= 0.35: 0   exactly 0: 79   undecidable queries: 0
+  D3:node+abs    own-class score: median 0.0320  max 0.1246   pairs >= 0.15: 0 of 300   >= 0.35: 0   exactly 0: 101   undecidable queries: 0
+  D3             own-class score: median 0.0327  max 0.1207   pairs >= 0.15: 0 of 300   >= 0.35: 0   exactly 0: 102   undecidable queries: 0
+
+==============================================================================================================
+3. NULL CALIBRATION of node coverage  (Phase 4 on; against the same configuration without calibration)
+==============================================================================================================
+3.1 PRE-REGISTERED MEASURE 1 -- the chance level N0 next to the uncalibrated node term N (means)
+  one-sided score  own-class: N 0.8297  N0 0.4365 (53% of N)  calibrated 0.7013   |   wrong-class: N 0.7915  N0 0.4131 (52% of N)  calibrated 0.6536
+                   per reference: N 0.726 0.815 0.760 0.904   N0 0.382 0.423 0.391 0.480   calibrated 0.558 0.679 0.609 0.815
+  D3 primary       own-class: N 0.8092  N0 0.4256 (53% of N)  calibrated 0.6681   |   wrong-class: N 0.7669  N0 0.4005 (52% of N)  calibrated 0.6124
+                   per reference: N 0.764 0.799 0.780 0.767   N0 0.402 0.415 0.401 0.408   calibrated 0.605 0.657 0.633 0.610
+
+3.2 PRE-REGISTERED MEASURE 2 -- variance explained by which reference / by own class
+  one-sided score
+      score, uncalibrated            which reference  29.4%   own class  10.3%   mean own 0.0433  wrong 0.0235   per reference apple 0.0083 car 0.0296 cup 0.0268 horse 0.0492
+      score, calibrated              which reference  35.8%   own class   7.7%   mean own 0.0330  wrong 0.0179   per reference apple 0.0038 car 0.0195 cup 0.0201 horse 0.0433
+      node term, uncalibrated        which reference  71.7%   own class   4.4%   mean own 0.8297  wrong 0.7915   per reference apple 0.7260 car 0.8147 cup 0.7599 horse 0.9037
+      node term, calibrated          which reference  72.0%   own class   3.3%   mean own 0.7013  wrong 0.6536   per reference apple 0.5582 car 0.6794 cup 0.6093 horse 0.8152
+      chance level N0                which reference  77.2%   own class   5.4%   mean own 0.4365  wrong 0.4131   per reference apple 0.3822 car 0.4230 cup 0.3909 horse 0.4797
+  D3 primary
+      score, uncalibrated            which reference  18.3%   own class  19.5%   mean own 0.0358  wrong 0.0131   per reference apple 0.0119 car 0.0297 cup 0.0265 horse 0.0070
+      score, calibrated              which reference  14.1%   own class  19.2%   mean own 0.0240  wrong 0.0064   per reference apple 0.0050 car 0.0176 cup 0.0171 horse 0.0035
+      node term, uncalibrated        which reference  14.4%   own class  25.7%   mean own 0.8092  wrong 0.7669   per reference apple 0.7638 car 0.7991 cup 0.7796 horse 0.7674
+      node term, calibrated          which reference  17.8%   own class  24.1%   mean own 0.6681  wrong 0.6124   per reference apple 0.6050 car 0.6574 cup 0.6327 horse 0.6103
+      chance level N0                which reference   5.2%   own class  19.9%   mean own 0.4256  wrong 0.4005   per reference apple 0.4024 car 0.4154 cup 0.4013 horse 0.4079
+
+3.3 PRE-REGISTERED MEASURE 3 -- r(node term, count formula)
+  one-sided score  pooled 0.942 -> 0.928   between references of one query 0.960 -> 0.946
+  D3 primary       pooled 0.753 -> 0.734   between references of one query 0.784 -> 0.777
+
+3.4 PRE-REGISTERED MEASURE 4 -- accuracy, ties split, and where the score stops deciding
+  one-sided score, uncalibrated      34/75 =  45.3%   apple  0/16 car  7/24 cup 14/18 horse 13/17   answers 0/12/20/43  ties  0
+  one-sided score, calibrated        36/75 =  48.0%   apple  0/16 car  6/24 cup 14/18 horse 16/17   answers 0/8/17/50   ties  0   +3/-1 p=0.625 vs uncalibrated
+      pairs scoring exactly 0: 88 -> 118 of 300   own-class pairs at 0: 8 -> 14 of 75   queries with four equal scores: 0 -> 0
+        calibrated, offset removed (B6 observable) 40/75 =  53.3%   apple  6/16 car  9/24 cup 16/18 horse  9/17   answers 13/17/22/23 ties  0   +11/-7 p=0.481 vs as is
+  D3 primary, uncalibrated           39/75 =  52.0%   apple  6/16 car 16/24 cup 16/18 horse  1/17   answers 6/34/25/10  ties  0
+  D3 primary, calibrated             40/75 =  53.3%   apple  6/16 car 16/24 cup 17/18 horse  1/17   answers 6/35/25/9   ties  0   +1/-0 p=1.000 vs uncalibrated
+      pairs scoring exactly 0: 102 -> 150 of 300   own-class pairs at 0: 8 -> 18 of 75   queries with four equal scores: 0 -> 0
+        calibrated, offset removed (B6 observable) 45/75 =  60.0%   apple 10/16 car 13/24 cup 16/18 horse  6/17   answers 10/26/20/19 ties  0   +9/-4 p=0.267 vs as is
+
+3.5 PRE-REGISTERED MEASURE 5 -- the node term alone against COUNT-ONLY (uncalibrated count formula)
+  one-sided score
+      COUNT-ONLY                     19/75 =  25.3%   apple  1/16 car  0/24 cup  1/18 horse 17/17   answers 1/3/1/70    ties  5 (split 17.83)
+      node term, uncalibrated        17/75 =  22.7%   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75    ties  0   +0/-2 p=0.500 vs COUNT-ONLY
+      node term, calibrated          17/75 =  22.7%   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75    ties  0   +0/-2 p=0.500 vs COUNT-ONLY
+      node term, calibrated vs uncalibrated: +0/-0 p=1.000
+  D3 primary
+      COUNT-ONLY                     48/75 =  64.0%   apple  9/16 car 21/24 cup 18/18 horse  0/17   answers 9/34/29/3   ties  0
+      node term, uncalibrated        38/75 =  50.7%   apple  3/16 car 14/24 cup 18/18 horse  3/17   answers 3/32/27/13  ties  0   +3/-13 p=0.021 vs COUNT-ONLY
+      node term, calibrated          34/75 =  45.3%   apple  1/16 car 15/24 cup 17/18 horse  1/17   answers 1/37/27/10  ties  0   +1/-15 p=0.001 vs COUNT-ONLY
+      node term, calibrated vs uncalibrated: +1/-5 p=0.219
+
+3.6 PRE-REGISTERED MEASURE 6 -- interaction with D3, and the two halves of the calibration (offline, not selected between)
+  evidence score, hits of 75:
+                         null off   null on
+    query-side off           34         36
+    query-side all           39         40
+    interaction (both - D3 only - null only + neither): -1 queries
+  reference share of the score's variance:
+    query-side off         29.4%      35.8%
+    query-side all         18.3%      14.1%
+  one-sided score -- node term alone, then the score built on it
+      N (uncalibrated)               17/75 =  22.7%   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75    ties  0
+      N - N0                         23/75 =  30.7%   apple  0/16 car  0/24 cup  6/18 horse 17/17   answers 0/1/6/68    ties  0   +6/-0 p=0.031 vs N
+      (N - N0) / (1 - N0)            17/75 =  22.7%   apple  0/16 car  0/24 cup  0/18 horse 17/17   answers 0/0/0/75    ties  0   +0/-0 p=1.000 vs N
+      score with N                   34/75 =  45.3%   apple  0/16 car  7/24 cup 14/18 horse 13/17   answers 0/12/20/43  ties  0
+      score with N - N0              33/75 =  44.0%   apple  0/16 car  4/24 cup 13/18 horse 16/17   answers 3/4/16/52   ties  3 (split 33.75)   +3/-4 p=1.000 vs N
+      score with (N - N0)/(1 - N0)   36/75 =  48.0%   apple  0/16 car  6/24 cup 14/18 horse 16/17   answers 0/8/17/50   ties  0   +3/-1 p=0.625 vs N
+  D3 primary -- node term alone, then the score built on it
+      N (uncalibrated)               38/75 =  50.7%   apple  3/16 car 14/24 cup 18/18 horse  3/17   answers 3/32/27/13  ties  0
+      N - N0                         33/75 =  44.0%   apple  1/16 car 16/24 cup 16/18 horse  0/17   answers 1/39/28/7   ties  0   +3/-8 p=0.227 vs N
+      (N - N0) / (1 - N0)            34/75 =  45.3%   apple  1/16 car 15/24 cup 17/18 horse  1/17   answers 1/37/27/10  ties  0   +1/-5 p=0.219 vs N
+      score with N                   39/75 =  52.0%   apple  6/16 car 16/24 cup 16/18 horse  1/17   answers 6/34/25/10  ties  0
+      score with N - N0              33/75 =  44.0%   apple 11/16 car  7/24 cup 15/18 horse  0/17   answers 42/12/20/1  ties 40 (split 34.00)   +5/-11 p=0.210 vs N
+      score with (N - N0)/(1 - N0)   40/75 =  53.3%   apple  6/16 car 16/24 cup 17/18 horse  1/17   answers 6/35/25/9   ties  0   +1/-0 p=1.000 vs N
+
+3.7 mechanism check -- BINARY credit, calibrated (a count is what a random pairing earns)
+  mean N 0.8963 / 0.8621 (own / wrong)   N0 0.9450 / 0.9063   calibrated node term 0.0095 / 0.0067
+    evidence score                   16/75 =  21.3%   apple 15/16 car  0/24 cup  0/18 horse  1/17   answers 72/0/0/3    ties 72 (split 19.00)
+      pairs scoring exactly 0: 297 of 300   queries with four equal scores: 72
+
+##############################################################################################################
+# PRE-REGISTERED RULES, read off the tables above (pins are checked separately)
+##############################################################################################################
+window = full
+  continuity with stage 1: exact
+  Phase 4: pairs whose score moved 0 (query-side off), 0 (query-side on); accuracy falls with p<0.05: no
+  D3 primary: reference share of the score's variance 10.1% -> 10.5% (DOES NOT FALL);  accuracy 38 -> 41, +15/-12 p=0.701 (falls with p<0.05: no)
+  null, one-sided: reference share 10.1% -> 12.9% (DOES NOT FALL);  accuracy 38 -> 39, +3/-2 p=1.000 (falls with p<0.05: no);  queries with four equal scores: 0
+  null, with D3:   reference share 10.5% -> 5.5% (falls);  accuracy 41 -> 41, +4/-4 p=1.000 (falls with p<0.05: no);  queries with four equal scores: 2
+window = v1
+  continuity with stage 1: exact
+  Phase 4: pairs whose score moved 0 (query-side off), 0 (query-side on); accuracy falls with p<0.05: no
+  D3 primary: reference share of the score's variance 29.4% -> 18.3% (falls);  accuracy 34 -> 39, +17/-12 p=0.458 (falls with p<0.05: no)
+  null, one-sided: reference share 29.4% -> 35.8% (DOES NOT FALL);  accuracy 34 -> 36, +3/-1 p=0.625 (falls with p<0.05: no);  queries with four equal scores: 0
+  null, with D3:   reference share 18.3% -> 14.1% (falls);  accuracy 39 -> 40, +1/-0 p=1.000 (falls with p<0.05: no);  queries with four equal scores: 0

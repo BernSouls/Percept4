@@ -1,0 +1,227 @@
+PHASE 0 / AUDIT B -- count-only classifier and population control (EVAL-75, in-sample)
+
+==============================================================================
+window = full
+==============================================================================
+B1. deciding each query four ways
+  evidence_score (baseline)          36/75 =  48.0%   apple  2/16  car  6/24  cup 16/18  horse 12/17   ties 0   margin -0.0026
+  node term (node_coverage)          31/75 =  41.3%   apple  0/16  car  4/24  cup 18/18  horse  9/17   ties 0   margin -0.0041
+  COUNT-ONLY (lens node counts)      34/75 =  45.3%   apple  0/16  car 10/24  cup 18/18  horse  6/17   ties 0   margin -0.0096
+  graded node term (observable)      37/75 =  49.3%   apple  1/16  car  6/24  cup 18/18  horse 12/17   ties 0   margin +0.0066
+  same prediction on N of 75 queries:
+     count-only vs node term      59
+     count-only vs evidence_score 42
+     node term  vs evidence_score 47
+  paired against evidence_score (queries gained / lost, exact McNemar):
+     node term          +5/-10  p=0.302
+     COUNT-ONLY         +11/-13  p=0.839
+     graded node term   +7/-6  p=1.000
+  confusion, COUNT-ONLY:
+      true\pred     apple    car    cup  horse
+      apple              0      1     15      0
+      car                0     10      6      8
+      cup                0      0     18      0
+      horse              0     11      0      6
+  confusion, evidence_score:
+      true\pred     apple    car    cup  horse
+      apple              2      1     12      1
+      car                0      6      1     17
+      cup                0      1     16      1
+      horse              0      4      1     12
+
+B2. the matcher's node_coverage against the count formula, 300 (query, reference) pairs
+  exact (|diff| < 1e-9): 0/300;  count-only >= node_coverage in 300/300
+  count-only - node_coverage: mean 0.0621  median 0.0567  max 0.1633
+  Pearson r(node_coverage, count-only) = 0.978;  r(node_coverage, graded node term) = 0.997
+  node_coverage  mean 0.7552  (min 0.4429, max 0.9510);  count-only mean 0.8173;  graded mean 0.6660
+
+B3. node credit by lens type (own-class reference pairs)
+  per lens type, summed over 75 (query, own-class reference) pairs
+  lens               boost    core   query min(q,c) credited  cred/min mean sim sim<0.5  sim==1
+  CONTOUR_PEAK         1.0    9046    7682     7122     6776     95.1%    0.863       0       0
+  Position             1.0    7361    7376     7291     7119     97.6%    0.998       0    6239
+  TextureBoundary      1.0    7311    6971     6108     4904     80.3%    0.862       4       0
+  BorderOwnership      1.0    6117    5433     4981     4543     91.2%    0.907      21     137
+  Boundary             1.0    5063    5482     4918     4622     94.0%    0.945      33    1479
+  Orientation          1.0    4059    3957     3396     3027     89.1%    0.799     289     234
+  Color                1.0    2775    2765     2564     2300     89.7%    0.848      75     117
+  EndStopped           1.0    2438    2590     2074     2026     97.7%    0.883       1     948
+  Texture              1.0    1753    2218     1734     1643     94.8%    0.888      23     305
+  Contour              1.2    1580    1424     1257     1162     92.4%    0.936       0      15
+  PEAK_CHAIN           1.0    1480    1360     1135     1099     96.8%    0.817      14       0
+  ContourFragment      1.0    1386    1252     1028     1002     97.5%    0.716     145       0
+  RegionShape          1.0    1183     980      852      812     95.3%    0.835       0       0
+  CurveComplex         1.5    1114    1029      917      889     96.9%    0.855       0      34
+  Corner               1.2    1063     929      730      636     87.1%    0.811      37       2
+  Surface              1.0     979    1020      823      804     97.7%    0.888       0       0
+  Polarity             1.0     225     225      225      195     86.7%    0.764      33      23
+  Junction             1.2      76      94       44       44    100.0%    0.753       0       1
+  Onset                1.0      75      75       75       75    100.0%    1.000       0      75
+  IllusoryContour      1.0      65     122       37       34     91.9%    0.590       7       0
+  T                    1.2      16      30        2        2    100.0%    0.771       0       0
+  Y                    1.2       0       3        0        0      0.0%    0.000       0       0
+  TOTAL                      55165   53017    47313    43714     92.4%    0.891     682    9609
+  mean signature similarity of CREDITED pairs, own-class reference vs the three wrong-class references:
+  lens                own-class      wrong     delta cred/min own cred/min wrong
+  CONTOUR_PEAK            0.863      0.859    +0.005        95.1%        94.9%
+  Position                0.998      0.998    +0.000        97.6%        97.3%
+  TextureBoundary         0.862      0.811    +0.052        80.3%        76.9%
+  BorderOwnership         0.907      0.904    +0.003        91.2%        92.8%
+  Boundary                0.945      0.940    +0.005        94.0%        96.0%
+  Orientation             0.799      0.761    +0.038        89.1%        85.2%
+  Color                   0.848      0.838    +0.010        89.7%        94.2%
+  EndStopped              0.883      0.878    +0.005        97.7%        96.6%
+  Texture                 0.888      0.870    +0.019        94.8%        93.9%
+  Contour                 0.936      0.935    +0.001        92.4%        92.7%
+  PEAK_CHAIN              0.817      0.803    +0.013        96.8%        97.2%
+  ContourFragment         0.716      0.667    +0.049        97.5%        96.7%
+  RegionShape             0.835      0.837    -0.002        95.3%        97.2%
+  CurveComplex            0.855      0.859    -0.005        96.9%        96.7%
+  Corner                  0.811      0.822    -0.011        87.1%        88.7%
+  Surface                 0.888      0.820    +0.067        97.7%        94.1%
+  Polarity                0.764      0.780    -0.016        86.7%        86.7%
+  Junction                0.753      0.766    -0.013       100.0%       100.0%
+  Onset                   1.000      1.000    +0.000       100.0%       100.0%
+  IllusoryContour         0.590      0.521    +0.069        91.9%        93.1%
+  T                       0.771      0.839    -0.068       100.0%       100.0%
+  ALL                     0.890      0.879    +0.012   (boost-weighted)
+
+B4. every population vector removed from both graphs (arm nopop)
+  baseline                           36/75 =  48.0%   apple  2/16  car  6/24  cup 16/18  horse 12/17   ties 0   margin -0.0026
+  nopop                              34/75 =  45.3%   apple  1/16  car  7/24  cup 15/18  horse 11/17   ties 0   margin -0.0051   +3/-5 vs baseline, McNemar p=0.727
+  predictions changed: 8 of 75
+  score change per pair:         mean +0.00583  mean|.| 0.00822  max|.| 0.03276
+  node_coverage change per pair: mean -0.00401  mean|.| 0.00829  max|.| 0.05526
+  baseline credited node pairs 166283 (mean sig sim 0.882); verifiable edges 160425, matched 33539, sim_sum 23448.0
+  nopop    credited node pairs 165356 (mean sig sim 0.905); verifiable edges 159107, matched 34067, sim_sum 24922.7
+
+B5. one term of the score at a time (stored trace values; score rebuilt from its terms to within 7.1e-11)
+  evidence_score (baseline)          36/75 =  48.0%   apple  2/16  car  6/24  cup 16/18  horse 12/17   ties 0   margin -0.0026
+                                     answers: apple 2  car 12  cup 30  horse 31
+  node term alone                    31/75 =  41.3%   apple  0/16  car  4/24  cup 18/18  horse  9/17   ties 0   margin -0.0041
+                                     answers: apple 0  car 6  cup 51  horse 18   | same as evidence_score on 47 of 75; +5/-10 p=0.302
+  edge term alone (rel. consist.)    29/75 =  38.7%   apple 14/16  car 12/24  cup  2/18  horse  1/17   ties 0   margin -0.0100
+                                     answers: apple 36  car 21  cup 8  horse 10   | same as evidence_score on 24 of 75; +20/-27 p=0.382
+  absence term alone (verif. frac)   29/75 =  38.7%   apple  0/16  car  0/24  cup 12/18  horse 17/17   ties 0   margin -0.0811
+                                     answers: apple 0  car 1  cup 17  horse 57   | same as evidence_score on 48 of 75; +5/-12 p=0.143
+  score, matched edges as COUNT      30/75 =  40.0%   apple  4/16  car  6/24  cup 12/18  horse  8/17   ties 0   margin -0.0082
+                                     answers: apple 6  car 16  cup 27  horse 26   | same as evidence_score on 62 of 75; +2/-8 p=0.109
+  true class of the 75 queries:      apple 16  car 24  cup 18  horse 17
+  mean of each term per REFERENCE, over all 75 queries whatever their class:
+     score                      apple 0.0340  car 0.0548  cup 0.0654  horse 0.0581
+     node_coverage              apple 0.6997  car 0.7599  cup 0.8349  horse 0.7265
+     relational_consistency     apple 0.1591  car 0.1444  cup 0.1415  horse 0.1169
+     edge_absence (penalised)   apple 0.5385  car 0.3784  cup 0.3596  horse 0.1794
+  scores clamped to exactly 0.0: 27 of 300 pairs;  winner minus runner-up: median 0.0296, below 0.005 on 6 of 75 queries
+  reference sizes in this window (the score is normalised by the REFERENCE only):
+     apple  nodes  862   edges 1297
+     car    nodes  742   edges  973
+     cup    nodes  598   edges  869
+     horse  nodes  753   edges  462
+  query sizes, mean nodes / mean edges by true class: apple 619/889  car 753/750  cup 622/992  horse 814/781
+
+B6. OBSERVABLE: each term minus the mean its reference receives from the other 74 queries (leave-one-out)
+  mean score: own-class reference 0.0729, wrong-class reference 0.0464
+  share of the score's variance over the 300 pairs explained by WHICH REFERENCE it is: 9.3%;  by own-class vs not: 9.0%
+  evidence_score             as is 36/75  ->  offset removed 40/75  (apple 8/16 car 6/24 cup 15/18 horse 11/17)  answers apple 11 car 11 cup 23 horse 30   offset removed vs as is: +6/-2 p=0.2891
+  node term                  as is 31/75  ->  offset removed 46/75  (apple 6/16 car 8/24 cup 18/18 horse 14/17)  answers apple 7 car 10 cup 28 horse 30   offset removed vs as is: +15/-0 p=0.0001
+  edge term (rel. consist.)  as is 29/75  ->  offset removed 30/75  (apple 11/16 car 8/24 cup 4/18 horse 7/17)  answers apple 20 car 19 cup 12 horse 24   offset removed vs as is: +9/-8 p=1.0000
+  COUNT-ONLY                 as is 34/75  ->  offset removed 38/75  (apple 2/16 car 7/24 cup 17/18 horse 12/17)  answers apple 4 car 11 cup 31 horse 29   offset removed vs as is: +11/-7 p=0.4807
+
+==============================================================================
+window = v1
+==============================================================================
+B1. deciding each query four ways
+  evidence_score (baseline)          34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   ties 0   margin -0.0024
+  node term (node_coverage)          17/75 =  22.7%   apple  0/16  car  0/24  cup  0/18  horse 17/17   ties 0   margin -0.0539
+  COUNT-ONLY (lens node counts)      19/75 =  25.3%   apple  1/16  car  0/24  cup  1/18  horse 17/17   ties 5   margin -0.0303
+  graded node term (observable)      17/75 =  22.7%   apple  0/16  car  0/24  cup  0/18  horse 17/17   ties 0   margin -0.0514
+  same prediction on N of 75 queries:
+     count-only vs node term      70
+     count-only vs evidence_score 42
+     node term  vs evidence_score 43
+  paired against evidence_score (queries gained / lost, exact McNemar):
+     node term          +4/-21  p=0.001
+     COUNT-ONLY         +5/-20  p=0.004   (5 ties; counted wrong 17, split 17.83)
+     graded node term   +4/-21  p=0.001
+  confusion, COUNT-ONLY:
+      true\pred     apple    car    cup  horse
+      apple              1      3      0     12
+      car                0      0      0     24
+      cup                0      0      1     17
+      horse              0      0      0     17
+  confusion, evidence_score:
+      true\pred     apple    car    cup  horse
+      apple              0      1      5     10
+      car                0      7      0     17
+      cup                0      1     14      3
+      horse              0      3      1     13
+
+B2. the matcher's node_coverage against the count formula, 300 (query, reference) pairs
+  exact (|diff| < 1e-9): 0/300;  count-only >= node_coverage in 300/300
+  count-only - node_coverage: mean 0.0507  median 0.0500  max 0.1201
+  Pearson r(node_coverage, count-only) = 0.957;  r(node_coverage, graded node term) = 0.992
+  node_coverage  mean 0.8707  (min 0.6975, max 0.9953);  count-only mean 0.9213;  graded mean 0.8011
+
+B3. node credit by lens type (own-class reference pairs)
+  per lens type, summed over 75 (query, own-class reference) pairs
+  lens               boost    core   query min(q,c) credited  cred/min mean sim sim<0.5  sim==1
+  Position             1.0    7361    7376     7291     7122     97.7%    0.998       0    6234
+  Boundary             1.0    5063    5482     4918     4622     94.0%    0.945      34    1483
+  Orientation          1.0    4059    3957     3396     3030     89.2%    0.800     288     236
+  Color                1.0    2775    2765     2564     2299     89.7%    0.848      76     118
+  Texture              1.0    1753    2218     1734     1642     94.7%    0.888      23     305
+  Onset                1.0      75      75       75       75    100.0%    1.000       0      75
+  TOTAL                      21086   21873    19978    18790     94.1%    0.925     421    8451
+  mean signature similarity of CREDITED pairs, own-class reference vs the three wrong-class references:
+  lens                own-class      wrong     delta cred/min own cred/min wrong
+  Position                0.998      0.998    +0.000        97.7%        97.4%
+  Boundary                0.945      0.940    +0.006        94.0%        96.0%
+  Orientation             0.800      0.761    +0.039        89.2%        85.2%
+  Color                   0.848      0.839    +0.009        89.7%        94.1%
+  Texture                 0.888      0.870    +0.019        94.7%        93.9%
+  Onset                   1.000      1.000    +0.000       100.0%       100.0%
+  ALL                     0.925      0.917    +0.008   (boost-weighted)
+
+B4. every population vector removed from both graphs (arm nopop)
+  baseline                           34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   ties 0   margin -0.0024
+  nopop                              32/75 =  42.7%   apple  0/16  car  6/24  cup 12/18  horse 14/17   ties 0   margin -0.0104   +2/-4 vs baseline, McNemar p=0.688
+  predictions changed: 11 of 75
+  score change per pair:         mean +0.01226  mean|.| 0.01226  max|.| 0.05431
+  node_coverage change per pair: mean +0.00000  mean|.| 0.00000  max|.| 0.00000
+  baseline credited node pairs 72683 (mean sig sim 0.919); verifiable edges 93377, matched 10873, sim_sum 7663.8
+  nopop    credited node pairs 72683 (mean sig sim 0.919); verifiable edges 93377, matched 11096, sim_sum 9081.3
+
+B5. one term of the score at a time (stored trace values; score rebuilt from its terms to within 7.9e-11)
+  evidence_score (baseline)          34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   ties 0   margin -0.0024
+                                     answers: apple 0  car 12  cup 20  horse 43
+  node term alone                    17/75 =  22.7%   apple  0/16  car  0/24  cup  0/18  horse 17/17   ties 0   margin -0.0539
+                                     answers: apple 0  car 0  cup 0  horse 75   | same as evidence_score on 43 of 75; +4/-21 p=0.001
+  edge term alone (rel. consist.)    42/75 =  56.0%   apple  6/16  car 19/24  cup 14/18  horse  3/17   ties 0   margin +0.0014
+                                     answers: apple 11  car 32  cup 25  horse 7   | same as evidence_score on 38 of 75; +19/-11 p=0.200
+  absence term alone (verif. frac)   21/75 =  28.0%   apple  0/16  car  0/24  cup  4/18  horse 17/17   ties 0   margin -0.1017
+                                     answers: apple 0  car 0  cup 4  horse 71   | same as evidence_score on 47 of 75; +4/-17 p=0.007
+  score, matched edges as COUNT      31/75 =  41.3%   apple  1/16  car  6/24  cup 10/18  horse 14/17   ties 0   margin -0.0125
+                                     answers: apple 1  car 10  cup 18  horse 46   | same as evidence_score on 60 of 75; +4/-7 p=0.549
+  true class of the 75 queries:      apple 16  car 24  cup 18  horse 17
+  mean of each term per REFERENCE, over all 75 queries whatever their class:
+     score                      apple 0.0109  car 0.0349  cup 0.0307  horse 0.0538
+     node_coverage              apple 0.7969  car 0.8819  cup 0.8294  horse 0.9744
+     relational_consistency     apple 0.0782  car 0.0889  cup 0.0843  horse 0.0672
+     edge_absence (penalised)   apple 0.4271  car 0.2928  cup 0.3053  horse 0.0772
+  scores clamped to exactly 0.0: 72 of 300 pairs;  winner minus runner-up: median 0.0292, below 0.005 on 10 of 75 queries
+  reference sizes in this window (the score is normalised by the REFERENCE only):
+     apple  nodes  324   edges  569
+     car    nodes  280   edges  503
+     cup    nodes  308   edges  512
+     horse  nodes  214   edges  225
+  query sizes, mean nodes / mean edges by true class: apple 322/523  car 264/377  cup 317/545  horse 275/428
+
+B6. OBSERVABLE: each term minus the mean its reference receives from the other 74 queries (leave-one-out)
+  mean score: own-class reference 0.0486, wrong-class reference 0.0272
+  share of the score's variance over the 300 pairs explained by WHICH REFERENCE it is: 28.6%;  by own-class vs not: 10.6%
+  evidence_score             as is 34/75  ->  offset removed 46/75  (apple 9/16 car 11/24 cup 16/18 horse 10/17)  answers apple 11 car 19 cup 22 horse 23   offset removed vs as is: +15/-3 p=0.0075
+  node term                  as is 17/75  ->  offset removed 48/75  (apple 11/16 car 6/24 cup 18/18 horse 13/17)  answers apple 12 car 9 cup 23 horse 31   offset removed vs as is: +35/-4 p=0.0000
+  edge term (rel. consist.)  as is 42/75  ->  offset removed 34/75  (apple 8/16 car 9/24 cup 12/18 horse 5/17)  answers apple 15 car 18 cup 23 horse 19   offset removed vs as is: +4/-12 p=0.0768
+  COUNT-ONLY                 as is 19/75  ->  offset removed 43/75  (apple 12/16 car 5/24 cup 15/18 horse 11/17)  answers apple 16 car 8 cup 20 horse 31   offset removed vs as is: +30/-6 p=0.0001
+

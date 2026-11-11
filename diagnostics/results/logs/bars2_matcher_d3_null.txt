@@ -1,0 +1,33 @@
+.....................F...................................                [100%]
+=================================== FAILURES ===================================
+____________________________ test_declared_defaults ____________________________
+
+declared_defaults = {'EDGE_UNPARAMETERISED_STRUCTURAL_MATCH': True, 'EVIDENCE_GRADED_NODE_CREDIT': True, 'EVIDENCE_QUERY_SIDE_TERMS': ('node', 'relation', 'absence'), 'EDGE_UNMEASURED_IS_NOT_EVIDENCE': True, ...}
+
+    def test_declared_defaults(declared_defaults):
+>       assert declared_defaults == {
+            # F6 -- landed on; a parameter-less pair matches as structure
+            "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True,
+            # D1 -- landed on; its success signal was NOT met
+            "EVIDENCE_GRADED_NODE_CREDIT": True,
+            # D3 -- in the tree, OFF: its pre-registered rule failed
+            "EVIDENCE_QUERY_SIDE_TERMS": (),
+            # Phase 4 -- on by the spec; never exercised on ETH-80
+            "EDGE_UNMEASURED_IS_NOT_EVIDENCE": True,
+            # null calibration -- in the tree, OFF: its rule failed
+            "EVIDENCE_NODE_NULL_CALIBRATED": False,
+        }
+E       AssertionError: assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+E         
+E         Omitting 3 identical items, use -vv to show
+E         Differing items:
+E         {'EVIDENCE_QUERY_SIDE_TERMS': ('node', 'relation', 'absence')} != {'EVIDENCE_QUERY_SIDE_TERMS': ()}
+E         {'EVIDENCE_NODE_NULL_CALIBRATED': True} != {'EVIDENCE_NODE_NULL_CALIBRATED': False}
+E         Use -v to get more diff
+
+tests_matcher/test_declared_defaults.py:14: AssertionError
+
+PARAMETER OVERRIDES for this session: EVIDENCE_NODE_NULL_CALIBRATED=True; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence')
+=========================== short test summary info ============================
+FAILED tests_matcher/test_declared_defaults.py::test_declared_defaults - Asse...
+1 failed, 56 passed in 0.86s

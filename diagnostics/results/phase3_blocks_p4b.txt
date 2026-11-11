@@ -1,0 +1,133 @@
+STAGE 4 -- signature matrix in blocks, and P4b (the count kept apart from the physics), EVAL-75 (in-sample)
+source f66ea9ac0eea  harness 6e3efcabb263  front end c1ea81ae1b6c   environment {'python': '3.11.2', 'PYTHONHASHSEED': '0', 'numpy': '2.4.6', 'scipy': '1.17.1', 'PIL': '13.0.0'}
+the tree declares: MATCH_SIGNATURE_MATRIX_BLOCKS=True  EVIDENCE_RELATION_COUNT_APART=False
+
+============================================================================================================
+window = full
+============================================================================================================
+PART 1  blocks against the per-pair loop, declared defaults: 10500 stored per-pair values compared (every key, the edge and node breakdowns included): 0 differ (largest 0); same answer on 75/75 queries
+        wall time of the 300 pairs on 2 workers, front end excluded: per pair 99 s, in blocks 17 s (x5.9)
+
+PART 2  what the relational term is made of (switch off)
+            per pair, mean                    own class  wrong class
+  DEFAULTS  verifiable edges                           666.3733     597.0178
+  DEFAULTS    with a counterpart (present)             137.4800     117.1511
+  DEFAULTS      count-only pairs                        24.7600      18.2622
+  DEFAULTS      physical pairs                         112.7200      98.8889
+  DEFAULTS  presence                                     0.1973       0.1894
+  DEFAULTS  physics                                      0.6582       0.6366
+  DEFAULTS  mean similarity of ALL present pairs         0.7209       0.6953
+  DEFAULTS  count-only share of the sim sum              0.2568       0.2334
+  DEFAULTS  term as it is (the mean)                     0.1417       0.1309
+  DEFAULTS  term kept apart (presence x physics)         0.1295       0.1199
+  DEFAULTS  pairs whose physics rests on fewer than 5 physical pairs: 0 of 300; present but nothing physical: 0
+  D3        verifiable edges                          1314.8133    1178.2489
+  D3          with a counterpart (present)             274.8133     234.1778
+  D3            count-only pairs                        49.5200      36.5244
+  D3            physical pairs                         225.2933     197.6533
+  D3        presence                                     0.1998       0.1918
+  D3        physics                                      0.6572       0.6359
+  D3        mean similarity of ALL present pairs         0.7201       0.6947
+  D3        count-only share of the sim sum              0.2567       0.2331
+  D3        term as it is (the mean)                     0.1435       0.1327
+  D3        term kept apart (presence x physics)         0.1311       0.1216
+  D3        pairs whose physics rests on fewer than 5 physical pairs: 0 of 300; present but nothing physical: 0
+
+PART 3  P4b on (EVIDENCE_RELATION_COUNT_APART)
+                  hits (split)  per class a/c/c/h  answers a/c/c/h  pairs at 0   variance of the score: which reference / own class
+  DEFAULTS        37 (37.00)     1/ 7/16/13         1/13/29/32      30          12.7% / 7.8%
+  DEFAULTS +P4b   37 (37.00)     1/ 7/16/13         1/13/30/31      44          13.0% / 7.5%
+  D3              37 (37.00)     7/13/13/ 4        12/27/21/15      31          18.5% / 10.7%
+  D3 +P4b         38 (38.00)     6/13/13/ 6        11/26/21/17      39          18.1% / 10.1%
+
+  DEFAULTS +P4b against DEFAULTS
+    1. the term: rises on 0 pairs (must be 0), falls on 300 (largest fall 0.0217), unchanged on 0
+    2. presence  own 0.1973  wrong 0.1894  (+0.0079)
+    2. physics   own 0.6582  wrong 0.6366  (+0.0216)
+    2. the term  own 0.1417  wrong 0.1309  (+0.0108)   ->   own 0.1295  wrong 0.1199  (+0.0096)
+    3. discrimination of the relational term (own-class reference wins, of 225, ties half): 0.5378 -> 0.5333   [presence alone 0.5422, physics alone 0.6178]
+       the relational term deciding alone, hits: 23 -> 23
+    4. variance of the score, which reference / own class: 12.7% / 7.8%  ->  13.0% / 7.5%
+    5. accuracy 37 -> 37, paired +0/-0 vs baseline, McNemar p=1.000; scores moved 270 of 300 (rose on 0); answers moved 1
+
+  D3 +P4b against D3
+    1. the term: rises on 0 pairs (must be 0), falls on 300 (largest fall 0.0216), unchanged on 0
+    2. presence  own 0.1998  wrong 0.1918  (+0.0080)
+    2. physics   own 0.6572  wrong 0.6359  (+0.0213)
+    2. the term  own 0.1435  wrong 0.1327  (+0.0108)   ->   own 0.1311  wrong 0.1216  (+0.0095)
+    3. discrimination of the relational term (own-class reference wins, of 225, ties half): 0.6044 -> 0.5867   [presence alone 0.5644, physics alone 0.6222]
+       the relational term deciding alone, hits: 27 -> 25
+    4. variance of the score, which reference / own class: 18.5% / 10.7%  ->  18.1% / 10.1%
+    5. accuracy 37 -> 38, paired +2/-1 vs baseline, McNemar p=1.000; scores moved 269 of 300 (rose on 0); answers moved 3
+
+PART 4  the specificity cap on same-schema pairs (EDGE_SPECIFICITY_CAP_SAME_SCHEMA) -- DESCRIPTIVE, no default rule, the switch stays off
+  DEFAULTS +cap accuracy 37 -> 36 (1/7/16/12), paired +0/-1 vs baseline, McNemar p=1.000; similarity sum per own-class pair 98.5 -> 79.9; the term own/wrong 0.1417/0.1309 -> 0.1138/0.1077; its discrimination 0.5378 -> 0.5378; deciding alone 23 -> 22; variance which reference / own class 12.7%/7.8% -> 10.4%/6.4%; pairs at 0: 30 -> 59
+  D3 +cap       accuracy 37 -> 34 (8/12/10/4), paired +1/-4 vs baseline, McNemar p=0.375; similarity sum per own-class pair 98.5 -> 79.9; the term own/wrong 0.1435/0.1327 -> 0.1152/0.1091; its discrimination 0.6044 -> 0.5422; deciding alone 27 -> 21; variance which reference / own class 18.5%/10.7% -> 19.1%/7.4%; pairs at 0: 31 -> 58
+
+============================================================================================================
+window = v1
+============================================================================================================
+PART 1  blocks against the per-pair loop, declared defaults: 10500 stored per-pair values compared (every key, the edge and node breakdowns included): 0 differ (largest 0); same answer on 75/75 queries
+        wall time of the 300 pairs on 2 workers, front end excluded: per pair 23 s, in blocks 7 s (x3.4)
+
+PART 2  what the relational term is made of (switch off)
+            per pair, mean                    own class  wrong class
+  DEFAULTS  verifiable edges                           389.7333     346.4889
+  DEFAULTS    with a counterpart (present)              46.7867      36.9911
+  DEFAULTS      count-only pairs                         7.4667       5.3378
+  DEFAULTS      physical pairs                          39.3200      31.6533
+  DEFAULTS  presence                                     0.1186       0.1064
+  DEFAULTS  physics                                      0.6771       0.6206
+  DEFAULTS  mean similarity of ALL present pairs         0.7242       0.6715
+  DEFAULTS  count-only share of the sim sum              0.2059       0.2007
+  DEFAULTS  term as it is (the mean)                     0.0865       0.0713
+  DEFAULTS  term kept apart (presence x physics)         0.0810       0.0658
+  DEFAULTS  pairs whose physics rests on fewer than 5 physical pairs: 0 of 300; present but nothing physical: 0
+  D3        verifiable edges                           763.0267     680.7333
+  D3          with a counterpart (present)              93.5733      73.9822
+  D3            count-only pairs                        14.9333      10.6756
+  D3            physical pairs                          78.6400      63.3067
+  D3        presence                                     0.1208       0.1080
+  D3        physics                                      0.6771       0.6206
+  D3        mean similarity of ALL present pairs         0.7242       0.6715
+  D3        count-only share of the sim sum              0.2059       0.2007
+  D3        term as it is (the mean)                     0.0880       0.0724
+  D3        term kept apart (presence x physics)         0.0823       0.0669
+  D3        pairs whose physics rests on fewer than 5 physical pairs: 0 of 300; present but nothing physical: 0
+
+PART 3  P4b on (EVIDENCE_RELATION_COUNT_APART)
+                  hits (split)  per class a/c/c/h  answers a/c/c/h  pairs at 0   variance of the score: which reference / own class
+  DEFAULTS        39 (39.00)     2/ 8/15/14         2/14/23/36      48          30.7% / 11.2%
+  DEFAULTS +P4b   38 (38.00)     2/ 7/15/14         2/13/23/37      62          32.8% / 10.9%
+  D3              40 (40.00)     5/18/17/ 0         5/34/30/ 6      55          31.2% / 18.5%
+  D3 +P4b         41 (41.00)     6/18/17/ 0         6/33/30/ 6      65          30.4% / 19.1%
+
+  DEFAULTS +P4b against DEFAULTS
+    1. the term: rises on 0 pairs (must be 0), falls on 292 (largest fall 0.0203), unchanged on 8
+    2. presence  own 0.1186  wrong 0.1064  (+0.0122)
+    2. physics   own 0.6771  wrong 0.6206  (+0.0564)
+    2. the term  own 0.0865  wrong 0.0713  (+0.0152)   ->   own 0.0810  wrong 0.0658  (+0.0152)
+    3. discrimination of the relational term (own-class reference wins, of 225, ties half): 0.7200 -> 0.7244   [presence alone 0.6889, physics alone 0.6711]
+       the relational term deciding alone, hits: 41 -> 41
+    4. variance of the score, which reference / own class: 30.7% / 11.2%  ->  32.8% / 10.9%
+    5. accuracy 39 -> 38, paired +0/-1 vs baseline, McNemar p=1.000; scores moved 246 of 300 (rose on 0); answers moved 3
+
+  D3 +P4b against D3
+    1. the term: rises on 0 pairs (must be 0), falls on 292 (largest fall 0.0168), unchanged on 8
+    2. presence  own 0.1208  wrong 0.1080  (+0.0128)
+    2. physics   own 0.6771  wrong 0.6206  (+0.0564)
+    2. the term  own 0.0880  wrong 0.0724  (+0.0155)   ->   own 0.0823  wrong 0.0669  (+0.0154)
+    3. discrimination of the relational term (own-class reference wins, of 225, ties half): 0.7200 -> 0.7511   [presence alone 0.7000, physics alone 0.6711]
+       the relational term deciding alone, hits: 43 -> 47
+    4. variance of the score, which reference / own class: 31.2% / 18.5%  ->  30.4% / 19.1%
+    5. accuracy 40 -> 41, paired +1/-0 vs baseline, McNemar p=1.000; scores moved 240 of 300 (rose on 0); answers moved 2
+
+PART 4  the specificity cap on same-schema pairs (EDGE_SPECIFICITY_CAP_SAME_SCHEMA) -- DESCRIPTIVE, no default rule, the switch stays off
+  DEFAULTS +cap accuracy 39 -> 36 (1/7/14/14), paired +0/-3 vs baseline, McNemar p=0.250; similarity sum per own-class pair 34.6 -> 23.0; the term own/wrong 0.0865/0.0713 -> 0.0566/0.0473; its discrimination 0.7200 -> 0.6756; deciding alone 41 -> 39; variance which reference / own class 30.7%/11.2% -> 26.9%/8.8%; pairs at 0: 48 -> 89
+  D3 +cap       accuracy 40 -> 43 (6/20/17/0), paired +3/-0 vs baseline, McNemar p=0.250; similarity sum per own-class pair 34.6 -> 23.0; the term own/wrong 0.0880/0.0724 -> 0.0575/0.0479; its discrimination 0.7200 -> 0.6667; deciding alone 43 -> 37; variance which reference / own class 31.2%/18.5% -> 28.0%/17.0%; pairs at 0: 55 -> 113
+
+============================================================================================================
+BLOCKS, criterion 3 at record level (declared defaults; 0 differing values on every window measured): MET
+P4b DEFAULT RULE (pre-registered): on only if, on both windows on the declared defaults, the pins are green, the term rises on no pair, the discrimination of the relational term does not fall, and accuracy does not fall with paired p < 0.05 under either form
+  term rises on a pair: 0   discrimination falls on: full   accuracy falls (p < 0.05) on: no window
+  -> the rule says: OFF   (the pins are run separately: python -m pytest tests_matcher)

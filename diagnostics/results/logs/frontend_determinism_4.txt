@@ -1,0 +1,5 @@
+apple1-000-000.png           IDENTICAL  cached=fd240d8a1a34  rebuilt=fd240d8a1a34,fd240d8a1a34
+horse1-000-000.png           IDENTICAL  cached=f715740e8ae4  rebuilt=f715740e8ae4,f715740e8ae4
+car1-022-090.png             IDENTICAL  cached=cab22e975471  rebuilt=cab22e975471,cab22e975471
+cup1-068-180.png             IDENTICAL  cached=5fb33bcdfdf7  rebuilt=5fb33bcdfdf7,5fb33bcdfdf7
+front end deterministic across hash seeds: True

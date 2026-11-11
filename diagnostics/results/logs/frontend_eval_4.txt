@@ -1,0 +1,9 @@
+front-end source digest 83937c990fb5b469
+  front end 10/79  (88s)
+  front end 20/79  (161s)
+  front end 30/79  (233s)
+  front end 40/79  (311s)
+  front end 50/79  (389s)
+  front end 60/79  (466s)
+  front end 70/79  (549s)
+done: 79 graphs

@@ -1,0 +1,176 @@
+.........F..FF.F..F..FF......F.............F.............                [100%]
+=================================== FAILURES ===================================
+_____________ test_empty_setting_is_the_historical_one_sided_score _____________
+
+params = <function params.<locals>._set at 0x7f1c0478f1a0>
+
+    def test_empty_setting_is_the_historical_one_sided_score(params):
+        params(EVIDENCE_QUERY_SIDE_TERMS=())
+        q = graph(_nodes(range(6)), [(0, 1, T), (1, 2, T), (4, 5, T)])
+        c = graph(_nodes(range(3), base=100), [(100, 101, T)])
+        score, corr, tr = _ev(q, c)
+        assert corr == {0: 100, 1: 101, 2: 102}
+        assert tr["query_side_terms"] == ()
+        assert tr["node_coverage"] == tr["core_node_coverage"]
+        assert "q_verifiable_edges_count" not in tr        # mirror loop not run
+        want = (tr["core_node_coverage"] * tr["relational_consistency"]
+                - 0.15 * tr["edge_absence"])
+        assert score == pytest.approx(want, abs=1e-12)
+>       assert score == pytest.approx(1.0, abs=1e-6)       # fully covered core
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       assert 0.0 == 1.0 ± 1.0e-06
+E         
+E         comparison failed
+E         Obtained: 0.0
+E         Expected: 1.0 ± 1.0e-06
+
+tests_matcher/test_d3_query_side_terms.py:73: AssertionError
+__________ test_relation_term_counts_a_query_relation_the_core_lacks ___________
+
+params = <function params.<locals>._set at 0x7f1c047af9c0>
+
+    def test_relation_term_counts_a_query_relation_the_core_lacks(params):
+        q = graph(_nodes(range(3)), [(0, 1, T), (1, 2, T)])
+        c = graph(_nodes(range(3), base=100), [(100, 101, T)])
+    
+        params(EVIDENCE_QUERY_SIDE_TERMS=())
+>       assert _ev(q, c)[0] == pytest.approx(1.0, abs=1e-6)
+E       assert 0.0 == 1.0 ± 1.0e-06
+E         
+E         comparison failed
+E         Obtained: 0.0
+E         Expected: 1.0 ± 1.0e-06
+
+tests_matcher/test_d3_query_side_terms.py:117: AssertionError
+__________ test_absence_term_counts_a_query_edge_the_map_cannot_reach __________
+
+params = <function params.<locals>._set at 0x7f1c0478eac0>
+
+    def test_absence_term_counts_a_query_edge_the_map_cannot_reach(params):
+        pol = TypedSignature(kind="CANONICAL", class_="POLARITY", quantized=(1.0,))
+        q_nodes = _nodes(range(3))
+        q_nodes[9] = ("Polarity", pol)          # no partner of its lens in core
+        q = graph(q_nodes, [(0, 1, T), (2, 9, T)])
+        c = graph(_nodes(range(3), base=100), [(100, 101, T)])
+    
+        params(EVIDENCE_QUERY_SIDE_TERMS=())
+        s0, corr, tr0 = _ev(q, c)
+        assert 9 not in corr
+        assert tr0["edge_absence"] == 0.0
+>       assert s0 == pytest.approx(1.0, abs=1e-6)
+E       assert 0.0 == 1.0 ± 1.0e-06
+E         
+E         comparison failed
+E         Obtained: 0.0
+E         Expected: 1.0 ± 1.0e-06
+
+tests_matcher/test_d3_query_side_terms.py:142: AssertionError
+_______ test_mirror_loop_in_the_core_direction_is_the_matchers_own_loop ________
+
+params = <function params.<locals>._set at 0x7f1c047aeb60>
+
+    def test_mirror_loop_in_the_core_direction_is_the_matchers_own_loop(params):
+        params(EVIDENCE_QUERY_SIDE_TERMS=())
+        q, c = _mixed_pair()
+        _s, corr, tr = _ev(q, c)
+        assert corr == {0: 100, 1: 101, 2: 102, 3: 103}
+        inv = {cid: qid for qid, cid in corr.items()}
+        n_edges, n_ver, sim_sum = _edge_side_evidence(c[0], q[0], inv)
+        assert n_edges == tr["n_core_edges"] == 4
+        assert n_ver == tr["verifiable_core_edges_count"] == 4
+        assert sim_sum == tr["matched_rel_sim_sum"]            # bit-identical
+        # the case is not degenerate: one exact, one graded, one topological,
+        # one core edge with no query partner
+>       assert 2.0 < sim_sum < 3.0
+E       assert 2.0 < 1.6411803884299547
+
+tests_matcher/test_d3_query_side_terms.py:191: AssertionError
+_____________ test_identical_graphs_score_one_under_every_setting ______________
+
+params = <function params.<locals>._set at 0x7f1c04831ee0>
+
+    def test_identical_graphs_score_one_under_every_setting(params):
+        q, _c = _mixed_pair()
+        for terms in ((), ("node",), ("node", "absence"), ALL):
+            params(EVIDENCE_QUERY_SIDE_TERMS=terms)
+>           assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6), terms
+E           AssertionError: ()
+E           assert 0.59999999988 == 1.0 ± 1.0e-06
+E             
+E             comparison failed
+E             Obtained: 0.59999999988
+E             Expected: 1.0 ± 1.0e-06
+
+tests_matcher/test_d3_query_side_terms.py:225: AssertionError
+____________________________ test_declared_defaults ____________________________
+
+declared_defaults = {'EDGE_UNPARAMETERISED_STRUCTURAL_MATCH': False, 'EVIDENCE_GRADED_NODE_CREDIT': True, 'EVIDENCE_QUERY_SIDE_TERMS': (), 'EDGE_UNMEASURED_IS_NOT_EVIDENCE': True, ...}
+
+    def test_declared_defaults(declared_defaults):
+>       assert declared_defaults == {
+            # F6 -- landed on; a parameter-less pair matches as structure
+            "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True,
+            # D1 -- landed on; its success signal was NOT met
+            "EVIDENCE_GRADED_NODE_CREDIT": True,
+            # D3 -- in the tree, OFF: its pre-registered rule failed
+            "EVIDENCE_QUERY_SIDE_TERMS": (),
+            # Phase 4 -- on by the spec; never exercised on ETH-80
+            "EDGE_UNMEASURED_IS_NOT_EVIDENCE": True,
+            # null calibration -- in the tree, OFF: its rule failed
+            "EVIDENCE_NODE_NULL_CALIBRATED": False,
+        }
+E       AssertionError: assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+E         
+E         Omitting 4 identical items, use -vv to show
+E         Differing items:
+E         {'EDGE_UNPARAMETERISED_STRUCTURAL_MATCH': False} != {'EDGE_UNPARAMETERISED_STRUCTURAL_MATCH': True}
+E         Use -v to get more diff
+
+tests_matcher/test_declared_defaults.py:14: AssertionError
+___________ test_same_predicate_without_params_is_a_structural_match ___________
+
+    def test_same_predicate_without_params_is_a_structural_match():
+>       assert polymorphic_edge_similarity(None, None, edge_types=(T, T)) == 1.0
+E       assert 0.0 == 1.0
+E        +  where 0.0 = polymorphic_edge_similarity(None, None, edge_types=(<EdgeType.TOPOLOGY: 6>, <EdgeType.TOPOLOGY: 6>))
+
+tests_matcher/test_f6_unparameterised_edge_match.py:40: AssertionError
+__________ test_matcher_credits_a_topology_edge_present_on_both_sides __________
+
+    def test_matcher_credits_a_topology_edge_present_on_both_sides():
+        score, tr = _evidence([(1, 2, T)], [(1, 2, T)])
+        assert tr["verifiable_core_edges_count"] == 1
+>       assert tr["matched_rel_sim_sum"] == 1.0
+E       assert 0.0 == 1.0
+
+tests_matcher/test_f6_unparameterised_edge_match.py:109: AssertionError
+_________________ test_calibrated_balanced_score_is_symmetric __________________
+
+params = <function params.<locals>._set at 0x7f1c04830b80>
+
+    def test_calibrated_balanced_score_is_symmetric(params):
+        params(EVIDENCE_NODE_NULL_CALIBRATED=True, EVIDENCE_QUERY_SIDE_TERMS=ALL)
+        q = _g((1, 6, 12, 3), edges=[(0, 1, T), (1, 2, T), (2, 3, T)])
+        c = _g((2, 7, 11), base=100, edges=[(100, 101, T)])
+        s_qc, _c1, tr_qc = _ev(q, c)
+        s_cq, _c2, tr_cq = _ev(c, q)
+        assert s_qc == pytest.approx(s_cq, abs=1e-9)
+        assert tr_qc["node_coverage_chance"] == pytest.approx(
+            tr_cq["node_coverage_chance"], abs=1e-9)
+>       assert 0.0 < s_qc < 1.0
+E       assert 0.0 < 0.0
+
+tests_matcher/test_nullcal_node_coverage.py:238: AssertionError
+
+PARAMETER OVERRIDES for this session: EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=False
+=========================== short test summary info ============================
+FAILED tests_matcher/test_d3_query_side_terms.py::test_empty_setting_is_the_historical_one_sided_score
+FAILED tests_matcher/test_d3_query_side_terms.py::test_relation_term_counts_a_query_relation_the_core_lacks
+FAILED tests_matcher/test_d3_query_side_terms.py::test_absence_term_counts_a_query_edge_the_map_cannot_reach
+FAILED tests_matcher/test_d3_query_side_terms.py::test_mirror_loop_in_the_core_direction_is_the_matchers_own_loop
+FAILED tests_matcher/test_d3_query_side_terms.py::test_identical_graphs_score_one_under_every_setting
+FAILED tests_matcher/test_declared_defaults.py::test_declared_defaults - Asse...
+FAILED tests_matcher/test_f6_unparameterised_edge_match.py::test_same_predicate_without_params_is_a_structural_match
+FAILED tests_matcher/test_f6_unparameterised_edge_match.py::test_matcher_credits_a_topology_edge_present_on_both_sides
+FAILED tests_matcher/test_nullcal_node_coverage.py::test_calibrated_balanced_score_is_symmetric
+9 failed, 48 passed in 1.94s

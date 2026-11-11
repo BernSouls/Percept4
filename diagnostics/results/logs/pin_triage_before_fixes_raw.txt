@@ -1,0 +1,697 @@
+PIN TRIAGE -- every failing assertion of tests_matcher, pin baseline disabled
+soft copies: 205 assertions wrapped; original line numbers reported
+
+====================================================================================================
+defaults   (tree defaults)
+====================================================================================================
+  57 tests collected; 0 with a failing assertion; 0 failing assertions (0 distinct lines)   [pytest: 57 passed in 1.88s]
+
+====================================================================================================
+d3n   EVIDENCE_QUERY_SIDE_TERMS=("node",)
+====================================================================================================
+  57 tests collected; 8 with a failing assertion; 56 failing assertions (13 distinct lines)   [pytest: 57 passed in 1.63s]
+  test_d1_graded_node_credit.py :: test_binary_credit_tied_them_and_the_switch_restores_it
+    [??] line 102  x1   assert tr_near["node_coverage"] == tr_near["node_coverage_binary"]
+         assert 0.9999999998333333 == 0.9999999996666666
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [??] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.9248822057604883 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9248822057604883 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.9248822057604883 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9248822057604883 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [??] line 145  x35  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.6551904778013827 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.6551904778013827 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 142  x10  assert tr["node_coverage"] <= tr["node_coverage_binary"] + 1e-12
+         assert 0.2284827962892467 <= (0.1428571428367347 + 1e-12)
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_an_unmatched_core_node_earns_nothing_under_either_rule
+    [??] line 170  x1   assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.6666666664444444 == 0.5 ± 1.0e-06 | Obtained: 0.6666666664444444 | Expected: 0.5 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 172  x1   assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.6666666664444444 == 0.5 ± 1.0e-06 | Obtained: 0.6666666664444444 | Expected: 0.5 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_declared_defaults.py :: test_declared_defaults
+    [??] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_is_the_mean_of_the_candidate_matrix
+    [??] line 97   x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.28575154169816747 == 0.2381262847960982 ± 1.0e-09 | Obtained: 0.28575154169816747 | Expected: 0.2381262847960982 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 99   x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.7311449480707536 == 0.6092874568474854 ± 1.0e-09 | Obtained: 0.7311449480707536 | Expected: 0.6092874568474854 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 100  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.6235832940144317 == 0.4871688898626101 ± 1.0e-09 | Obtained: 0.6235832940144317 | Expected: 0.4871688898626101 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_carries_the_lens_boost
+    [??] line 121  x1   assert tr["node_coverage_chance"] == pytest.approx( (tex_sum + boost * con_sum) / c_total, abs=1e-9)
+         assert 0.43778296259019644 == 0.5198672681442619 ± 1.0e-09 | Obtained: 0.43778296259019644 | Expected: 0.5198672681442619 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_carries_the_node_weights
+    [??] line 144  x1   assert tr["node_coverage_chance"] == pytest.approx(c_ch / 2.5, abs=1e-9)
+         assert 0.5526105645551425 == 0.5556530856183615 ± 1.0e-09 | Obtained: 0.5526105645551425 | Expected: 0.5556530856183615 ± 1.0e-09
+         -> UNCLASSIFIED
+
+====================================================================================================
+d3   EVIDENCE_QUERY_SIDE_TERMS=("node","relation","absence")
+====================================================================================================
+  57 tests collected; 8 with a failing assertion; 56 failing assertions (13 distinct lines)   [pytest: 57 passed in 1.55s]
+  test_d1_graded_node_credit.py :: test_binary_credit_tied_them_and_the_switch_restores_it
+    [??] line 102  x1   assert tr_near["node_coverage"] == tr_near["node_coverage_binary"]
+         assert 0.9999999998333333 == 0.9999999996666666
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [??] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.9248822057604883 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9248822057604883 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.9248822057604883 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9248822057604883 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [??] line 145  x35  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.6551904778013827 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.6551904778013827 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 142  x10  assert tr["node_coverage"] <= tr["node_coverage_binary"] + 1e-12
+         assert 0.2284827962892467 <= (0.1428571428367347 + 1e-12)
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_an_unmatched_core_node_earns_nothing_under_either_rule
+    [??] line 170  x1   assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.6666666664444444 == 0.5 ± 1.0e-06 | Obtained: 0.6666666664444444 | Expected: 0.5 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 172  x1   assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.6666666664444444 == 0.5 ± 1.0e-06 | Obtained: 0.6666666664444444 | Expected: 0.5 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_declared_defaults.py :: test_declared_defaults
+    [??] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_is_the_mean_of_the_candidate_matrix
+    [??] line 97   x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.28575154169816747 == 0.2381262847960982 ± 1.0e-09 | Obtained: 0.28575154169816747 | Expected: 0.2381262847960982 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 99   x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.7311449480707536 == 0.6092874568474854 ± 1.0e-09 | Obtained: 0.7311449480707536 | Expected: 0.6092874568474854 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 100  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.6235832940144317 == 0.4871688898626101 ± 1.0e-09 | Obtained: 0.6235832940144317 | Expected: 0.4871688898626101 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_carries_the_lens_boost
+    [??] line 121  x1   assert tr["node_coverage_chance"] == pytest.approx( (tex_sum + boost * con_sum) / c_total, abs=1e-9)
+         assert 0.43778296259019644 == 0.5198672681442619 ± 1.0e-09 | Obtained: 0.43778296259019644 | Expected: 0.5198672681442619 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_carries_the_node_weights
+    [??] line 144  x1   assert tr["node_coverage_chance"] == pytest.approx(c_ch / 2.5, abs=1e-9)
+         assert 0.5526105645551425 == 0.5556530856183615 ± 1.0e-09 | Obtained: 0.5526105645551425 | Expected: 0.5556530856183615 ± 1.0e-09
+         -> UNCLASSIFIED
+
+====================================================================================================
+null   EVIDENCE_NODE_NULL_CALIBRATED=True
+====================================================================================================
+  57 tests collected; 14 with a failing assertion; 67 failing assertions (26 distinct lines)   [pytest: 57 passed in 1.52s]
+  test_d1_graded_node_credit.py :: test_credit_is_boost_times_weight_times_similarity
+    [??] line 80   x2   assert tr["node_coverage"] == pytest.approx( _expected_cov(QUERY, core, corr), abs=1e-9)
+         assert 0.9164432304981106 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432304981106 | Expected: 0.9559974818331 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 82   x2   assert tr["node_coverage"] == pytest.approx(sum(sims) / 3, abs=1e-9)
+         assert 0.9164432304981106 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432304981106 | Expected: 0.9559974818331 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_binary_credit_tied_them_and_the_switch_restores_it
+    [??] line 102  x1   assert tr_near["node_coverage"] == tr_near["node_coverage_binary"]
+         assert 0.0 == 0.9999999996666666
+         -> UNCLASSIFIED
+    [??] line 103  x1   assert s_near == s_far == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [??] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [??] line 145  x40  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.35895869358808197 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.35895869358808197 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_an_unmatched_core_node_earns_nothing_under_either_rule
+    [??] line 170  x1   assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 172  x1   assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_empty_setting_is_the_historical_one_sided_score
+    [??] line 68   x1   assert tr["node_coverage"] == tr["core_node_coverage"]
+         assert 0.9999999989521132 == 0.9999999996666666
+         -> UNCLASSIFIED
+    [??] line 72   x1   assert score == pytest.approx(want, abs=1e-12)
+         assert 0.9999999989521132 == 0.9999999996666666 ± 1.0e-12 | Obtained: 0.9999999989521132 | Expected: 0.9999999996666666 ± 1.0e-12
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_node_term_prefers_the_core_that_explains_the_whole_query
+    [??] line 91   x1   assert s_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 95   x1   assert tr["node_coverage"] == pytest.approx(2 / 3, abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_node_term_carries_the_graded_credit
+    [??] line 106  x1   assert tr["node_coverage"] == pytest.approx( 2 * sum(sims) / (2 + 3), abs=1e-9)
+         assert 0.6374254769797993 == 0.7647979854664799 ± 1.0e-09 | Obtained: 0.6374254769797993 | Expected: 0.7647979854664799 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_declared_defaults.py :: test_declared_defaults
+    [??] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_off_is_the_uncalibrated_score
+    [??] line 65   x1   assert tr_off["node_null_calibrated"] is False
+         assert True is False
+         -> UNCLASSIFIED
+    [??] line 66   x1   assert tr_off["node_coverage"] == tr_off["node_coverage_raw"]
+         assert 0.8637621129156853 == 0.9139311848142626
+         -> UNCLASSIFIED
+    [??] line 67   x1   assert "node_coverage_chance" not in tr_off
+         assert 'node_coverage_chance' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'n_core_edges': 0, ...}
+         -> UNCLASSIFIED
+    [??] line 68   x1   assert "c_chance_nm" not in tr_off and "q_chance_nm" not in tr_off
+         assert ('c_chance_nm' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'n_core_edges': 0, ...})
+         -> UNCLASSIFIED
+    [??] line 79   x1   assert tr_on["node_coverage_raw"] == tr_off["node_coverage"]
+         assert 0.9139311848142626 == 0.8637621129156853
+         -> UNCLASSIFIED
+    [??] line 80   x1   assert on < off
+         assert 0.8637621129156853 < 0.8637621129156853
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_a_coverage_any_pairing_reaches_is_worth_nothing
+    [??] line 153  x1   assert off == pytest.approx(_sim(1, 2), abs=1e-6)
+         assert 0.0 == 0.9139311852712282 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.9139311852712282 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_binary_credit_calibrates_to_nothing
+    [??] line 190  x1   assert off == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_a_homogeneous_graph_scores_nothing_against_itself
+    [??] line 202  x1   assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_calibration_keeps_the_balanced_preference_for_the_whole
+    [??] line 250  x1   assert raw_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.5836610536361684 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.5836610536361684 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 254  x1   assert 0.0 < cal_frag < raw_frag
+         assert 0.5836610536361684 < 0.5836610536361684
+         -> UNCLASSIFIED
+
+====================================================================================================
+d3n_null   EVIDENCE_QUERY_SIDE_TERMS=("node",);EVIDENCE_NODE_NULL_CALIBRATED=True
+====================================================================================================
+  57 tests collected; 17 with a failing assertion; 74 failing assertions (32 distinct lines)   [pytest: 57 passed in 3.66s]
+  test_d1_graded_node_credit.py :: test_credit_is_boost_times_weight_times_similarity
+    [??] line 80   x2   assert tr["node_coverage"] == pytest.approx( _expected_cov(QUERY, core, corr), abs=1e-9)
+         assert 0.9164432307881508 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432307881508 | Expected: 0.9559974818331 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 82   x2   assert tr["node_coverage"] == pytest.approx(sum(sims) / 3, abs=1e-9)
+         assert 0.9164432307881508 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432307881508 | Expected: 0.9559974818331 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_binary_credit_tied_them_and_the_switch_restores_it
+    [??] line 102  x1   assert tr_near["node_coverage"] == tr_near["node_coverage_binary"]
+         assert 0.0 == 0.9999999996666666
+         -> UNCLASSIFIED
+    [??] line 103  x1   assert s_near == s_far == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [??] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [??] line 145  x40  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.45373826765179187 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.45373826765179187 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 142  x2   assert tr["node_coverage"] <= tr["node_coverage_binary"] + 1e-12
+         assert 0.14522521960480328 <= (0.1428571428367347 + 1e-12)
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_an_unmatched_core_node_earns_nothing_under_either_rule
+    [??] line 170  x1   assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 172  x1   assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_empty_setting_is_the_historical_one_sided_score
+    [??] line 68   x1   assert tr["node_coverage"] == tr["core_node_coverage"]
+         assert 0.9999999989521132 == 0.9999999996666666
+         -> UNCLASSIFIED
+    [??] line 72   x1   assert score == pytest.approx(want, abs=1e-12)
+         assert 0.9999999989521132 == 0.9999999996666666 ± 1.0e-12 | Obtained: 0.9999999989521132 | Expected: 0.9999999996666666 ± 1.0e-12
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_node_term_prefers_the_core_that_explains_the_whole_query
+    [??] line 91   x1   assert s_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 95   x1   assert tr["node_coverage"] == pytest.approx(2 / 3, abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_node_term_carries_the_graded_credit
+    [??] line 106  x1   assert tr["node_coverage"] == pytest.approx( 2 * sum(sims) / (2 + 3), abs=1e-9)
+         assert 0.6374254769797993 == 0.7647979854664799 ± 1.0e-09 | Obtained: 0.6374254769797993 | Expected: 0.7647979854664799 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_declared_defaults.py :: test_declared_defaults
+    [??] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_off_is_the_uncalibrated_score
+    [??] line 65   x1   assert tr_off["node_null_calibrated"] is False
+         assert True is False
+         -> UNCLASSIFIED
+    [??] line 66   x1   assert tr_off["node_coverage"] == tr_off["node_coverage_raw"]
+         assert 0.6188632467499043 == 0.7311449480707536
+         -> UNCLASSIFIED
+    [??] line 67   x1   assert "node_coverage_chance" not in tr_off
+         assert 'node_coverage_chance' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'n_core_edges': 0, ...}
+         -> UNCLASSIFIED
+    [??] line 68   x1   assert "c_chance_nm" not in tr_off and "q_chance_nm" not in tr_off
+         assert ('c_chance_nm' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'n_core_edges': 0, ...})
+         -> UNCLASSIFIED
+    [??] line 79   x1   assert tr_on["node_coverage_raw"] == tr_off["node_coverage"]
+         assert 0.7311449480707536 == 0.6188632467499043
+         -> UNCLASSIFIED
+    [??] line 80   x1   assert on < off
+         assert 0.6188632467499043 < 0.6188632467499043
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_is_the_mean_of_the_candidate_matrix
+    [??] line 97   x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.28575154169816747 == 0.2381262847960982 ± 1.0e-09 | Obtained: 0.28575154169816747 | Expected: 0.2381262847960982 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 99   x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.7311449480707536 == 0.6092874568474854 ± 1.0e-09 | Obtained: 0.7311449480707536 | Expected: 0.6092874568474854 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 100  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.6235832940144317 == 0.4871688898626101 ± 1.0e-09 | Obtained: 0.6235832940144317 | Expected: 0.4871688898626101 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_carries_the_lens_boost
+    [??] line 121  x1   assert tr["node_coverage_chance"] == pytest.approx( (tex_sum + boost * con_sum) / c_total, abs=1e-9)
+         assert 0.43778296259019644 == 0.5198672681442619 ± 1.0e-09 | Obtained: 0.43778296259019644 | Expected: 0.5198672681442619 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_carries_the_node_weights
+    [??] line 144  x1   assert tr["node_coverage_chance"] == pytest.approx(c_ch / 2.5, abs=1e-9)
+         assert 0.5526105645551425 == 0.5556530856183615 ± 1.0e-09 | Obtained: 0.5526105645551425 | Expected: 0.5556530856183615 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_a_coverage_any_pairing_reaches_is_worth_nothing
+    [??] line 153  x1   assert off == pytest.approx(_sim(1, 2), abs=1e-6)
+         assert 0.0 == 0.9139311852712282 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.9139311852712282 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_binary_credit_calibrates_to_nothing
+    [??] line 190  x1   assert off == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_a_homogeneous_graph_scores_nothing_against_itself
+    [??] line 202  x1   assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_calibration_keeps_the_balanced_preference_for_the_whole
+    [??] line 250  x1   assert raw_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.5836610536361684 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.5836610536361684 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 254  x1   assert 0.0 < cal_frag < raw_frag
+         assert 0.5836610536361684 < 0.5836610536361684
+         -> UNCLASSIFIED
+
+====================================================================================================
+d3_null   EVIDENCE_QUERY_SIDE_TERMS=("node","relation","absence");EVIDENCE_NODE_NULL_CALIBRATED=True
+====================================================================================================
+  57 tests collected; 17 with a failing assertion; 74 failing assertions (32 distinct lines)   [pytest: 57 passed in 1.92s]
+  test_d1_graded_node_credit.py :: test_credit_is_boost_times_weight_times_similarity
+    [??] line 80   x2   assert tr["node_coverage"] == pytest.approx( _expected_cov(QUERY, core, corr), abs=1e-9)
+         assert 0.9164432307881508 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432307881508 | Expected: 0.9559974818331 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 82   x2   assert tr["node_coverage"] == pytest.approx(sum(sims) / 3, abs=1e-9)
+         assert 0.9164432307881508 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9164432307881508 | Expected: 0.9559974818331 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_binary_credit_tied_them_and_the_switch_restores_it
+    [??] line 102  x1   assert tr_near["node_coverage"] == tr_near["node_coverage_binary"]
+         assert 0.0 == 0.9999999996666666
+         -> UNCLASSIFIED
+    [??] line 103  x1   assert s_near == s_far == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [??] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.0 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [??] line 145  x40  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.45373826765179187 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.45373826765179187 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 142  x2   assert tr["node_coverage"] <= tr["node_coverage_binary"] + 1e-12
+         assert 0.14522521960480328 <= (0.1428571428367347 + 1e-12)
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_an_unmatched_core_node_earns_nothing_under_either_rule
+    [??] line 170  x1   assert tr["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 172  x1   assert _ev(query, core)[2]["node_coverage"] == pytest.approx(0.5, abs=1e-6)
+         assert 0.0 == 0.5 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.5 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_empty_setting_is_the_historical_one_sided_score
+    [??] line 68   x1   assert tr["node_coverage"] == tr["core_node_coverage"]
+         assert 0.9999999989521132 == 0.9999999996666666
+         -> UNCLASSIFIED
+    [??] line 72   x1   assert score == pytest.approx(want, abs=1e-12)
+         assert 0.9999999989521132 == 0.9999999996666666 ± 1.0e-12 | Obtained: 0.9999999989521132 | Expected: 0.9999999996666666 ± 1.0e-12
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_node_term_prefers_the_core_that_explains_the_whole_query
+    [??] line 91   x1   assert s_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 95   x1   assert tr["node_coverage"] == pytest.approx(2 / 3, abs=1e-6)
+         assert 0.3888281795147016 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.3888281795147016 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_node_term_carries_the_graded_credit
+    [??] line 106  x1   assert tr["node_coverage"] == pytest.approx( 2 * sum(sims) / (2 + 3), abs=1e-9)
+         assert 0.6374254769797993 == 0.7647979854664799 ± 1.0e-09 | Obtained: 0.6374254769797993 | Expected: 0.7647979854664799 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_declared_defaults.py :: test_declared_defaults
+    [??] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_off_is_the_uncalibrated_score
+    [??] line 65   x1   assert tr_off["node_null_calibrated"] is False
+         assert True is False
+         -> UNCLASSIFIED
+    [??] line 66   x1   assert tr_off["node_coverage"] == tr_off["node_coverage_raw"]
+         assert 0.6188632467499043 == 0.7311449480707536
+         -> UNCLASSIFIED
+    [??] line 67   x1   assert "node_coverage_chance" not in tr_off
+         assert 'node_coverage_chance' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'n_core_edges': 0, ...}
+         -> UNCLASSIFIED
+    [??] line 68   x1   assert "c_chance_nm" not in tr_off and "q_chance_nm" not in tr_off
+         assert ('c_chance_nm' not in {'c_node_total': 2.0, 'verifiable_core_edges_count': 0, 'matched_rel_sim_sum': 0.0, 'n_core_edges': 0, ...})
+         -> UNCLASSIFIED
+    [??] line 79   x1   assert tr_on["node_coverage_raw"] == tr_off["node_coverage"]
+         assert 0.7311449480707536 == 0.6188632467499043
+         -> UNCLASSIFIED
+    [??] line 80   x1   assert on < off
+         assert 0.6188632467499043 < 0.6188632467499043
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_is_the_mean_of_the_candidate_matrix
+    [??] line 97   x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.28575154169816747 == 0.2381262847960982 ± 1.0e-09 | Obtained: 0.28575154169816747 | Expected: 0.2381262847960982 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 99   x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.7311449480707536 == 0.6092874568474854 ± 1.0e-09 | Obtained: 0.7311449480707536 | Expected: 0.6092874568474854 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 100  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.6235832940144317 == 0.4871688898626101 ± 1.0e-09 | Obtained: 0.6235832940144317 | Expected: 0.4871688898626101 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_carries_the_lens_boost
+    [??] line 121  x1   assert tr["node_coverage_chance"] == pytest.approx( (tex_sum + boost * con_sum) / c_total, abs=1e-9)
+         assert 0.43778296259019644 == 0.5198672681442619 ± 1.0e-09 | Obtained: 0.43778296259019644 | Expected: 0.5198672681442619 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_carries_the_node_weights
+    [??] line 144  x1   assert tr["node_coverage_chance"] == pytest.approx(c_ch / 2.5, abs=1e-9)
+         assert 0.5526105645551425 == 0.5556530856183615 ± 1.0e-09 | Obtained: 0.5526105645551425 | Expected: 0.5556530856183615 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_a_coverage_any_pairing_reaches_is_worth_nothing
+    [??] line 153  x1   assert off == pytest.approx(_sim(1, 2), abs=1e-6)
+         assert 0.0 == 0.9139311852712282 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.9139311852712282 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_binary_credit_calibrates_to_nothing
+    [??] line 190  x1   assert off == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_a_homogeneous_graph_scores_nothing_against_itself
+    [??] line 202  x1   assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_calibration_keeps_the_balanced_preference_for_the_whole
+    [??] line 250  x1   assert raw_frag == pytest.approx((3 + 3) / (6 + 3), abs=1e-6)
+         assert 0.5836610536361684 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.5836610536361684 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 254  x1   assert 0.0 < cal_frag < raw_frag
+         assert 0.5836610536361684 < 0.5836610536361684
+         -> UNCLASSIFIED
+
+====================================================================================================
+d1off   EVIDENCE_GRADED_NODE_CREDIT=False
+====================================================================================================
+  57 tests collected; 17 with a failing assertion; 76 failing assertions (35 distinct lines)   [pytest: 57 passed in 1.65s]
+  test_d1_graded_node_credit.py :: test_identical_graphs_keep_a_full_node_term
+    [??] line 67   x1   assert tr["node_credit"] == "graded"
+         assert 'binary' == 'graded'
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_credit_is_boost_times_weight_times_similarity
+    [??] line 80   x2   assert tr["node_coverage"] == pytest.approx( _expected_cov(QUERY, core, corr), abs=1e-9)
+         assert 0.9999999996666666 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9999999996666666 | Expected: 0.9559974818331 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 82   x2   assert tr["node_coverage"] == pytest.approx(sum(sims) / 3, abs=1e-9)
+         assert 0.9999999996666666 == 0.9559974818331 ± 1.0e-09 | Obtained: 0.9999999996666666 | Expected: 0.9559974818331 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_equal_census_the_more_alike_core_now_wins
+    [??] line 90   x1   assert tr_near["node_coverage"] > tr_far["node_coverage"] + 0.05
+         assert 0.9999999996666666 > (0.9999999996666666 + 0.05)
+         -> UNCLASSIFIED
+    [??] line 91   x1   assert s_near > s_far + 0.05
+         assert 0.9999999996666666 > (0.9999999996666666 + 0.05)
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_node_weight_and_lens_boost_enter_the_credit
+    [??] line 118  x1   assert tr["node_coverage"] == pytest.approx(want, abs=1e-9)
+         assert 0.9999999996226415 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9999999996226415 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 119  x1   assert tr["node_coverage"] == pytest.approx(_expected_cov(q, c, corr), abs=1e-9)
+         assert 0.9999999996226415 == 0.9446081166989653 ± 1.0e-09 | Obtained: 0.9999999996226415 | Expected: 0.9446081166989653 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d1_graded_node_credit.py :: test_graded_coverage_never_exceeds_binary_coverage
+    [??] line 145  x40  assert tr["node_coverage"] == pytest.approx( _expected_cov(q, c, corr), abs=1e-9)
+         assert 0.7142857141836735 == 0.5615918381622702 ± 1.0e-09 | Obtained: 0.7142857141836735 | Expected: 0.5615918381622702 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_node_term_carries_the_graded_credit
+    [??] line 106  x1   assert tr["node_coverage"] == pytest.approx( 2 * sum(sims) / (2 + 3), abs=1e-9)
+         assert 0.79999999984 == 0.7647979854664799 ± 1.0e-09 | Obtained: 0.79999999984 | Expected: 0.7647979854664799 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_declared_defaults.py :: test_declared_defaults
+    [??] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_is_the_mean_of_the_candidate_matrix
+    [??] line 94   x1   assert tr["c_chance_nm"] == pytest.approx(total / 3.0, abs=1e-12)
+         assert 2.0 == 0.7143788543882946 ± 1.0e-12 | Obtained: 2.0 | Expected: 0.7143788543882946 ± 1.0e-12
+         -> UNCLASSIFIED
+    [??] line 95   x1   assert tr["q_chance_nm"] == pytest.approx(total / 3.0, abs=1e-12)
+         assert 2.0 == 0.7143788543882946 ± 1.0e-12 | Obtained: 2.0 | Expected: 0.7143788543882946 ± 1.0e-12
+         -> UNCLASSIFIED
+    [??] line 97   x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.6666666664444444 == 0.2381262847960982 ± 1.0e-09 | Obtained: 0.6666666664444444 | Expected: 0.2381262847960982 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 99   x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.6666666664444444 == 0.6092874568474854 ± 1.0e-09 | Obtained: 0.6666666664444444 | Expected: 0.6092874568474854 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 100  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.0 == 0.4871688898626101 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.4871688898626101 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 102  x1   assert 0.0 < tr["node_coverage"] < tr["node_coverage_raw"]
+         assert 0.0 < 0.0
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_carries_the_lens_boost
+    [??] line 119  x1   assert tr["c_chance_nm"] == pytest.approx(tex_sum + boost * con_sum, abs=1e-12)
+         assert 3.2 == 1.663575258061638 ± 1.0e-12 | Obtained: 3.2 | Expected: 1.663575258061638 ± 1.0e-12
+         -> UNCLASSIFIED
+    [??] line 121  x1   assert tr["node_coverage_chance"] == pytest.approx( (tex_sum + boost * con_sum) / c_total, abs=1e-9)
+         assert 0.9999999996875 == 0.5198672681442619 ± 1.0e-09 | Obtained: 0.9999999996875 | Expected: 0.5198672681442619 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_chance_carries_the_node_weights
+    [??] line 142  x1   assert tr["c_chance_nm"] == pytest.approx(c_ch, abs=1e-12)
+         assert 2.5 == 1.3891327140459038 ± 1.0e-12 | Obtained: 2.5 | Expected: 1.3891327140459038 ± 1.0e-12
+         -> UNCLASSIFIED
+    [??] line 143  x1   assert tr["q_chance_nm"] == pytest.approx(q_ch, abs=1e-12)
+         assert 4.0 == 2.2028359561151327 ± 1.0e-12 | Obtained: 4.0 | Expected: 2.2028359561151327 ± 1.0e-12
+         -> UNCLASSIFIED
+    [??] line 144  x1   assert tr["node_coverage_chance"] == pytest.approx(c_ch / 2.5, abs=1e-9)
+         assert 0.9999999996 == 0.5556530856183615 ± 1.0e-09 | Obtained: 0.9999999996 | Expected: 0.5556530856183615 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_a_coverage_any_pairing_reaches_is_worth_nothing
+    [??] line 153  x1   assert off == pytest.approx(_sim(1, 2), abs=1e-6)
+         assert 0.9999999996666666 == 0.9139311852712282 ± 1.0e-06 | Obtained: 0.9999999996666666 | Expected: 0.9139311852712282 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_a_specific_correspondence_keeps_its_credit
+    [??] line 167  x1   assert 0.3 < tr["node_coverage_chance"] < 0.5
+         assert 0.9999999996666666 < 0.5
+         -> UNCLASSIFIED
+    [??] line 168  x1   assert tr["node_coverage"] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 169  x1   assert score == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_between_the_two_the_value_is_the_excess_over_chance
+    [??] line 179  x1   assert tr["node_coverage"] == pytest.approx((n - n0) / (1.0 - n0), abs=1e-9)
+         assert 0.0 == 0.8184246250715185 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.8184246250715185 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 181  x1   assert score == pytest.approx((n - n0) / (1.0 - n0), abs=1e-6)
+         assert 0.0 == 0.8184246250715185 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.8184246250715185 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_a_homogeneous_graph_scores_nothing_against_itself
+    [??] line 209  x1   assert _ev(q2, q2)[0] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_balanced_node_term_is_calibrated_over_both_sides
+    [??] line 223  x1   assert tr["node_coverage_chance"] == pytest.approx(n0, abs=1e-9)
+         assert 0.79999999984 == 0.2945968878252688 ± 1.0e-09 | Obtained: 0.79999999984 | Expected: 0.2945968878252688 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 224  x1   assert tr["node_coverage_raw"] == pytest.approx(n, abs=1e-9)
+         assert 0.79999999984 == 0.7311449482169825 ± 1.0e-09 | Obtained: 0.79999999984 | Expected: 0.7311449482169825 ± 1.0e-09
+         -> UNCLASSIFIED
+    [??] line 225  x1   assert tr["node_coverage"] == pytest.approx( calibrate_fraction(n, n0), abs=1e-9)
+         assert 0.0 == 0.618863246925368 ± 1.0e-09 | Obtained: 0.0 | Expected: 0.618863246925368 ± 1.0e-09
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_calibrated_balanced_score_is_symmetric
+    [??] line 238  x1   assert 0.0 < s_qc < 1.0
+         assert 0.0 < 0.0
+         -> UNCLASSIFIED
+  test_nullcal_node_coverage.py :: test_calibration_keeps_the_balanced_preference_for_the_whole
+    [??] line 253  x1   assert cal_whole == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 254  x1   assert 0.0 < cal_frag < raw_frag
+         assert 0.0 < 0.0
+         -> UNCLASSIFIED
+    [??] line 255  x1   assert cal_whole > cal_frag
+         assert 0.0 > 0.0
+         -> UNCLASSIFIED
+
+====================================================================================================
+f6off   EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=False
+====================================================================================================
+  57 tests collected; 9 with a failing assertion; 20 failing assertions (17 distinct lines)   [pytest: 1 failed, 56 passed in 1.75s]
+  test_d3_query_side_terms.py :: test_empty_setting_is_the_historical_one_sided_score
+    [??] line 73   x1   assert score == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_relation_term_counts_a_query_relation_the_core_lacks
+    [??] line 117  x1   assert _ev(q, c)[0] == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 122  x1   assert tr["matched_rel_sim_sum"] == 1.0
+         assert 0.0 == 1.0
+         -> UNCLASSIFIED
+    [??] line 124  x1   assert tr["q_matched_rel_sim_sum"] == 1.0
+         assert 0.0 == 1.0
+         -> UNCLASSIFIED
+    [??] line 125  x1   assert tr["relational_consistency"] == pytest.approx(2 / 3)
+         assert 0.0 == 0.6666666666666666 ± 6.7e-07 | Obtained: 0.0 | Expected: 0.6666666666666666 ± 6.7e-07
+         -> UNCLASSIFIED
+    [??] line 126  x1   assert score == pytest.approx(2 / 3, abs=1e-6)
+         assert 0.0 == 0.6666666666666666 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.6666666666666666 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_absence_term_counts_a_query_edge_the_map_cannot_reach
+    [??] line 142  x1   assert s0 == pytest.approx(1.0, abs=1e-6)
+         assert 0.0 == 1.0 ± 1.0e-06 | Obtained: 0.0 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+    [??] line 149  x1   assert s1 == pytest.approx(1.0 - 0.15 / 3, abs=1e-6)
+         assert 0.0 == 0.95 ± 1.0e-06 | Obtained: 0.0 | Expected: 0.95 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_mirror_loop_in_the_core_direction_is_the_matchers_own_loop
+    [??] line 191  x1   assert 2.0 < sim_sum < 3.0
+         assert 2.0 < 1.6411803884299547
+         -> UNCLASSIFIED
+  test_d3_query_side_terms.py :: test_identical_graphs_score_one_under_every_setting
+    [??] line 225  x4   assert _ev(q, q)[0] == pytest.approx(1.0, abs=1e-6), terms
+         assert 0.59999999988 == 1.0 ± 1.0e-06 | Obtained: 0.59999999988 | Expected: 1.0 ± 1.0e-06
+         -> UNCLASSIFIED
+  test_declared_defaults.py :: test_declared_defaults
+    [??] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...E': True, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> UNCLASSIFIED
+  test_f6_unparameterised_edge_match.py :: test_same_predicate_without_params_is_a_structural_match
+    [??] line 40   x1   assert polymorphic_edge_similarity(None, None, edge_types=(T, T)) == 1.0
+         assert 0.0 == 1.0
+         -> UNCLASSIFIED
+    [??] line 41   x1   assert polymorphic_edge_similarity(None, None, edge_types=(D, D)) == 1.0
+         assert 0.0 == 1.0
+         -> UNCLASSIFIED
+  test_f6_unparameterised_edge_match.py :: test_matcher_credits_a_topology_edge_present_on_both_sides
+    [??] line 109  x1   assert tr["matched_rel_sim_sum"] == 1.0
+         assert 0.0 == 1.0
+         -> UNCLASSIFIED
+    [??] line 110  x1   assert tr["relational_consistency"] == 1.0
+         assert 0.0 == 1.0
+         -> UNCLASSIFIED
+    [!!] line 137  x1   <raised, soft copy line>
+         KeyError('coverage_axes')
+         -> raised after a soft failure
+  test_nullcal_node_coverage.py :: test_calibrated_balanced_score_is_symmetric
+    [??] line 238  x1   assert 0.0 < s_qc < 1.0
+         assert 0.0 < 0.0
+         -> UNCLASSIFIED
+
+====================================================================================================
+p4off   EDGE_UNMEASURED_IS_NOT_EVIDENCE=False
+====================================================================================================
+  57 tests collected; 7 with a failing assertion; 12 failing assertions (12 distinct lines)   [pytest: 57 passed in 1.74s]
+  test_declared_defaults.py :: test_declared_defaults
+    [??] line 14   x1   assert declared_defaults == { # F6 -- landed on; a parameter-less pair matches as structure "EDGE_UNPARAMETERISED_STRUCTURAL_MATCH": True, # D1 -- lan
+         assert {'EDGE_UNPARA...': False, ...} == {'EDGE_UNPARA...E': True, ...}
+         -> UNCLASSIFIED
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_two_all_unknown_tuples_are_not_evidence
+    [??] line 50   x1   assert sim(co(U, U), co(U, U)) == 0.0
+         assert 0.2 == 0.0
+         -> UNCLASSIFIED
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_tuples_measured_on_different_axes_are_not_a_perfect_match
+    [??] line 58   x1   assert sim(a, b) == 0.0
+         assert 1.0 == 0.0
+         -> UNCLASSIFIED
+    [??] line 59   x1   assert sim(b, a) == 0.0
+         assert 1.0 == 0.0
+         -> UNCLASSIFIED
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_one_side_all_unknown_is_not_evidence
+    [??] line 65   x1   assert sim(co(U, U), co(3.0, 5.0)) == 0.0
+         assert 1.0 == 0.0
+         -> UNCLASSIFIED
+    [??] line 66   x1   assert sim(co(3.0, 5.0), co(U, U)) == 0.0
+         assert 1.0 == 0.0
+         -> UNCLASSIFIED
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_cross_schema_with_no_measured_shared_axis_is_not_evidence
+    [??] line 104  x1   assert polymorphic_edge_similarity(a, b) == 0.0
+         assert 0.45 == 0.0
+         -> UNCLASSIFIED
+    [??] line 105  x1   assert polymorphic_edge_similarity(b, a) == 0.0
+         assert 0.45 == 0.0
+         -> UNCLASSIFIED
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_cross_schema_mean_runs_over_the_measured_shared_axes
+    [??] line 121  x1   assert 0.0 < honest < floor
+         assert 0.4779863919318107 < 0.4779863919318107
+         -> UNCLASSIFIED
+    [??] line 124  x1   assert honest / same == pytest.approx((floor / same_floor) ** 2, rel=1e-9)
+         assert 0.5310959910353452 == 0.2820629516938155 ± 2.8e-10 | Obtained: 0.5310959910353452 | Expected: 0.2820629516938155 ± 2.8e-10
+         -> UNCLASSIFIED
+  test_p4_unmeasured_edge_is_not_evidence.py :: test_matcher_gives_an_unmeasured_edge_pair_no_similarity
+    [??] line 153  x1   assert tr["matched_rel_sim_sum"] == 0.0
+         assert 0.2 == 0.0
+         -> UNCLASSIFIED
+    [??] line 154  x1   assert score == 0.0
+         assert 0.1999999999 == 0.0
+         -> UNCLASSIFIED
+
+====================================================================================================
+SUMMARY   setting: tests with a failure / distinct failing assertions / by class
+  defaults    0 /  0   
+  d3n         8 / 13   ??=13
+  d3          8 / 13   ??=13
+  null       14 / 26   ??=26
+  d3n_null   17 / 32   ??=32
+  d3_null    17 / 32   ??=32
+  d1off      17 / 35   ??=35
+  f6off       9 / 17   !!=1  ??=16
+  p4off       7 / 12   ??=12
+  unclassified failing assertions: 179

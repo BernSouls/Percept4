@@ -1,0 +1,66 @@
+PHASE 0 / AUDIT A -- CO_LOCATED edge parameters on real images
+images: 79 (4 references + 75 EVAL queries); front end ca87bf41d0eb
+writer: orchestration/binder.py Binder._run_co_located
+  scale_ratio    = None if either Detection.scale <= 0 else |log2(sa/sb)|
+  salience_ratio = min(z1, z2) / max(z1, z2)
+  slots: scale_ratio 8 bins over [0, 4] abs-log2; salience_ratio 8 bins over [0, 1]; bin -1 = UNKNOWN (no measurement)
+
+A1. WRITER INPUTS -- V1 detections of the informative lenses handed to the binder
+  lens               dets  Detection.scale values  z: min / p25 / median / p75 / max   (distinct z)
+  Boundary          10299  0 x10299                1.000 / 1.000 / 1.000 / 1.000 / 1.000   (1)
+  Color              9767  0 x9767                 0.505 / 0.745 / 0.900 / 0.961 / 1.000   (9687)
+  Orientation        4586  0 x4586                 0.019 / 0.156 / 0.394 / 0.704 / 1.000   (4400)
+  Texture           10589  0 x10589                0.601 / 0.721 / 0.759 / 0.815 / 1.000   (9774)
+  detections with Detection.scale > 0: 0 of 35241
+
+A2. WRITER OUTPUT -- every candidate the writer built (21625 over 79 images)
+  scale_ratio   : None:21625 (100.0%)  measured:0 (0.0%)
+  salience_ratio bin histogram (bin k covers [k/8, (k+1)/8)):
+     0:886 (4.1%)  1:1030 (4.8%)  2:751 (3.5%)  3:711 (3.3%)  4:1052 (4.9%)  5:4960 (22.9%)  6:6383 (29.5%)  7:5852 (27.1%)
+     entropy 2.46 bits of 3.00 possible; modal bin holds 29.5%
+  salience_ratio continuous: min 0.019  p05 0.145  p25 0.668  median 0.772  p75 0.888  p95 0.983  max 1.000
+  distinct (scale_bin, salience_bin) tuples overall: 8 -> (-1.0, 0.0) x886, (-1.0, 1.0) x1030, (-1.0, 2.0) x751, (-1.0, 3.0) x711, (-1.0, 4.0) x1052, (-1.0, 5.0) x4960, (-1.0, 6.0) x6383, (-1.0, 7.0) x5852
+  per image: distinct tuples min 7 / median 8 / max 8; modal-tuple share min 0.27 / median 0.38 / max 0.54
+  re-derivation check (writer formula applied to the detections reproduces the captured values exactly): 79/79 images
+
+  salience bin by LENS PAIR (candidates):
+  lens pair                        n    b0   b1   b2   b3   b4   b5   b6   b7   median
+  Boundary x Texture            5551      0     0     0     0    77  2398  2436   640   0.758
+  Color x Texture               4879      0     0     0     0    36   852  2304  1687   0.832
+  Boundary x Color              4750      0     0     0     0   288   986   925  2551   0.897
+  Orientation x Texture         2314    287   365   265   270   209   217   255   446   0.488
+  Boundary x Orientation        2097    310   363   286   256   235   243   174   230   0.420
+  Color x Orientation           2034    289   302   200   185   207   264   289   298   0.526
+
+A3. GRAPH -- CO_LOCATED edges that reach the matcher: 17516 of 66951 edges (26.2%), 222 per image
+  parameter container: EdgeParams x15510, EdgeParamsMixture x2006
+  mixture size (prototypes per edge): 1: 17513, 2: 3
+  (scale_bin, salience_bin) of the edge's founder prototype:
+     (-1.0, 0.0)       334  (1.9%)
+     (-1.0, 1.0)       740  (4.2%)
+     (-1.0, 2.0)       691  (3.9%)
+     (-1.0, 3.0)       685  (3.9%)
+     (-1.0, 4.0)      1005  (5.7%)
+     (-1.0, 5.0)      3964  (22.6%)
+     (-1.0, 6.0)      5132  (29.3%)
+     (-1.0, 7.0)      4965  (28.3%)
+  scale_ratio slot UNKNOWN on 17516/17516 CO_LOCATED edges (100.0%)
+
+A4. MATCHER -- what the baseline credited to CO_LOCATED core edges
+  [full window, own-class refs] core 16081  verifiable 12874  matched 1593  sim_sum 1165.6  exact-1.0 889 (55.8% of matched)  measured axes/matched 1.00
+        share of all matched edge similarity: 17.0%; share of verifiable edges: 29.7%
+  [full window, all refs] core 64200  verifiable 47201  matched 5476  sim_sum 3652.5  exact-1.0 2557 (46.7% of matched)  measured axes/matched 1.00
+        share of all matched edge similarity: 15.6%; share of verifiable edges: 29.4%
+  [v1 window, own-class refs] core 16081  verifiable 12882  matched 1614  sim_sum 1182.2  exact-1.0 901 (55.8% of matched)  measured axes/matched 1.00
+        share of all matched edge similarity: 48.3%; share of verifiable edges: 50.8%
+  [v1 window, all refs] core 64200  verifiable 47232  matched 5511  sim_sum 3667.0  exact-1.0 2557 (46.4% of matched)  measured axes/matched 1.00
+        share of all matched edge similarity: 47.8%; share of verifiable edges: 50.6%
+
+A5. REMOVAL ARM -- CO_LOCATED edges deleted from query and reference (EVAL-75, in-sample)
+  [full] baseline                           36/75 =  48.0%   apple  2/16  car  6/24  cup 16/18  horse 12/17   ties 0   margin -0.0026
+  [full] noedge_col                         34/75 =  45.3%   apple  2/16  car  5/24  cup 16/18  horse 11/17   ties 0   margin -0.0064   +2/-4 vs baseline, McNemar p=0.688
+        predictions changed: 7 of 75
+  [v1] baseline                           34/75 =  45.3%   apple  0/16  car  7/24  cup 14/18  horse 13/17   ties 0   margin -0.0024
+  [v1] noedge_col                         34/75 =  45.3%   apple  0/16  car  8/24  cup 12/18  horse 14/17   ties 0   margin -0.0129   +3/-3 vs baseline, McNemar p=1.000
+        predictions changed: 14 of 75
+

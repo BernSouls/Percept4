@@ -1,0 +1,110 @@
+BUG HUNT -- identities and invariants of the matcher changes, EVAL-75 (in-sample)
+tree now: source ef4516a74acb  harness 0925e36eaf59  front end 83937c990fb5
+
+========================================================================================================
+D. WALK -- the matcher on all 300 (query, reference) pairs of each window
+========================================================================================================
+   settings (every switch on, so every loop runs; the correspondence reads none of them): EDGE_UNMEASURED_IS_NOT_EVIDENCE=True; EDGE_UNPARAMETERISED_STRUCTURAL_MATCH=True; EVIDENCE_GRADED_NODE_CREDIT=True; EVIDENCE_NODE_NULL_CALIBRATED=True; EVIDENCE_QUERY_SIDE_TERMS=('node', 'relation', 'absence')
+
+   window = full   (300 pairs, 176 s)
+   D1 the mirror loop, called in the core direction, is the matcher's own loop
+     pairs whose counts differ from the trace                                               0
+     pairs whose similarity sum is not bit-identical to the trace                           0
+   D2 this instrument against the library function
+     pairs differing, core direction                                                        0
+     pairs differing, query direction                                                       0
+     pairs whose query-side verifiable count differs from its definition                    0
+   D3 every edge pair the two loops evaluate, read from both ends
+     verifiable core edges                                                             160425
+     verifiable query edges                                                            155033
+     candidate evaluations, core direction                                              81842
+     candidate evaluations, query direction                                             81842
+     edge pairs evaluated from both sides                                               81842
+       of which the two readings differ (> 1e-12)                                          45   <-- FINDING
+       largest difference between the two readings: 0.966
+       core: reversed entry / query: reversed entry                                     29484
+       core: reversed entry / query: reversed entry -- DIFFERENT                           45
+       core: reversed entry / query: stored entry, second lookup                          992
+       core: stored entry / query: stored entry                                         50724
+       core: stored entry, second lookup / query: reversed entry                          642
+     edge pairs evaluated from the core side only                                           0
+       of which with similarity > 0                                                         0
+     edge pairs evaluated from the query side only                                          0
+       of which with similarity > 0                                                         0
+     edge pairs evaluated more than once from one side                                      0
+   D4 mixtures read in reverse (reverse_edge_params returns a mixture unchanged; flipped_copy reverses it)
+     core direction: evaluations of a reversal-sensitive mixture read in reverse           86   <-- FINDING
+     core direction: of which it is the best match of its edge                             17
+     query direction: evaluations of a reversal-sensitive mixture read in reverse          67   <-- FINDING
+     query direction: of which it is the best match of its edge                            25
+     pairs whose core-side similarity sum flipping would change                            21
+     pairs whose query-side similarity sum flipping would change                           28
+       change of the similarity sum per pair, flipped - as is: core side mean +0.0006 min -0.8620 max +0.8688; query side mean -0.0091 min -0.9659 max +0.6266
+       one-sided score (F6+D1 form)           scores changed  19 of 300 (largest 0.0011); answers changed 0; hits 38 -> 38
+       balanced score (D3, all three terms)   scores changed  41 of 300 (largest 0.0005); answers changed 1; hits 41 -> 41
+   D5 the correspondence
+     kept node pairs                                                                   166283
+     correspondence not one-to-one                                                          0
+     a pair joins two lens types                                                            0
+     a paired node is not in its graph                                                      0
+     kept pairs with signature similarity <= 0                                              0
+     trace correspondence differs from the returned one                                     0
+   D6 a traced call against an untraced one
+     pairs compared                                                                        60
+     untraced score differs                                                                 0
+   D7 the chance masses against 400 sampled random maximum pairings (first query of each class x 4 references)
+     masses compared 32   z = (closed form - sample mean) / standard error: mean -0.06  sd 1.33  largest |z| 2.88  |z| > 3: 0
+     relative difference closed form against sample mean: mean 0.0740%  largest 0.2024%
+
+   window = v1   (300 pairs, 36 s)
+   D1 the mirror loop, called in the core direction, is the matcher's own loop
+     pairs whose counts differ from the trace                                               0
+     pairs whose similarity sum is not bit-identical to the trace                           0
+   D2 this instrument against the library function
+     pairs differing, core direction                                                        0
+     pairs differing, query direction                                                       0
+     pairs whose query-side verifiable count differs from its definition                    0
+   D3 every edge pair the two loops evaluate, read from both ends
+     verifiable core edges                                                              93377
+     verifiable query edges                                                             88868
+     candidate evaluations, core direction                                              14876
+     candidate evaluations, query direction                                             14876
+     edge pairs evaluated from both sides                                               14876
+       of which the two readings differ (> 1e-12)                                          44   <-- FINDING
+       largest difference between the two readings: 0.966
+       core: reversed entry / query: reversed entry                                      3856
+       core: reversed entry / query: reversed entry -- DIFFERENT                           44
+       core: reversed entry / query: stored entry, second lookup                            9
+       core: stored entry / query: stored entry                                         11003
+       core: stored entry, second lookup / query: reversed entry                            8
+     edge pairs evaluated from the core side only                                           0
+       of which with similarity > 0                                                         0
+     edge pairs evaluated from the query side only                                          0
+       of which with similarity > 0                                                         0
+     edge pairs evaluated more than once from one side                                      0
+   D4 mixtures read in reverse (reverse_edge_params returns a mixture unchanged; flipped_copy reverses it)
+     core direction: evaluations of a reversal-sensitive mixture read in reverse           86   <-- FINDING
+     core direction: of which it is the best match of its edge                             17
+     query direction: evaluations of a reversal-sensitive mixture read in reverse          65   <-- FINDING
+     query direction: of which it is the best match of its edge                            24
+     pairs whose core-side similarity sum flipping would change                            21
+     pairs whose query-side similarity sum flipping would change                           27
+       change of the similarity sum per pair, flipped - as is: core side mean +0.0008 min -0.8620 max +0.8688; query side mean -0.0089 min -0.9659 max +0.6266
+       one-sided score (F6+D1 form)           scores changed  18 of 300 (largest 0.0020); answers changed 0; hits 34 -> 34
+       balanced score (D3, all three terms)   scores changed  34 of 300 (largest 0.0011); answers changed 0; hits 39 -> 39
+   D5 the correspondence
+     kept node pairs                                                                    72683
+     correspondence not one-to-one                                                          0
+     a pair joins two lens types                                                            0
+     a paired node is not in its graph                                                      0
+     kept pairs with signature similarity <= 0                                              0
+     trace correspondence differs from the returned one                                     0
+   D6 a traced call against an untraced one
+     pairs compared                                                                        60
+     untraced score differs                                                                 0
+   D7 the chance masses against 400 sampled random maximum pairings (first query of each class x 4 references)
+     masses compared 32   z = (closed form - sample mean) / standard error: mean +0.30  sd 1.20  largest |z| 2.77  |z| > 3: 0
+     relative difference closed form against sample mean: mean 0.1555%  largest 0.4374%
+
+========================================================================================================
+checks with a finding, per section: D=6   total 6

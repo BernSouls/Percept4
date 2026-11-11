@@ -1,0 +1,13 @@
+.........................................................                [100%]
+
+PARAMETER OVERRIDES for this session: none (tree defaults)
+
+REACH -- calls into the functions the fixes edited, whole session:
+  core.schema.EdgeParams.similarity                70
+  core.schema.polymorphic_edge_similarity          129
+  memory.cores._mcs_accumulate                     128
+  memory.cores.evidence_score                      116
+  memory.cores.mcs_score                           8
+  memory.cores.mcs_similarity                      4
+  imported by the collected tests themselves: consolidator no, core.schema yes, matching.calibration yes, memory.cores yes, memory.mapper no
+57 passed in 0.76s

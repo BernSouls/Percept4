@@ -1,0 +1,13 @@
+STAGE 4 -- D2 prerequisites: does the dark alignment refine, and at what cost (no score, no accuracy)
+source f66ea9ac0eea  front end c1ea81ae1b6c
+MATCH_ALIGN_ROUNDS=4  MATCH_ALIGN_MAX_PAIR_EVALS=200000  MATCH_SYSTEMATICITY_WEIGHT=0.5  MATCH_UNMATCHED_COST=0.0  MATCH_GLOBAL_CONSISTENCY_ENABLED=False (the tree)
+
+window = full   32 pairs
+  historical       candidates per pair 576964 (min 355212, max 789592); refinement sweeps run: mean 0.00 (pairs with none: 32 of 32); budget exhausted on 32; seconds per pair mean 0.20 max 0.53
+  refinement only  candidates per pair 576964 (min 355212, max 789592); refinement sweeps run: mean 3.00 (pairs with none: 0 of 32); budget exhausted on 0; seconds per pair mean 0.67 max 0.92
+  one round + anchor prior against the live correspondence: identical on 7 of 32 pairs; of the rest, 18 contain a pair across lens types that share a signature class; 7 are another optimum of the same assignment (equal total weight, 1 to 8 nodes paired differently); 0 unexplained
+
+window = v1   32 pairs
+  historical       candidates per pair 85013 (min 57780, max 110808); refinement sweeps run: mean 2.03 (pairs with none: 0 of 32); budget exhausted on 27; seconds per pair mean 0.61 max 0.85
+  refinement only  candidates per pair 85013 (min 57780, max 110808); refinement sweeps run: mean 3.00 (pairs with none: 0 of 32); budget exhausted on 0; seconds per pair mean 0.23 max 0.35
+  one round + anchor prior against the live correspondence: identical on 32 of 32 pairs; of the rest, 0 contain a pair across lens types that share a signature class; 0 are another optimum of the same assignment (equal total weight, 0 nodes paired differently); 0 unexplained
