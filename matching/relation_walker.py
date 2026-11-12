@@ -420,6 +420,9 @@ class WalkResult:
     admission_rejections: int = 0
     #: the terms of the Amendment-7 objective of this mapping
     terms: Dict[str, Any] = field(default_factory=dict)
+    #: [7.33 (a)] Q * |M| / min(frame_q, frame_r), the score that can arbitrate
+    #: across node sets.  REPORTED ONLY: nothing in the pipeline selects on it.
+    score_for_class: float = 0.0
     #: the hypotheses of the beam: seed count, mapped, Q
     beam: List[Dict[str, Any]] = field(default_factory=list)
     #: every graded signature similarity this walk PAID for, by pair
@@ -936,6 +939,7 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
                      contradicts=best.contradicts, terms=best.terms,
                      pops=res.pops, admission_rejections=res.admission_rejections)
     _score(out, gq, gr, lambda u, v: 1.0)
+    out.score_for_class = score_for_class(out.terms, out.frame_q, out.frame_r)
     out.beam = [{"seeds": len(h.seeds), "mapped": len(h.mapping), "q": h.terms["q"],
                  "order_rejections": h.order_rejections,
                  "examined": h.examined} for h in hypotheses]
@@ -972,6 +976,11 @@ def objective(mapping: Dict[int, int], gq: "_Index", gr: "_Index",
     # union of 7.0 cannot be a set union of edge keys.  It is counted: (edges
     # with at least one end in M) + (edges with at least one end in the image
     # of M) - (edges with both ends mapped, the P candidates).
+    #
+    # [STAGE 7 / PHASE 4(b), Amendments 7.33 and 7.39] THIS COUNT IS NO LONGER
+    # THE DENOMINATOR.  It is kept and reported: it is the union form every
+    # stage-6 number was stated under.  The relation denominator is now the
+    # QUERY's own relation mass over its whole frame (`r_frame`, below).
     n_q_any = n_r_any = 0
     for s_, d_, name in gq.edges:
         if s_ in m and d_ in m:
@@ -1014,15 +1023,45 @@ def objective(mapping: Dict[int, int], gq: "_Index", gr: "_Index",
                     hits += 1
             a_mass += hits / len(finer)
 
+    # [7.39] the query's own relation mass, both ends in the FRAME: a node the
+    # mapping does not reach is a MISSED relation, not an absent one.  Selected
+    # by the closed-sub-mapping test, where the union form let a closed region
+    # score 8 of 22 cases at or above the whole mapping and this form did not.
+    frame_q = set(gq.frame)
+    r_frame = sum(1 for s_, d_, _n in gq.edges if s_ in frame_q and d_ in frame_q)
+
     num = W_NODE * s_node + W_RELATION * (p_mass + a_mass)
     # Amendment 7.8: the attribute units are in the denominator too, the same
     # (mapped pair, lens type) units the attribute mass is summed over, so the
     # objective stays in [0, 1].
-    den = W_NODE * len(m) + W_RELATION * (r_union + a_units)
-    jac = (p_mass / r_union) if r_union else 0.0
+    den = W_NODE * len(m) + W_RELATION * (r_frame + a_units)
+    jac = (p_mass / r_frame) if r_frame else 0.0
     return {"q": (num / den) if den > 0 else 0.0, "mapped": len(m),
-            "S": s_node, "P": p_mass, "A": a_mass, "R": r_union,
-            "A_units": a_units, "p_candidates": p_candidates, "jaccard": jac}
+            "S": s_node, "P": p_mass, "A": a_mass, "R": r_frame,
+            "A_units": a_units, "p_candidates": p_candidates, "jaccard": jac,
+            "R_union": r_union}
+
+
+def score_for_class(terms: Dict[str, Any], frame_q: int, frame_r: int) -> float:
+    """[Stage 7 / Phase 4(a), Amendment 7.33] Q paid for the share of the
+    SMALLER frame the mapping covers.
+
+        score_for_class = Q * |M| / min(frame_q, frame_r)
+
+    No constant is tuned: the factor is read off the two frames.  Raw Q is a
+    mean over the union of the terms the mapping contains, so a small closed
+    mapping can outscore a large honest one; this factor charges a mapping for
+    the frame it does not reach.  REPORTED ONLY -- `match_evidence` still
+    returns raw Q, and no default is flipped on it.
+    """
+    m = int(terms.get("mapped", 0))
+    smaller = max(1, min(frame_q, frame_r))
+    # a mapping cannot cover MORE than the smaller frame: without the clamp the
+    # factor exceeds 1 whenever |M| > min(frame_q, frame_r), which is possible
+    # (|M| is one-to-one but the frames are not the same size), and the score
+    # would read 1.0 * 10 / 4 for a perfect mapping of a 10-node frame against
+    # a 4-node one.
+    return float(terms.get("q", 0.0)) * min(m / smaller, 1.0)
 
 
 def _score(res: WalkResult, gq: "_Index", gr: "_Index", similarity: Any) -> None:

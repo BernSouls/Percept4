@@ -894,11 +894,14 @@ def test_below_the_minimum_support_there_is_no_score():
 
 
 def test_the_score_is_the_objective_of_the_mapping_the_walk_returned():
-    """RULE (M2 as amended by D0 / 7.0): the walk's score IS Q(its mapping),
-    with the support floor on top: preserved relation mass P (agreement
-    weighted), node mass S, attribute mass A, relation denominator R.  A
-    relation the other side lacks counts against; nodes outside the mapping
-    count for nothing; attributes are carried, not mapped (they are A)."""
+    """RULE (M2 as amended by D0 / 7.0, and by 7.39 for R): the walk's score
+    IS Q(its mapping), with the support floor on top: preserved relation mass
+    P (agreement weighted), node mass S, attribute mass A, relation denominator
+    R = the QUERY's own relation mass over its whole frame.  A relation the
+    other side lacks counts against; a node the mapping does not reach is a
+    MISSED relation, not an absent one (7.39: the union denominator let a
+    closed sub-mapping pay nothing for what it left out); attributes are
+    carried, not mapped (they are A)."""
     a_sg, a_sigs = two_boundaries()
     res = W.walk(a_sg, a_sg, a_sigs, a_sigs)
     # 11 attachments + 9 successors preserved exactly, 3 attribute units
@@ -908,8 +911,10 @@ def test_the_score_is_the_objective_of_the_mapping_the_walk_returned():
     assert res.terms["S"] == pytest.approx(13.0) and res.terms["R"] == 20
     assert res.score == pytest.approx(res.terms["q"]) == pytest.approx(1.0)
     # drop two successor links from the reference: the nodes still map, and
-    # the relations of the union shrink with them (Q stays 1: nothing is
-    # preserved, nothing is lost -- the union is the whole denominator)
+    # under the union form the denominator shrank with them, so Q stayed 1 --
+    # nothing preserved was lost, because nothing lost was counted.  Under
+    # 7.39's query-side denominator the two links are STILL owed: the query is
+    # unmapped there, so they are missed relations and Q must fall.
     b = Build()
     b.nodes, b.edges, b.params = dict(a_sigs), set(a_sg.edges), dict(a_sg.edge_params)
     for key in ((2, 3, EdgeType.BOUNDARY_SUCCESSOR), (12, 13, EdgeType.BOUNDARY_SUCCESSOR)):
@@ -918,8 +923,15 @@ def test_the_score_is_the_objective_of_the_mapping_the_walk_returned():
     b_sg, b_sigs = b.done()
     res2 = W.walk(a_sg, b_sg, a_sigs, b_sigs)
     assert res2.mapping == res.mapping
+    # relations_q counts the mapped relations whose counterpart is MISSING
+    # (20 mapped, of which 18 have a counterpart); relations_r is the
+    # reference-side count and is reported, not used in the score
     assert (res2.preserved, res2.relations_q, res2.relations_r) == (18, 20, 18)
-    assert res2.score == pytest.approx(1.0)     # nothing preserved is lost
+    # S 13 + P 18 + A 3 over |M| 13 + R 20 + A_units 3: the two dropped links
+    # stay in R, so the same mapping no longer reads 1.0
+    assert res2.terms["R"] == 20 == res.terms["R"]
+    assert res2.score == pytest.approx((13.0 + 18.0 + 3.0) / (13 + 20 + 3))
+    assert res2.score < res.score
     # an edge with NOTHING measured is not a relation: it changes no count
     c = Build()
     c.nodes, c.edges, c.params = dict(a_sigs), set(a_sg.edges), dict(a_sg.edge_params)
@@ -963,3 +975,62 @@ def test_the_switch_off_is_the_old_matcher(params, monkeypatch):
     assert calls == [1] and mapping == trace["relation_walk"].mapping
     assert score == trace["relation_walk"].score and mapping[1] == 2
     assert bool(P.MATCH_RELATION_WALKER) is True
+
+
+# --------------------------------------------------------------------------
+# PHASE 4: the score across node sets, and the coverage loophole (7.33/7.39)
+# --------------------------------------------------------------------------
+
+def test_a_mapping_that_leaves_a_boundary_out_does_not_keep_the_full_score():
+    """RULE (7.39, the coverage loophole).  The union denominator paid a
+    mapping only for the relations it CONTAINED, so a closed region -- a
+    mapping that stops at one boundary and never reaches the other -- could
+    read as high as a mapping of the whole frame.  R is now the QUERY's own
+    relation mass, so a node the mapping does not reach is a MISSED relation.
+    The same graph matched against itself maps everything and scores 1; the
+    mapping restricted to one boundary must score strictly below it, although
+    every relation it does contain is preserved exactly."""
+    sg, sigs = two_boundaries()
+    full = W.walk(sg, sg, sigs, sigs)
+    assert full.score == pytest.approx(1.0)
+
+    # the region around boundary 100 (its six features) and nothing else: a
+    # CLOSED sub-mapping -- every relation inside it is preserved perfectly
+    keep = {n for n in sigs if n in (100, 1, 2, 3, 4, 5, 6)}
+    part = {u: u for u in keep}
+    res = W._Index(sg, sigs)
+    terms = W.objective(part, res, res, lambda u, v: 1.0)
+    assert terms["R"] == full.terms["R"] > 0          # the whole frame is owed
+    assert terms["P"] < full.terms["P"]               # and only part is paid
+    assert terms["q"] < full.terms["q"]
+
+    # every relation the part DOES contain is preserved: nothing is wrong with
+    # it, it is simply not the whole job -- which is the point of the rule
+    # `_Index` keys a relation by the edge type's NAME, not the enum
+    inside = [(s_, d_, getattr(nm, "name", nm)) for (s_, d_, nm) in sg.edges
+              if s_ in keep and d_ in keep]
+    assert inside, "the fixture must contain relations inside the kept region"
+    # every relation the walker SEES inside the region is preserved in full;
+    # relations it drops at admission (an unmeasured parameter) are not
+    # relations to it, and _score does not count them either
+    seen = [k for k in inside if k in res.pair]
+    assert seen, "the kept region must contain relations the walker sees"
+    for k in seen:
+        hq, hr = res.pair[k], res.pair.get(k)
+        assert hq is not None and hr is not None
+        assert W._slack(hq, hr) == pytest.approx(0.0)   # preserved exactly
+
+
+def test_the_class_score_charges_a_mapping_for_the_frame_it_does_not_reach():
+    """RULE (7.33 (a)).  score_for_class = Q * |M| / min(frame_q, frame_r).
+    Two mappings of the same |M| with the same Q score the same; a mapping of
+    the same Q with FEWER pairs scores less, which is what makes the number
+    comparable across node sets.  No constant is involved."""
+    assert W.score_for_class({"q": 1.0, "mapped": 10}, 10, 10) == pytest.approx(1.0)
+    assert W.score_for_class({"q": 1.0, "mapped": 5}, 10, 10) == pytest.approx(0.5)
+    # the SMALLER frame is the denominator: an over-complete mapping is not
+    # rewarded past 1
+    assert W.score_for_class({"q": 1.0, "mapped": 10}, 10, 4) == pytest.approx(1.0)
+    # and Q alone cannot tell the two halves apart
+    assert W.score_for_class({"q": 1.0, "mapped": 5}, 10, 10) < \
+        W.score_for_class({"q": 1.0, "mapped": 10}, 10, 10)

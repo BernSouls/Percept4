@@ -1616,3 +1616,108 @@ One pair is not the mechanism.  NO ARM IS DEFAULTED (both fail the 7.32 default
 rule: recall up on >= 6 of 9, precision down on <= 2), both stay OFF, and the
 conclusion the falsifier asks for is written: growth by relation is not the
 recall lever for this representation, and no margin is tuned to make it one.
+
+### 7.39 PHASE 4(b), THE TEST AS WRITTEN IS TOO WEAK.  A CORRECTED OPERATIONALISATION, REGISTERED BEFORE ITS RUN
+
+The first Phase-4 run applied 7.33's test literally: halve the mapping (every
+second pair in sorted order) and ask whether the 50 % mapping scores below the
+100 % one.  Result: BOTH forms pass, 27 of 27 mappings under each (union
+27/27, mean drop 0.1954; frame 27/27, mean drop 0.2214), so by 7.33 R is not
+changed.
+
+That result is real but it does not test what 7.33 meant.  Dropping every
+second pair CUTS relations: a relation with one end in the kept half and one
+end in the dropped half becomes a MISSED relation under both forms, so both
+denominators grow and both scores fall.  The thing a closed sub-mapping does
+is the opposite -- it keeps every relation it contains, so under the union
+form it pays nothing at all for what it does not map.  Measuring a cut and
+calling it a closure measures the wrong event.
+
+**THE CORRECTED TEST, fixed now, before it is run.**  A mapping M is CLOSED
+when every relation of the query with an end in M has BOTH ends in M, and
+every relation of the reference with an end in the image of M has both ends in
+the image.  The closed sub-mapping of a mapping is its LARGEST CONNECTED
+COMPONENT under the query's relation graph -- a region, not a cut.
+
+    the loophole is CLOSED by a form iff, on every pair and every mapping,
+    Q(closed component) < Q(the whole mapping) whenever the component is a
+    PROPER subset of the mapping.
+
+The prediction being tested, stated before the run: under the union form a
+closed component scores exactly as high as the whole mapping whenever the
+mapping is relation-complete inside itself (it is paid for what it contains
+and nothing for what it does not), so the union form should FAIL on those
+pairs; under the frame form the unmapped nodes' relations stay in the
+denominator, so it should pass.
+
+This is a SUPPLEMENT to 7.33, not a replacement: the halving result stands as
+reported.  R is changed only if the corrected test selects exactly one form
+and the frame form is the one selected; otherwise R stays as it is.
+
+### 7.40 PHASE 4, RUN AND APPLIED
+
+**(a) THE SCORE ACROSS NODE SETS.**  `score_for_class = Q * |M| /
+min(frame_q, frame_r)` is computed on the nine pairs for the walker's mapping,
+renderer truth and the old matcher (`results/phase7_p4_objective.txt`).  It is
+stored on `WalkResult.score_for_class` and REPORTED, never selected on:
+`match_evidence` still returns raw Q and `_choose` is untouched.
+
+    truth > walker   raw Q  5 of 9   score_for_class  9 of 9
+    truth > old      raw Q  0 of 9   score_for_class  0 of 9
+    medians          raw Q: walk 0.248, truth 0.226, old 0.417
+                     score_for_class: walk 0.085, truth 0.105, old 0.403
+
+The factor fixes exactly the comparison the diagnosis named: raw Q ranks truth
+ABOVE the walker on 5 of 9 pairs (a coin toss) because the walker's mappings
+are smaller and a mean over a smaller union is easier to make high; paid for
+coverage it ranks truth above the walker on 9 of 9.  It does NOT rescue the
+walker against the old matcher (0 of 9 under either), which is the honest
+result: the old matcher maps 169 nodes to the walker's 58 and its relations
+are real.
+
+**A BUG THE TEST FOUND, fixed in the function, not in the pin.**
+`score_for_class` divided by `min(frame_q, frame_r)` but did not clamp the
+resulting factor, so a mapping of 10 pairs against a 4-node frame scored 2.5;
+"the share of the smaller frame" cannot exceed 1.  The factor is now
+`min(|M| / min(frame_q, frame_r), 1.0)`.
+
+**(b) THE LOOPHOLE.**  The first run applied 7.33 literally (drop every second
+pair) and BOTH forms passed 27 of 27 -- recorded in 7.39, together with the
+reason the test cannot decide: a halved mapping CUTS relations, so every
+denominator grows and every score falls.  The corrected operationalisation
+registered in 7.39 -- compare a CLOSED region (the largest connected component
+under the query's relation graph) with the whole mapping -- separates them:
+
+    form    proper-subset cases   component BELOW whole   equal   ABOVE   verdict
+    union        22                       14               0       8     FAILS
+    frame        22                       22               0       0     PASSES
+
+Under the union form a closed region scores AT OR ABOVE the whole mapping on 8
+of 22 cases (box_over_box_test: whole 0.704, region 0.704; truth's mapping
+0.634 against its region 0.680) -- a mapping that stops at one boundary is paid
+nothing for the boundary it never reaches.  Under the frame form no closed
+region ever exceeds its whole mapping.
+
+**R IS THEREFORE CHANGED** (7.39's condition, which named this exact outcome
+in advance): `objective`'s relation denominator is the QUERY's own relation
+mass over its whole frame, `r_frame`; `R_union` is still computed and returned
+beside it for every earlier result's baseline.  Pin:
+`test_a_mapping_that_leaves_a_boundary_out_does_not_keep_the_full_score`,
+verified RED against the union form and GREEN against the frame form.
+`test_the_score_is_the_objective_of_the_mapping_the_walk_returned` was REWRITTEN
+for the new rule, not relaxed: where it used to assert "drop two reference
+relations and Q stays 1.0" (which was the loophole, written down as a rule) it
+now asserts that the same mapping falls to (13+18+3)/(13+20+3).  493 pass.
+
+**T2 re-run under the new R (results/phase7_p4_t2_rerun.txt).**  truth Q >
+walker Q on 5 of 9 (it was 6 of 9 under the union form; the registered test is
+"at least half", so it still passes), median Q walker 0.237, truth 0.235, old
+0.437.  The size-confounded reading is now explicit: the same three mappings
+rank 0.085 / 0.105 / 0.403 under score_for_class.
+
+**(a2) What a selection rule on score_for_class WOULD change.**  The walk's
+own choice among its beam hypotheses (`_choose`: larger mapping first, Q to
+break ties) differs from the raw-Q-only pick on 5 of 9 pairs; a pick on
+score_for_class differs from the raw-Q pick on 2 of 9
+(box_over_box_haze: 91 pairs Q 0.400 vs 92 pairs Q 0.397; f_haze: 46/0.211 vs
+51/0.194).  Measured, not applied: `_choose` is unchanged.

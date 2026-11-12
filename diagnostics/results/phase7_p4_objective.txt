@@ -1,0 +1,91 @@
+[STAGE 7 / PHASE 4] THE OBJECTIVE: (a) a score across node sets, (b) the coverage loophole
+   raw Q stays the number every earlier result is stated in; score_for_class = Q * |M| / min(frame_q, frame_r)
+   is reported beside it.  R forms: union (the stage-6 form, 7.14) and frame
+   (the form SELECTED here, 7.39, now in matching/relation_walker.py).
+   The local frame form was asserted equal to matching.relation_walker.objective on all 9 pairs.
+
+   pair                                          MAPPING    mapped  raw Q  Q_class   R_union  R_frame
+   box_over_box / box_over_box_test walk          109  0.704    0.452      458      470
+                                  truth         135  0.634    0.503      505      470
+                                  old           169  0.767    0.762      485      470
+   box_over_box / box_over_box_haze walk           92  0.363    0.180      531      470
+                                  truth         120  0.405    0.263      549      470
+                                  old           172  0.535    0.497      522      470
+   cylinder_over_box / cylinder_over_box_shift walk          118  0.498    0.306      701      554
+                                  truth         147  0.498    0.381      713      554
+                                  old           192  0.609    0.609      644      554
+   f_box_a / f_box_b              walk           59  0.248    0.071      437      461
+                                  truth          96  0.226    0.105      485      461
+                                  old           186  0.371    0.335      545      461
+   f_haze_a / f_haze_b            walk           51  0.211    0.058      402      411
+                                  truth          75  0.224    0.091      435      411
+                                  old           178  0.417    0.403      443      411
+   f_disk_a / f_disk_b            walk           41  0.154    0.038      417      423
+                                  truth          62  0.179    0.066      388      423
+                                  old           154  0.300    0.276      508      423
+   f_cyl_a / f_cyl_b              walk           45  0.195    0.050      464      498
+                                  truth          71  0.207    0.084      355      498
+                                  old           159  0.327    0.297      529      498
+   single_disk / f_ctrl_disk      walk           58  0.285    0.131      381      374
+                                  truth          64  0.306    0.155      450      374
+                                  old           116  0.490    0.451      399      374
+   single_box / f_ctrl_box        walk           43  0.240    0.085      284      346
+                                  truth          62  0.202    0.103      281      346
+                                  old           107  0.361    0.317      303      346
+
+   MEDIANS OVER THE NINE PAIRS
+     walk   raw Q  0.248   score_for_class  0.085   mapped    58   R_union    437  R_frame    461
+     truth  raw Q  0.226   score_for_class  0.105   mapped    75   R_union    450  R_frame    461
+     old    raw Q  0.417   score_for_class  0.403   mapped   169   R_union    508  R_frame    461
+
+   (a) DOES score_for_class ARBITRATE ACROSS NODE SETS?
+       truth > walker on raw Q:            5 of 9
+       truth > walker on score_for_class:  9 of 9
+       truth > old on raw Q:               0 of 9
+       truth > old on score_for_class:     0 of 9
+       median mapped: truth 75, old 169, walk 58  (the sets the raw Q is taken over differ, which is the defect)
+
+   (a2) WHAT score_for_class WOULD DO IF THE WALK SELECTED ON IT
+        (it does not: _choose is untouched; this is the size of the change
+        a selection rule on this score would make, measured on the nine pairs)
+        pairs with a beam: 9;  the walk's own hypothesis differs from the one raw Q alone would pick on 5
+        raw-Q pick and score_for_class pick differ on 2 of 9 pairs
+          box_over_box/box_over_box_haze     raw-Q pick:   91 pairs Q 0.400   |   class-score pick:   92 pairs Q 0.397
+          f_haze_a/f_haze_b                  raw-Q pick:   46 pairs Q 0.211   |   class-score pick:   51 pairs Q 0.194
+
+   (b) THE COVERAGE LOOPHOLE: the SAME mapping at 100 % and at 50 %
+       100 %-complete vs a 50 %-complete sub-mapping of itself (every second pair in sorted order);
+       the registered test (7.33) needs 50 % < 100 % on EVERY pair.
+
+       form    pairs where 50 % scores BELOW 100 %   mean(100 % - 50 %)   a 50 % mapping that still scores >= a full one
+       union       27 of 27  mappings                 +0.1954            0
+       frame       27 of 27  mappings                 +0.2214            0
+
+   (b, corrected per 7.39) THE CLOSED SUB-MAPPING: the largest connected
+       component under the query's relation graph, versus the whole mapping.
+       This is the event the loophole describes; the halving above is a CUT and
+       both forms fall under it, which is why it cannot decide.  The prediction
+       registered in 7.39: union FAILS (a closed mapping pays nothing for what it
+       leaves out), frame PASSES (the unmapped nodes' relations stay counted).
+
+       form    proper-subset cases   component scores BELOW the whole   equal   ABOVE   verdict
+       union       22                   14               0          8   FAILS (8 above)
+       frame       22                   22               0          0   PASSES (never above the whole)
+       under the union form, a closed component that pays NOTHING for
+       what it leaves out (component Q == whole-mapping Q):
+         box_over_box/box_over_box_test     old    whole 0.767   component (n=0) 0.795
+         box_over_box/box_over_box_test     walk   whole 0.704   component (n=0) 0.704
+         box_over_box/box_over_box_test     truth  whole 0.634   component (n=0) 0.680
+         cylinder_over_box/cylinder_over_box_shift old    whole 0.609   component (n=0) 0.610
+         cylinder_over_box/cylinder_over_box_shift walk   whole 0.498   component (n=0) 0.498
+         cylinder_over_box/cylinder_over_box_shift truth  whole 0.498   component (n=0) 0.511
+         single_disk/f_ctrl_disk            old    whole 0.490   component (n=0) 0.491
+         box_over_box/box_over_box_haze     truth  whole 0.405   component (n=0) 0.435
+       under the frame form no closed component scores above its whole
+       mapping; the largest component-minus-whole gap is +0.0000 (box_over_box/box_over_box_test walk)
+
+   THE TEST, AS REGISTERED: a form closes the loophole iff the halved mapping scores strictly below
+   the full one on every pair and mapping (7.33).  FORMS THAT PASS: union, frame
+   UNDER THE CORRECTED TEST (7.39): frame
+
+   VERDICT ON R: the union form FAILS the corrected test and the frame form passes it, so R is changed to the frame form -- 7.39's condition
