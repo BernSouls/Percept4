@@ -1568,3 +1568,51 @@ has so little to grow from.  Under the rule fixed in 7.31 the next arm is the
 DISTINCTIVENESS RANK (rarity of the agreeing bin pattern), which is registered
 there and not built: the second rule has now been measured, which is the
 condition for building a third.
+
+### 7.38 PHASE 3, RUN TWICE (the first run was not a measurement).  THE FALSIFIER FIRED
+
+**The first run is recorded and superseded.**  It reported fan-out 0.0 on every
+pair and Arm A identical to the shipped setting on all nine.  Both were my
+bugs, not results: (i) `pops` was counted on each hypothesis' `WalkResult` and
+never summed into the one `walk` returns, so the fan-out had no numerator; (ii)
+`ADMIT_MARGIN` was pre-registered in BINS (7.32: "1.0 bins ... of four"), and
+`_agreement` already divides by `CONTRADICTION_MARGIN`, so comparing 1.0 of
+AGREEMENT against agreements that live in [0, 1] allowed a margin the width of
+the whole scale and Arm A rejected 0 proposals.  Fixed in the code (the margin
+is now converted, `ADMIT_MARGIN / CONTRADICTION_MARGIN`, and the constant is
+annotated "in BINS"), the fan-out is summed over the beam like the similarity
+bill, and the run is repeated.  No constant was moved to change a result: the
+margin is still the 1.0 bin fixed before the run.
+
+**The corrected run (results/phase7_p3_admission.txt).**
+
+    arm                        mapped   corr.  fan-out      P      R      F1   spent
+    shipped                      68.4    46.7     89.0  0.625  0.353  0.444    2.39
+    arm A (within one bin)       64.1    43.4    106.4  0.588  0.327  0.411    2.34
+    arm B (arm A + floor 0.5)    64.1    43.4    106.2  0.588  0.327  0.411    2.33
+
+    arm A against shipped: fan-out falls on 3 of 9, recall rises on 1 and falls
+    on 3; mean fan-out +17.5 (worse), mean recall -0.027, mean precision -0.038.
+    Arm B is Arm A on these pairs: of the proposals Arm A rejects, every one is
+    already below 0.5 agreement, so the floor rejects nothing further.
+
+**THE FALSIFIER FIRED, with a detail the review's diagnosis did not have.**
+The diagnosis says "fan-out 20-70 candidates per true pair, recall 0.11, so the
+budget is spent on rivals".  Measured per pair, the candidates popped per
+role-correct mapped pair are 38-250 and the pattern is inverse: the pairs with
+LOW fan-out are the ones with good recall (box_over_box_test 58.6 pops per
+correct pair, recall 0.750; cylinder 85.2, 0.593; single_box 38.3, 0.379) and
+the pair with the highest fan-out has the worst recall (f_haze 249.8, 0.051).
+Fan-out is not what is eating the recall: the walker spends on rivals because
+the seeds are few and wrong (Phase 2: 2.8 right seeds against a median 124 true
+correspondent pairs, seed precision 0.639), and pruning rivals before
+admission does not give it better seeds -- it gives it fewer bad pairs to grow
+along, which is exactly what the -0.027 recall says.
+
+Where the arm does help -- f_disk_a/b, one of the four pairs where it fires --
+fan-out fell 43.7 -> 36.9 AND recall rose 0.159 -> 0.168 AND precision rose
+0.450 -> 0.514.  That is the pre-registered mechanism working on 1 of 9 pairs.
+One pair is not the mechanism.  NO ARM IS DEFAULTED (both fail the 7.32 default
+rule: recall up on >= 6 of 9, precision down on <= 2), both stay OFF, and the
+conclusion the falsifier asks for is written: growth by relation is not the
+recall lever for this representation, and no margin is tuned to make it one.
