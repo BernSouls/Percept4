@@ -1766,3 +1766,40 @@ improvement that does not meet a bar fixed before the numbers existed does not
 become a default.  The bias is recorded as OPEN, with the number that shows it
 is a size effect (rho = -1 on the full window) and the number that shows the
 symmetric form is only half a fix.
+
+### 7.42 PHASE 6, DONE: PINS THAT REACH THE REAL FRONT END
+
+Before this file, every relation pin took the code apart by hand (hand-built
+hosts, features, detections) or called a `Binder._stage6_*` writer directly.
+None built a graph the way the repository builds one, so a change that stopped
+a relation from being written in the pipeline would have left the suite green.
+
+New file `tests_matcher/test_frontend_relations.py` (6 pins, one build per
+switch setting, ~11 s per build, shared at module scope).  Each one runs
+`diagnostics/eth80_frontend.build_graph` on a synthetic disk: the real
+perception stack, the real lens tier, the real binder, the real writers.
+
+  1. all three stage-6 relations are written on a real graph,
+     BOUNDARY_ATTACHMENT 190 / BOUNDARY_SUCCESSOR 26 / ILLUSORY_INDUCER 4,
+     and `stage6_attachment` is reported.  VERIFIED RED by deleting the
+     `_run_boundary_successor()` call site: the pin fails, and only that pin.
+  2. the switch OFF writes none of them (the end-to-end form of the switch pin).
+  3. each relation's own slot takes more than one value (7.35: a relation with
+     one constant parameter is a count, not a measurement).
+  4. every emitted lens type is on exactly one side of the FRAME/ATTRIBUTE
+     partition, and both sides are non-empty on a real graph.
+  5. ambiguity: the binder COUNTS its refusals on a scene where ties exist
+     (7 `|ambiguous` outcomes here) and every attachment it does write carries
+     a measured slot.
+  6. the cache key moves when a graph-side switch moves, with the two graphs
+     that key names checked to be different.
+
+**A PIN I HAD TO CORRECT, and why it is worth recording.**  The ambiguity pin
+first asserted "a feature attaches to at most one host of one kind".  It failed
+on the real scene, and the code was right: 6 of 128 features attach to two
+hosts of one kind, and those are the CONTOUR_PEAK / PEAK_CHAIN memberships the
+data NAMES -- Amendment 3.1's rule, that recorded memberships are facts and not
+rival guesses.  The pin was written from memory of the rule rather than from
+it.  It now pins the two invariants that are real (refusals are counted; what
+is written is measured) and says in its docstring which obvious third one is
+NOT an invariant.  499 pass.
