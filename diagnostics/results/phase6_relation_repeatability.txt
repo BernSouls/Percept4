@@ -1,0 +1,49 @@
+[STAGE 6 / TRACK M, after the verdict] do the relations repeat across two images?  (synthetic scenes, renderer truth)
+true correspondents: same lens type, same labels within one scale, box-normalised position within 0.10
+
+SAME GEOMETRY (the same layout, hazed and blurred): 1 pairs, both directions
+   FRAME nodes placed on an object: 287 of 345; with at least one true correspondent in the other scene: 226 (0.79); correspondents per such node, median 1
+   relation class (type, direction, far lens)                      relations   PRESENT   REPEATS   CHANCE   repeats / chance
+   BOUNDARY_SUCCESSOR           u CONTOUR_PEAK             120      0.92      0.90    0.594      1.5
+   ORIENTATION_CONTINUITY       u Orientation              106      0.96      0.92    0.903      1.0
+   BOUNDARY_ATTACHMENT          i Contour                  102      0.78      0.63    0.296      2.1
+   BOUNDARY_ATTACHMENT          o CONTOUR_PEAK              87      0.79      0.55    0.473      1.2
+   ORIENTATION_JUNCTION         u Orientation               82      0.88      0.83    0.459      1.8
+   BOUNDARY_ATTACHMENT          i PEAK_CHAIN                81      0.91      0.74    0.196      3.8
+   BOUNDARY_ATTACHMENT          o Orientation               59      0.90      0.85    0.565      1.5
+   CONTOUR_CONTINUITY           u Contour                   42      0.67      0.67    0.763      0.9
+   JUNCTION_CONTOUR             i Corner                    30      1.00      0.90    0.496      1.8
+   JUNCTION_CONTOUR             o Contour                   30      1.00      0.90    0.327      2.8
+   COCIRCULAR                   u Contour                   22      0.91      0.36    0.230      1.6
+   CURVATURE_SIGN_CONTINUITY    u Contour                   20      0.90      0.90    0.598      1.5
+   ALL CLASSES                                                      900      0.85      0.73    0.499
+
+OTHER GEOMETRY (the same family, other sizes and places): 8 pairs, both directions
+   FRAME nodes placed on an object: 2325 of 2678; with at least one true correspondent in the other scene: 1409 (0.61); correspondents per such node, median 1
+   relation class (type, direction, far lens)                      relations   PRESENT   REPEATS   CHANCE   repeats / chance
+   BOUNDARY_SUCCESSOR           u CONTOUR_PEAK             840      0.78      0.70    0.545      1.3
+   ORIENTATION_CONTINUITY       u Orientation              598      0.83      0.79    0.649      1.2
+   ORIENTATION_JUNCTION         u Orientation              496      0.84      0.73    0.428      1.7
+   BOUNDARY_ATTACHMENT          i PEAK_CHAIN               456      0.91      0.71    0.289      2.5
+   BOUNDARY_ATTACHMENT          o CONTOUR_PEAK             406      0.83      0.67    0.422      1.6
+   BOUNDARY_ATTACHMENT          i Contour                  404      0.79      0.63    0.313      2.0
+   BOUNDARY_ATTACHMENT          o Orientation              299      0.89      0.74    0.600      1.2
+   CURVATURE_SIGN_CONTINUITY    u Contour                  148      0.93      0.93    0.552      1.7
+   CONTOUR_CONTINUITY           u Contour                  140      0.94      0.93    0.570      1.6
+   JUNCTION_CONTOUR             o Contour                  110      1.00      0.96    0.355      2.7
+   RADIALITY                    u Contour                   98      0.94      0.94    0.149      6.3
+   BOUNDARY_ATTACHMENT          o ContourFragment           84      0.90      0.57    0.132      4.3
+   JUNCTION_CONTOUR             i Corner                    79      1.00      1.00    0.429      2.3
+   ORIENTATION_BEND             u Orientation               74      0.76      0.62    0.223      2.8
+   PARALLEL                     u Contour                   72      0.92      0.78    0.274      2.8
+   COCIRCULAR                   u Contour                   58      1.00      0.83    0.241      3.4
+   SPIRALITY                    u Contour                   52      1.00      1.00    0.397      2.5
+   CURVE_CONTAINMENT            i CurveComplex              39      0.67      0.36    0.037      9.6
+   CURVE_CONTAINMENT            o Contour                   34      0.71      0.35    0.072      4.9
+   JUNCTION_CONTOUR             i Junction                  31      1.00      0.87    0.225      3.9
+   BOUNDARY_ATTACHMENT          o RegionShape               29      1.00      0.83    0.476      1.7
+   BOUNDARY_ATTACHMENT          o EndStopped                27      0.44      0.15    0.141      1.1
+   AMODAL_LINK                  u Contour                   26      1.00      1.00    0.131      7.7
+   ALL CLASSES                                                     4688      0.85      0.73    0.462
+
+PEAK_CHAIN hosts per scene (features attached with an arc position): box_over_box 15 chains, median 7 features (largest 15); box_over_box_haze 13 chains, median 6 features (largest 36); box_over_box_test 11 chains, median 7 features (largest 23); cylinder_over_box 8 chains, median 7 features (largest 39); cylinder_over_box_shift 11 chains, median 7 features (largest 38); f_box_a 16 chains, median 7 features (largest 30); f_box_b 10 chains, median 7 features (largest 47); f_ctrl_box 6 chains, median 10 features (largest 24); f_ctrl_disk 1 chains, median 108 features (largest 108); f_cyl_a 10 chains, median 7 features (largest 30); f_cyl_b 10 chains, median 5 features (largest 21); f_disk_a 5 chains, median 7 features (largest 72); f_disk_b 10 chains, median 9 features (largest 16); f_haze_a 11 chains, median 10 features (largest 23); f_haze_b 13 chains, median 7 features (largest 31); single_box 6 chains, median 14 features (largest 42); single_disk 1 chains, median 82 features (largest 82)

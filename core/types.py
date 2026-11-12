@@ -107,6 +107,10 @@ class EdgeType(Enum):
     CROSS_SCALE_IDENTITY = 49
     BINOCULAR_DISPARITY = 50
     LINE_TERMINATION = 51
+    # [STAGE 6 / R1-R3] measured relations a correspondence can grow along
+    BOUNDARY_ATTACHMENT = 52    # host boundary -> a local feature on it
+    BOUNDARY_SUCCESSOR = 53     # consecutive member peaks of one chain
+    ILLUSORY_INDUCER = 54       # illusory contour -> each of its inducers
 
 
 # --- from binder.py: edge-type registries ---
@@ -144,6 +148,9 @@ _UNDIRECTED_EDGE_TYPES_BASE: FrozenSet[EdgeType] = frozenset(
         EdgeType.SPIRALITY,
         EdgeType.COLOR_OPPONENT_BORDER,
         EdgeType.LINE_TERMINATION,
+        # [STAGE 6 / R2] a chain's member order is the chain former's choice
+        # (a gauge), so "successor" has no direction of its own
+        EdgeType.BOUNDARY_SUCCESSOR,
     }
 )
 
@@ -225,6 +232,10 @@ REPRODUCIBLE_EDGE_TYPES: FrozenSet[EdgeType] = frozenset({
     EdgeType.CROSS_SCALE_IDENTITY,
     EdgeType.BINOCULAR_DISPARITY,
     EdgeType.LINE_TERMINATION,
+    # [STAGE 6] structural: a feature's place on its boundary is geometry
+    EdgeType.BOUNDARY_ATTACHMENT,
+    EdgeType.BOUNDARY_SUCCESSOR,
+    EdgeType.ILLUSORY_INDUCER,
 })
 
 HEBBIAN_BOOST_TYPES: FrozenSet[EdgeType] = frozenset({
@@ -273,6 +284,10 @@ HEBBIAN_BOOST_TYPES: FrozenSet[EdgeType] = frozenset({
     EdgeType.CROSS_SCALE_IDENTITY,
     EdgeType.BINOCULAR_DISPARITY,
     EdgeType.LINE_TERMINATION,
+    # [STAGE 6] corroborated by the geometry they describe
+    EdgeType.BOUNDARY_ATTACHMENT,
+    EdgeType.BOUNDARY_SUCCESSOR,
+    EdgeType.ILLUSORY_INDUCER,
 })
 
 
@@ -580,6 +595,12 @@ class Detection:
         "substrate_hash",
         "_hash_cache",
         "_curv_profile",
+        # [STAGE 6 / R1] a ContourFragment's own midpoint and chord direction.
+        # Carried like `_curv_profile`: not part of the signature, the
+        # equality or the hash, so the node is the same node.  Read by
+        # perception/attachment.py.
+        "_frag_mid",
+        "_frag_tangent",
     )
 
     def __init__(
@@ -604,6 +625,8 @@ class Detection:
         object.__setattr__(self, "rho", rho)
         object.__setattr__(self, "substrate_hash", substrate_hash)
         object.__setattr__(self, "_curv_profile", None)
+        object.__setattr__(self, "_frag_mid", None)
+        object.__setattr__(self, "_frag_tangent", None)
         object.__setattr__(
             self, "_hash_cache", hash_64_signed(serialize_detection(self))
         )
@@ -685,6 +708,9 @@ LEGACY_TO_CATEGORY = {
     EdgeType.BORDER_OWNERSHIP_EDGE: EdgeCategory.OCCLUSION,  # R3(i) two-sided; one-sided -> CONTAINMENT at the emitter
     EdgeType.BINOCULAR_DISPARITY: EdgeCategory.OCCLUSION,   # A4 (dormant), depth order
     EdgeType.LINE_TERMINATION: EdgeCategory.OCCLUSION,      # A3, source_cue=line_termination
+    EdgeType.BOUNDARY_ATTACHMENT: EdgeCategory.CONTAINMENT,  # [STAGE 6] a feature ON its boundary
+    EdgeType.BOUNDARY_SUCCESSOR: EdgeCategory.CONTINUITY,    # [STAGE 6] next along the chain
+    EdgeType.ILLUSORY_INDUCER: EdgeCategory.CONTINUITY,      # [STAGE 6] completion -> inducer
     EdgeType.MOTION_OPPOSITION: EdgeCategory.OCCLUSION,     # R3, source_cue=kinetic (dormant on static frames)
     EdgeType.CO_MOTION: EdgeCategory.SURFACE,               # R3, kinematic axis (dormant on static frames)
     EdgeType.ORIENTATION_CONTINUITY: EdgeCategory.CONTINUITY,

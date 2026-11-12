@@ -2387,6 +2387,10 @@ EDGE_TYPE_NAMES = frozenset(
     "CROSS_SCALE_IDENTITY",
     "BINOCULAR_DISPARITY",
     "LINE_TERMINATION",
+    # [STAGE 6]
+    "BOUNDARY_ATTACHMENT",
+    "BOUNDARY_SUCCESSOR",
+    "ILLUSORY_INDUCER",
 
     }
 )
@@ -2452,6 +2456,10 @@ FAMILY_FORMING_EDGE_TYPES = frozenset(
     "CROSS_SCALE_IDENTITY",
     "BINOCULAR_DISPARITY",
     "LINE_TERMINATION",
+    # [STAGE 6]
+    "BOUNDARY_ATTACHMENT",
+    "BOUNDARY_SUCCESSOR",
+    "ILLUSORY_INDUCER",
 
     }
 )
@@ -2718,6 +2726,56 @@ B1_NORM_SIGMA: float = 0.05
 B1_NORM_SIGMA_THETA: float = 1.2
 
 FFT_KERNEL_THRESHOLD = 31
+# [STAGE 6 / 0b] PER-CHANNEL BORDER DISCARD (perception/contour_field.py).
+# The peak extraction discards every peak within k // 2 px of the frame, k being
+# the LARGEST kernel of the bank: 56 px on each side of a 256 px image, for
+# every channel, although the finer channels' own kernels need 37 / 24 / 15 /
+# 10 px.  ON: the frame is cut into nested zones of border distance and in each
+# zone the peaks come from the channels whose own kernel fits there (never
+# closer than the 16 px extraction floor).
+# OFF (default): the single margin, byte for byte.
+# Measured (diagnostics/results/phase6_border_clearance.txt and
+# phase6_closure_per_channel.txt); see diagnostics/REPORT.md, Stage 6, 0b.
+FIELD_BORDER_DISCARD_PER_CHANNEL = False
+# [STAGE 6 / R3, direction 1] THE BINDER'S POSITION MAP.
+# `Pipeline.step` hands the binder a COPY of the anchor-position map made
+# before the higher lens tier runs.  The tier then registers positions for its
+# own anchors (peaks, chains, corners, EndStopped, RegionShape, ...) in the
+# lens tier's map only, so every binder writer that asks for such an anchor
+# gets nothing and skips: 0 of 4,106 EndStopped and 0 of 1,050 RegionShape
+# detections had a position in the binder (diagnostics/results/
+# phase6_position_map.txt).  ON: the binder's map is completed from the lens
+# tier's before each level is emitted, and `_run_part_containment` (which
+# lived in a level no caller ever asked for) runs with the v4 level.
+# OFF: the stale copy, byte for byte.
+BINDER_COMPLETE_POSITION_MAP = False
+# [STAGE 6 / R1, R2, R3, R5] THE MEASURED RELATIONS (one grouped switch).
+#   R1  BOUNDARY_ATTACHMENT: a local feature's place on an extended boundary
+#       (perception/attachment.py), written only when the host is unambiguous
+#   R2  PEAK_CHAIN -> CONTOUR_PEAK as the known-host case of R1, and
+#       BOUNDARY_SUCCESSOR between consecutive member peaks
+#   R3  EndStopped and RegionShape through R1; ILLUSORY_INDUCER
+#   R5  the CurveComplex link rule: one step of geometry between contour
+#       ends, each end linked at most once (lenses/v4.py)
+# OFF: none of these is written and the CurveComplex lens is the old one.
+GRAPH_STAGE6_RELATIONS = False
+# [STAGE 6 / R1, pre-registration Amendment 3.1] A feature the data structure
+# names as a member of SEVERAL hosts of one kind (an Orientation cell where
+# the cell graph branches is listed by every Contour that ends on it) is
+# attached to each of them: recorded memberships are facts, not rival guesses.
+# False: the Amendment-2 treatment (tangent agreement picks one, or nothing).
+# Read only under GRAPH_STAGE6_RELATIONS.  It exists so that R6 can report
+# what the gate owes to this rule, which was written after presence counts
+# had been seen.
+ATTACHMENT_EVERY_NAMED_HOST = True
+# [STAGE 6 / TRACK M] THE RELATION WALKER (matching/relation_walker.py): a
+# correspondence grown along measured relations from a few seeds; signature
+# similarity is only a gate; attributes are attached afterwards; the score is
+# a Jaccard on preserved relations and a pair of graphs below the minimum
+# support has NO score.  ONE switch, read at ONE place
+# (`matching.relation_walker.match_evidence`).  OFF (default): that function
+# is `memory.cores.evidence_score`, the old matcher, untouched.
+MATCH_RELATION_WALKER = False
 # [O5] Thread count for the value-preserving field/V1 loops. This is a
 # PERFORMANCE knob only: every task writes a disjoint output slice, so the
 # produced arrays are byte-identical at any value (proven in the O5 harness

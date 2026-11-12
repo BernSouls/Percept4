@@ -91,6 +91,12 @@ CONSTITUTIONAL_EDGE_RANGES: Dict[str, Tuple[float, ...]] = {
     # 24-cycle here, which made adjacent axial values score as maximally
     # different under the min(d, cycle-d) wrap.
     "EDGE_LINE_TERMINATION": (5.0, 8.0, 8.0, 6.0),
+    # [STAGE 6 / R1-R3] (arc_end_dist, tangent_angle, perp_dist)
+    "EDGE_BOUNDARY_ATTACHMENT": (8.0, 8.0, 8.0),
+    # (arc_gap, turn)
+    "EDGE_BOUNDARY_SUCCESSOR": (8.0, 8.0),
+    # (gap, alignment)
+    "EDGE_ILLUSORY_INDUCER": (8.0, 8.0),
 }
 
 CIRCULAR_EDGE_CYCLE_LENGTHS: Dict[str, Dict[int, int]] = {
@@ -454,6 +460,25 @@ EDGE_SCHEMAS: Dict[str, Tuple[Slot, ...]] = {
         Slot("sharpness",       "linear",      8.0, "same"),
         Slot("curvature",       "linear",      8.0, "same"),
         Slot("parent_theta",    "circular",   12.0, "same"),
+    ),
+    # [STAGE 6 / R1] A local feature's place on an extended boundary
+    # (perception/attachment.py).  Directed host -> feature.  Every slot is
+    # the same whichever way the host is walked; the ORDINAL arc position,
+    # which is not, lives in EdgeParams.ordinal and is never compared.
+    "EDGE_BOUNDARY_ATTACHMENT": (
+        Slot("arc_end_dist",    "linear",      8.0, "same"),
+        Slot("tangent_angle",   "linear",      8.0, "same"),
+        Slot("perp_dist",       "linear",      8.0, "same"),
+    ),
+    # [STAGE 6 / R2] Consecutive member peaks of one chain.  Undirected.
+    "EDGE_BOUNDARY_SUCCESSOR": (
+        Slot("arc_gap",         "linear",      8.0, "same"),
+        Slot("turn",            "linear",      8.0, "same"),
+    ),
+    # [STAGE 6 / R3] An illusory contour and one of its two inducers.
+    "EDGE_ILLUSORY_INDUCER": (
+        Slot("gap",             "linear",      8.0, "same"),
+        Slot("alignment",       "linear",      8.0, "same"),
     ),
 }
 
@@ -838,6 +863,40 @@ EDGE_UNIT_TABLE: Dict[str, Tuple[SlotSpec, ...]] = {
         _eslot("curvature", "fraction", 0.0, 1.0, 8),
         _eslot("parent_theta", "radians", 0.0, math.pi, 12, circular=True,
                quantiser="round"),
+    ),
+    # --- [STAGE 6 / R1] BOUNDARY ATTACHMENT ---------------------------------
+    # arc_end_dist   the foot's distance from the NEARER end of the host, as
+    #                a fraction of the host's length, in [0, 0.5].  ABSENT on
+    #                a closed host (a ring has no end)
+    # tangent_angle  the feature's own tangent against the host's tangent at
+    #                the foot, radians in [0, pi/2].  ABSENT when the feature
+    #                has no orientation of its own
+    # perp_dist      |feature - foot| in extraction scales; the span is the
+    #                writer's admission radius (D_MAX = 1)
+    "EDGE_BOUNDARY_ATTACHMENT": (
+        _eslot("arc_end_dist", "fraction", 0.0, 0.5, 8),
+        _eslot("tangent_angle", "radians", 0.0, 0.5 * math.pi, 8),
+        _eslot("perp_dist", "wavelengths", 0.0, 1.0, 8),
+    ),
+    # --- [STAGE 6 / R2] BOUNDARY SUCCESSOR ----------------------------------
+    # arc_gap  the distance between two consecutive member peaks, in
+    #          extraction scales; the span is the chain former's link limit
+    #          (2 median wavelengths = 1.08 scales), rounded up
+    # turn     the unsigned angle between the two peaks' tangents, [0, pi/2]
+    #          (unsigned: the sign flips with the direction the chain is
+    #          walked in, which is the chain former's choice)
+    "EDGE_BOUNDARY_SUCCESSOR": (
+        _eslot("arc_gap", "wavelengths", 0.0, 1.1, 8),
+        _eslot("turn", "radians", 0.0, 0.5 * math.pi, 8),
+    ),
+    # --- [STAGE 6 / R3] ILLUSORY INDUCER -------------------------------------
+    # gap        the separation of the two inducers, in extraction scales; the
+    #            span is the lens' own limit (KAPPA_ILLUSORY_MAX_GAP)
+    # alignment  the inducer's tangent against the completion line, radians;
+    #            the span is the lens' own tolerance (ILLUSORY_ANGLE_TOL_RAD)
+    "EDGE_ILLUSORY_INDUCER": (
+        _eslot("gap", "wavelengths", 0.0, float(P.KAPPA_ILLUSORY_MAX_GAP), 8),
+        _eslot("alignment", "radians", 0.0, float(P.ILLUSORY_ANGLE_TOL_RAD), 8),
     ),
 }
 #: [U30] EdgeParams schemas for the 8 canonical physical edge categories.
@@ -1488,6 +1547,14 @@ class EdgeParams:
     #: tell a proximity flood from true occlusion evidence.  "" means the
     #: producer did not record one; readers fall back to `class_`.
     origin: str = ""
+    #: [STAGE 6 / R1] An ORDINAL coordinate of this relation among its
+    #: siblings on the same parent (a feature's arc position along its host
+    #: boundary, in the host's own member order).  It is a gauge quantity:
+    #: the order is the chain former's choice.  So it is NOT a slot: nothing
+    #: compares it across graphs, it does not enter equality, hashing or the
+    #: repr, and no similarity reads it.  Only the order constraint of the
+    #: relation walker (matching/relation_walker.py) does.
+    ordinal: Optional[float] = field(default=None, repr=False, compare=False)
 
     def similarity(self, other: Any, use_confidence: bool = True) -> float:
         """Graded Gaussian similarity respecting categorical NAP gates and circular metric slots.

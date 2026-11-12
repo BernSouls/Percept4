@@ -45,6 +45,11 @@ PIN_BASELINE = {
     "MATCH_ALIGN_BUDGET_REFINEMENT_ONLY": True,        # D2 prerequisites
     "MATCH_GLOBAL_ANCHOR_PRIOR": False,                # D2 prerequisites
     "EDGE_SPECIFICITY_CAP_SAME_SCHEMA": False,         # dark; your decision
+    # [STAGE 6] graph switches: the pins are written against the old graph
+    "FIELD_BORDER_DISCARD_PER_CHANNEL": False,         # 0b, per-channel border
+    "BINDER_COMPLETE_POSITION_MAP": False,             # direction 1, the map
+    "GRAPH_STAGE6_RELATIONS": False,                   # R1-R3, R5
+    "MATCH_RELATION_WALKER": False,                    # Track M: the old matcher
 }
 
 #: the tree's own values, read once before any pin touches them

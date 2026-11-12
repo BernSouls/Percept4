@@ -48,6 +48,7 @@ from core.schema import edge_params as _edge_params  # noqa: F401
 from core.schema import edge_quantise  # noqa: F401
 from core.schema import u30_edge_params as _u30_edge_params  # noqa: F401
 from core.schema import U30_EDGE_UNIT_TABLE  # noqa: F401
+from core.schema import EDGE_UNIT_TABLE  # noqa: F401
 from core.slots import (  # noqa: F401
     orientation_theta_radians,
     slot_value,
@@ -736,6 +737,10 @@ class Binder:
         EdgeType.CROSS_SCALE_IDENTITY,
         EdgeType.BINOCULAR_DISPARITY,
         EdgeType.LINE_TERMINATION,
+        # [STAGE 6] the measured relations
+        EdgeType.BOUNDARY_ATTACHMENT,
+        EdgeType.BOUNDARY_SUCCESSOR,
+        EdgeType.ILLUSORY_INDUCER,
     )
 
     def __init__(
@@ -863,6 +868,10 @@ class Binder:
             "candidate_cap_hits": defaultdict(int),
             "dropped_below_threshold": defaultdict(int),
             "empty_or_zero_signal_by_type": defaultdict(int),
+            # [STAGE 6] outcomes of the attachment writer, keyed
+            # "feature kind|host kind|outcome" (known / unambiguous /
+            # ambiguous / no_host) and the pooling counters.
+            "stage6_attachment": defaultdict(int),
             # [Q3] Anti-phase observability. The anti-phase channels once
             # dropped every pair silently when either endpoint had no
             # registered pattern node, which is indistinguishable from "no
@@ -923,6 +932,8 @@ class Binder:
         self._higher_present_this_step = set()
         self._higher_onset_this_step = set()
         self._step_anchor_positions = None
+        self._tier_anchor_positions = None
+        self._stage6_higher_all = []
 
     def finalize_step(self) -> None:
         """Commit the per-step accumulators into the previous-step sets.
@@ -951,6 +962,8 @@ class Binder:
         self._higher_present_this_step = set()
         self._higher_onset_this_step = set()
         self._step_anchor_positions = None
+        self._tier_anchor_positions = None
+        self._stage6_higher_all = []
         self._step_begin_called = False
         # [U30] The v2 taxonomy flush: merge the step's (src, dst,
         # category) rows and land the merged EdgeCategory edges, after
@@ -1027,10 +1040,12 @@ class Binder:
             sig_hash = _node_signature_hash(d.sigma)
             pat = (d.k, sig_hash)
             if pat in self._higher_present_this_step:
+                self._stage6_note_pooled(d, pat)
                 continue
             if pat in self._v1_present_this_step:
                 # V1 already handled this pattern this step; skip to avoid
                 # double history append (futurework3.md II.5).
+                self._stage6_note_pooled(d, pat)
                 continue
             node_id = self.cg.get_or_create_pattern_node(
                 d.k, sig_hash, signature=d.sigma
@@ -1042,6 +1057,7 @@ class Binder:
             # it), so capture inline rather than in a later pass.
             self._remember_node_position(node_id, d.alpha)
             self._higher_dets_this_step.append(d)
+            self._stage6_higher_all.append((d, node_id))
             self._higher_present_this_step.add(pat)
             self._pattern_last_seen[pat] = t
             self._pattern_anchors[pat].add(d.alpha)
@@ -1056,6 +1072,259 @@ class Binder:
             hist.append(1)
             if len(hist) > P.W_HISTORY:
                 hist.pop(0)
+
+    # ------------------------------------------------------------------
+    # [STAGE 6] the lens tier's positions, and the measured relations
+    # ------------------------------------------------------------------
+    def _stage6_note_pooled(self, d: Detection, pat: Tuple[str, bytes]) -> None:
+        """Remember a detection whose pattern node is already bound this step.
+
+        `bind_intra_step` registers ONE detection per pattern node; the others
+        (same lens, same signature, another place) never reach the writers.
+        The stage-6 relations are per PLACE, so they need all of them.  This
+        only records; it creates and touches nothing."""
+        nid = self.cg._pattern_node_id_by_key.get(pat)
+        if nid is not None:
+            self._stage6_higher_all.append((d, nid))
+
+    def note_tier_positions(
+        self, tier_positions: Optional[Dict[Any, Tuple[float, ...]]]
+    ) -> None:
+        """[STAGE 6 / direction 1] Hand the binder the lens tier's position map.
+
+        `Pipeline.step` gives `step()` a COPY of the anchor positions made
+        before the higher lens tier runs.  The tier then registers positions
+        for its own anchors (peaks, chains, corners, EndStopped, ...) in ITS
+        map only, so a binder writer asking for such an anchor gets nothing
+        (measured: 0 of 4,106 EndStopped anchors were in the binder's map).
+
+        Called by the pipeline right before each `emit_pending_edges`.  The
+        reference is always kept (the stage-6 writers read it).  The step's
+        own map is COMPLETED from it only under
+        `P.BINDER_COMPLETE_POSITION_MAP`; the binder's own entries win, so
+        nothing an existing writer already saw changes value.
+        """
+        self._tier_anchor_positions = tier_positions
+        if tier_positions and bool(
+                getattr(P, "BINDER_COMPLETE_POSITION_MAP", False)):
+            merged = dict(tier_positions)
+            merged.update(self._step_anchor_positions or {})
+            self._step_anchor_positions = merged
+
+    def _stage6_positions(self) -> Dict[Any, Tuple[float, ...]]:
+        """The step's positions with the lens tier's added (binder's win)."""
+        merged = dict(getattr(self, "_tier_anchor_positions", None) or {})
+        merged.update(getattr(self, "_step_anchor_positions", None) or {})
+        return merged
+
+    def _stage6_detections(self) -> List[Tuple[Detection, int]]:
+        """[(detection, node id)] for every detection of the step, V1 and
+        higher, pooled ones included, in canonical order."""
+        seen: Dict[Detection, int] = {}
+        v1_nids = getattr(self, "_v1_node_ids", {}) or {}
+        for d in (getattr(self, "_v1_dets_this_step", ()) or ()):
+            nid = v1_nids.get(d)
+            if nid is not None:
+                seen.setdefault(d, nid)
+        for d, nid in (getattr(self, "_stage6_higher_all", ()) or ()):
+            seen.setdefault(d, nid)
+        return [(d, seen[d]) for d in sorted(seen, key=_detection_sort_key)]
+
+    @staticmethod
+    def _stage6_pool(cls: str, slot: str,
+                     values: List[Optional[float]]) -> Optional[float]:
+        """THE POOLING RULE.  A node pools detections; when several of them
+        give one edge several values of one axis, the axis is written only if
+        the values fall in the same bin or in adjacent bins (their mean), and
+        is ABSENT otherwise: a node that sits at two places of one boundary
+        has no one place on it."""
+        vals = [float(v) for v in values if v is not None]
+        if not vals:
+            return None
+        if len(vals) == 1:
+            return vals[0]
+        names = [sp.name for sp in EDGE_UNIT_TABLE[cls]]
+        idx = names.index(slot)
+        bins = [
+            edge_quantise(cls, {n: (v if n == slot else None) for n in names})[idx]
+            for v in vals
+        ]
+        if max(bins) - min(bins) > 1.0:
+            return None
+        return sum(vals) / len(vals)
+
+    def _run_boundary_attachment(self) -> None:
+        """[STAGE 6 / R1, R2, R3] A local feature's place on an extended
+        boundary.  Directed host -> feature.  See perception/attachment.py
+        for the measurement and the ambiguity rule; this method only turns
+        the per-place attachments into one edge per node pair."""
+        from dataclasses import replace as _replace
+        from perception import attachment as _att
+
+        scale = float(self._step_extraction_scale)
+        if scale <= 0.0:
+            return
+        hosts, feats = _att.hosts_and_features(
+            self._stage6_detections(), self._stage6_positions(),
+            int(P.ORIENTATION_N_THETA))
+        atts, stats = _att.attach(
+            feats, hosts, scale,
+            every_named=bool(getattr(P, "ATTACHMENT_EVERY_NAMED_HOST", True)))
+        diag = self.diagnostics["stage6_attachment"]
+        for (fk, hk), st in stats.items():
+            for outcome, n in st.items():
+                if n:
+                    diag["%s|%s|%s" % (fk, hk, outcome)] += int(n)
+        groups: Dict[Tuple[int, int], List[Any]] = {}
+        for a in atts:
+            hn, fn = a.host.node, a.feature.node
+            if hn is None or fn is None or hn == fn:
+                diag["dropped|no_node_or_self"] += 1
+                continue
+            groups.setdefault((hn, fn), []).append(a)
+        cls = "EDGE_BOUNDARY_ATTACHMENT"
+        candidates: List[Tuple[int, int, float, Tuple[int, int], EdgeParams]] = []
+        for hn, fn in sorted(groups):
+            g = groups[(hn, fn)]
+            vals = {
+                name: self._stage6_pool(cls, name, [getattr(a, name) for a in g])
+                for name in ("arc_end_dist", "tangent_angle", "perp_dist")
+            }
+            if len(g) > 1:
+                diag["pooled|node_pairs"] += 1
+                for name in ("arc_end_dist", "tangent_angle", "perp_dist"):
+                    if vals[name] is None and any(
+                            getattr(a, name) is not None for a in g):
+                        diag["pooled|%s_absent" % name] += 1
+            ep = _edge_params(cls, vals, sign=1, confidence=1.0)
+            # the ORDINAL arc position: same rule, eight bins over [0, 1]
+            arcs = [float(a.arc_pos) for a in g]
+            b = [min(7, int(x * 8.0)) for x in arcs]
+            if max(b) - min(b) <= 1:
+                ep = _replace(ep, ordinal=sum(arcs) / len(arcs))
+            elif len(g) > 1:
+                diag["pooled|ordinal_absent"] += 1
+            candidates.append((hn, fn, 1.0, (hn, fn), ep))
+        self._process_channel(EdgeType.BOUNDARY_ATTACHMENT, candidates)
+
+    def _run_boundary_successor(self) -> None:
+        """[STAGE 6 / R2] Consecutive member peaks of one chain.  Undirected.
+
+        `arc_gap` is the distance between the two peaks in extraction scales,
+        `turn` the unsigned angle between their tangents.  Two consecutive
+        peaks with the same signature are ONE node: no edge (a node is not
+        its own successor), counted."""
+        from perception import attachment as _att
+
+        scale = float(self._step_extraction_scale)
+        if scale <= 0.0:
+            return
+        dets = self._stage6_detections()
+        positions = self._stage6_positions()
+        peak_of: Dict[Any, Tuple[Detection, int]] = {}
+        for d, nid in dets:
+            if d.k == "CONTOUR_PEAK":
+                peak_of.setdefault(d.alpha, (d, nid))
+        cls = "EDGE_BOUNDARY_SUCCESSOR"
+        diag = self.diagnostics["stage6_attachment"]
+        groups: Dict[Tuple[int, int], List[Tuple[float, Optional[float]]]] = {}
+        for d, _nid in dets:
+            if d.k != "PEAK_CHAIN":
+                continue
+            members = _att._members(d)
+            q = d.sigma.quantized
+            closed = bool(len(q) > 3 and float(q[3]) >= 0.5 and len(members) >= 3)
+            pairs = list(zip(members[:-1], members[1:]))
+            if closed:
+                pairs.append((members[-1], members[0]))
+            for a, b in pairs:
+                pa, pb = _att._xy(positions, a), _att._xy(positions, b)
+                if pa is None or pb is None or a not in peak_of or b not in peak_of:
+                    diag["successor|unresolved"] += 1
+                    continue
+                (da, na), (db, nb) = peak_of[a], peak_of[b]
+                if na == nb:
+                    diag["successor|same_node"] += 1
+                    continue
+                ta = _att.feature_tangent(da, int(P.ORIENTATION_N_THETA))
+                tb = _att.feature_tangent(db, int(P.ORIENTATION_N_THETA))
+                turn = (_att.axial_difference(ta, tb)
+                        if ta is not None and tb is not None else None)
+                gap = math.hypot(pb[0] - pa[0], pb[1] - pa[1]) / scale
+                key = (na, nb) if na < nb else (nb, na)
+                groups.setdefault(key, []).append((gap, turn))
+        candidates: List[Tuple[int, int, float, Tuple[int, int], EdgeParams]] = []
+        for key in sorted(groups):
+            g = groups[key]
+            vals = {
+                "arc_gap": self._stage6_pool(cls, "arc_gap", [x[0] for x in g]),
+                "turn": self._stage6_pool(cls, "turn", [x[1] for x in g]),
+            }
+            ep = _edge_params(cls, vals, sign=1, confidence=1.0)
+            candidates.append((key[0], key[1], 1.0, key, ep))
+        self._process_channel(EdgeType.BOUNDARY_SUCCESSOR, candidates)
+
+    def _run_illusory_inducer(self) -> None:
+        """[STAGE 6 / R3] An illusory contour and each of its two inducers.
+
+        Directed completion -> inducer.  The inducers are named in the
+        IllusoryContour's own `rho`, so there is nothing to guess: `gap` is
+        their separation in extraction scales, `alignment` the angle the LENS
+        tested when it paired them (the inducer's slot turned by 90 degrees,
+        against the line that joins them).  The EndStopped slot is the
+        terminating bar's orientation, so what the lens requires is that the
+        completion runs ACROSS the bars that end on it; `alignment` is how far
+        from square."""
+        from core.quantize import carrier_to_tangent
+        from perception import attachment as _att
+
+        scale = float(self._step_extraction_scale)
+        if scale <= 0.0:
+            return
+        dets = self._stage6_detections()
+        positions = self._stage6_positions()
+        end_of: Dict[Any, Tuple[Detection, int]] = {}
+        for d, nid in dets:
+            if d.k == "EndStopped":
+                end_of.setdefault(d.alpha, (d, nid))
+        cls = "EDGE_ILLUSORY_INDUCER"
+        groups: Dict[Tuple[int, int], List[Tuple[float, Optional[float]]]] = {}
+        for d, nid in dets:
+            if d.k != "IllusoryContour":
+                continue
+            a1, a2 = _att._role(d, "inducer_1"), _att._role(d, "inducer_2")
+            p1 = _att._xy(positions, a1) if a1 is not None else None
+            p2 = _att._xy(positions, a2) if a2 is not None else None
+            if p1 is None or p2 is None:
+                continue
+            gap = math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / scale
+            line = math.atan2(p2[1] - p1[1], p2[0] - p1[0]) % math.pi
+            for a in (a1, a2):
+                if a not in end_of:
+                    continue
+                dd, nn = end_of[a]
+                if nn == nid:
+                    continue
+                # the lens' own quantity: the angle it tested against its
+                # tolerance when it built the completion (lenses/v4.py)
+                qd = dd.sigma.quantized
+                align = None
+                if qd:
+                    lens_dir = carrier_to_tangent(
+                        (float(qd[0]) + 0.5) * math.pi
+                        / float(P.ORIENTATION_N_THETA))
+                    align = _att.axial_difference(lens_dir, line)
+                groups.setdefault((nid, nn), []).append((gap, align))
+        candidates: List[Tuple[int, int, float, Tuple[int, int], EdgeParams]] = []
+        for key in sorted(groups):
+            g = groups[key]
+            vals = {
+                "gap": self._stage6_pool(cls, "gap", [x[0] for x in g]),
+                "alignment": self._stage6_pool(cls, "alignment", [x[1] for x in g]),
+            }
+            ep = _edge_params(cls, vals, sign=1, confidence=1.0)
+            candidates.append((key[0], key[1], 1.0, key, ep))
+        self._process_channel(EdgeType.ILLUSORY_INDUCER, candidates)
 
     def emit_pending_edges(self, level: str) -> None:
         """Emit edges for one higher-lens level. Each channel is emitted
@@ -1126,6 +1395,13 @@ class Binder:
             self._run_color_opponent_border(all_dets, all_node_ids, pos)
             self._run_line_termination(dets_tuple, node_ids, pos)
             self._run_cross_scale_identity(dets_tuple, node_ids, pos)
+            if bool(getattr(P, "GRAPH_STAGE6_RELATIONS", False)):
+                # [STAGE 6 / R1-R3] the measured relations.  They read EVERY
+                # detection of the step (pooled ones included) and the
+                # position map completed from the lens tier.
+                self._run_boundary_attachment()
+                self._run_boundary_successor()
+                self._run_illusory_inducer()
         elif level == "v4":
             self._run_curve_containment(dets_tuple, node_ids, pos)
             self._run_symmetry(dets_tuple, node_ids, pos)
@@ -1136,6 +1412,15 @@ class Binder:
             self._run_spirality(dets_tuple, node_ids, pos)
             self._run_surface_fold(dets_tuple, node_ids, pos)
             self._run_texture_boundary_edge(dets_tuple, node_ids, pos)
+            if bool(getattr(P, "BINDER_COMPLETE_POSITION_MAP", False)):
+                # [STAGE 6 / direction 1] RegionShape -> CurveComplex lived in
+                # "lo_pit", a level no caller ever asked for.  It reads only
+                # nodes this level has bound, so it runs here.  Its sibling
+                # `_run_part_content` stays unemitted on purpose: its channel
+                # (REGION_CONTENT) already runs once per step, and a second
+                # pass would double that channel's homeostatic rate (the
+                # T1.1 defect).
+                self._run_part_containment(dets_tuple, node_ids, pos)
         elif level == "lo_pit":
             self._run_part_containment(dets_tuple, node_ids, pos)
             self._run_part_content(dets_tuple, node_ids)
@@ -1375,6 +1660,9 @@ class Binder:
             ),
             "empty_or_zero_signal_by_type": dict(
                 self.diagnostics["empty_or_zero_signal_by_type"]
+            ),
+            "stage6_attachment": dict(
+                self.diagnostics.get("stage6_attachment", {})
             ),
             "anti_phase_pairs_offered": dict(
                 self.diagnostics["anti_phase_pairs_offered"]
@@ -4454,6 +4742,16 @@ class Binder:
 
             nearby.sort(key=lambda x: (x[0], x[1]))
             n_seg = len(nearby)
+            if (bool(getattr(P, "BINDER_COMPLETE_POSITION_MAP", False))
+                    and n_seg >= 2
+                    and (nearby[1][0] - nearby[0][0]) < 0.5 * r_scale):
+                # [STAGE 6 / Amendment 2.4] THE AMBIGUITY RULE.  With the map
+                # completed, EndStopped terminators enter this writer; "the
+                # nearest parent" of two near-equidistant ones is a guess.
+                # Nothing is written (counted).  Off: the old writer.
+                self.diagnostics["stage6_attachment"][
+                    "line_termination|ambiguous_parent"] += 1
+                continue
 
             if n_seg == 1:
                 junction_type = 0.0

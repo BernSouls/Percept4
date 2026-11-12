@@ -1,0 +1,56 @@
+[STAGE 6 / TRACK M] the relation walker on the synthetic scenes (real front end, 18 scenes)
+
+1. M1: each scene's graph (stage-6 relations on) against itself under shuffled node ids
+   scene                       FRAME  mapped  identity  score  supported  seeds  examined / budget   dense matrix
+   box_over_box                  174      50        50  0.535  True           8      1513 / 1513       258064
+   box_over_box_haze             171     106       106  0.926  True           8      1462 / 1462       254016
+   box_over_box_test             157      52        52  0.513  True           8      1256 / 1256       230400
+   cylinder_over_box             183      50        50  0.545  True           8      1674 / 1674       258064
+   cylinder_over_box_shift       197      55        55  0.534  True           8      1940 / 1940       273529
+   disk_on_box                   188     127       127  0.871  True           8      1767 / 1767       202500
+   f_box_a                       196      35        35  0.538  True           8      1920 / 1920       295936
+   f_box_b                       199      59        59  0.464  True           8      1980 / 1980       273529
+   f_ctrl_box                    116     100       100  1.000  True           8       920 / 928        144400
+   f_ctrl_disk                   150      20        20  0.642  True           8      1200 / 1200       137641
+   f_cyl_a                       165      47        47  0.528  True           8      1361 / 1361       247009
+   f_cyl_b                       173      87        87  0.656  True           8      1496 / 1496       224676
+   f_disk_a                      190     129       129  0.939  True           8      1805 / 1805       215296
+   f_disk_b                      207     159       159  1.000  True           8      1191 / 2142       246016
+   f_haze_a                      170      39        39  0.518  True           8      1445 / 1445       247009
+   f_haze_b                      173      47        47  0.499  True           8      1496 / 1496       239121
+   single_box                    117      34        34  0.436  True           8       936 / 936        143641
+   single_disk                   111      28        28  0.610  True           8       888 / 888        115600
+   every mapping is the identity with score 1 (where supported): False; mapped / FRAME median 0.29 (min 0.13); unsupported self-matches: 0
+
+2. M3-6: precision / recall of 'same physical role' on the registered pairs
+   pair                                          | new (walker, new graph)                         | old (evidence_score, old graph)        | old* (old matcher, new graph)
+                                                 | mapped  with role  P      R      F1    score      | with role  P      R      F1           | with role  P      R      F1
+   box_over_box / box_over_box_test              |     36         36  1.000  0.293  0.453  0.449     |       133  0.872  0.913  0.892        |       130  0.869  0.919  0.893
+   box_over_box / box_over_box_haze              |     75         75  0.760  0.456  0.570  0.339     |       129  0.767  0.767  0.767        |       126  0.770  0.776  0.773
+   cylinder_over_box / cylinder_over_box_shift   |     52         52  0.808  0.256  0.389  0.300     |       181  0.746  0.789  0.767        |       173  0.751  0.793  0.772
+   f_box_a / f_box_b                             |     12         12  0.167  0.014  0.026  UNSUPP.   |       145  0.517  0.514  0.515        |       140  0.507  0.504  0.505
+   f_haze_a / f_haze_b                           |     30         26  0.192  0.046  0.075  0.152     |       129  0.519  0.609  0.561        |       126  0.508  0.593  0.547
+   f_disk_a / f_disk_b                           |     29         26  0.154  0.038  0.061  0.121     |       145  0.421  0.560  0.480        |       140  0.421  0.557  0.480
+   f_cyl_a / f_cyl_b                             |     30         30  0.067  0.017  0.027  0.153     |       147  0.361  0.431  0.393        |       140  0.357  0.424  0.388
+   single_disk / f_ctrl_disk                     |     19         14  0.714  0.119  0.204  0.213     |        79  0.810  0.762  0.785        |        79  0.810  0.762  0.785
+   single_box / f_ctrl_box                       |     41         40  0.525  0.259  0.347  0.252     |        90  0.678  0.753  0.713        |        88  0.682  0.741  0.710
+
+   the walker's seeds, by renderer truth (same role / another role / no role), and what it mapped
+   pair                                          seeds  right  wrong  no role   mapped / smaller FRAME   order rejections   budget spent
+   box_over_box / box_over_box_test                  8      8      0        0       36 / 157                  0             yes
+   box_over_box / box_over_box_haze                  5      2      3        0       75 / 171                 10             yes
+   cylinder_over_box / cylinder_over_box_shift       8      6      2        0       52 / 183                  3             yes
+   f_box_a / f_box_b                                 8      1      7        0       12 / 196                  2             yes
+   f_haze_a / f_haze_b                               8      0      8        0       30 / 170                  6             yes
+   f_disk_a / f_disk_b                               5      2      2        1       29 / 190                 10             no
+   f_cyl_a / f_cyl_b                                 5      0      5        0       30 / 165                 12             yes
+   single_disk / f_ctrl_disk                         1      1      0        0       19 / 111                  0             yes
+   single_box / f_ctrl_box                           8      3      5        0       41 / 116                 27             no
+
+   pairs where old and new differ in (precision, recall): 9 of 9
+   F1(new) - F1(old) on them: mean -0.414; new higher on 0, lower on 9
+   precision, mean over the 9 pairs: new 0.487, old 0.632; recall: new 0.166, old 0.678
+   precision alone: new higher on 2 pairs, lower on 7; recall alone: new higher on 0, lower on 9
+   THE PIN (mean > 0 and higher >= lower): RED
+
+   cost per pair (walker): signature similarities computed, median 1427 (budget median 1470) against a dense matrix of median 243033; frame pairs mapped, median 30 of a smaller frame of median 170

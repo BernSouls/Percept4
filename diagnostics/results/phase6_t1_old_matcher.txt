@@ -1,0 +1,10 @@
+[STAGE 6 / TRACK M] T1: the OLD matcher (evidence_score) on the stage-6 graphs, EVAL-75, both windows, paired against the stage-5 graphs
+   REPORT ONLY: no default is changed by this run; the walker is not used.
+
+  window full   n=75   stage-5 38/75 = 0.507   stage-6 38/75 = 0.507   gained 0, lost 0, predictions moved 0
+  window v1     n=75   stage-5 39/75 = 0.520   stage-6 39/75 = 0.520   gained 0, lost 0, predictions moved 0
+
+   per-query changes (a query whose argmax moved between the two graphs):
+     none: the stage-6 graph changes no argmax for this matcher on EVAL-75
+
+   (EVAL-75, in-sample for every decision of this work; reported, never selected on.  The split and harness are the repository's own: diagnostics/eth80_benchmark.py.)

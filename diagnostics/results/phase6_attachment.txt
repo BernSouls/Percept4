@@ -1,0 +1,95 @@
+[STAGE 6 / R1] attachment census, 79 graphs (4 references + 75 EVAL)
+admission radius 1.00 scales, ambiguity margin 0.50 scales; tangent agreement: parallel within 15 degrees, the next contender at least 15 degrees less so
+
+hosts: Contour 1965 (107 closed), PEAK_CHAIN 1569 (0 closed)
+ContourFragment detections carrying their own midpoint and chord direction: 1336 of 1336
+features with an orientation of their own: CONTOUR_PEAK 10306/10306, ContourFragment 0/1336, Corner 0/1085, EndStopped 0/4106, Orientation 4446/4446, RegionShape 0/1050
+host vertices: Contour median 2 (p10 2, p90 4; exactly two: 0.54), PEAK_CHAIN median 3 (p10 2, p90 11; exactly two: 0.33)
+
+A. outcome per feature and host kind (one attempt per feature detection per host kind), the rule in force
+   feature          host         features   known  several  unambig.  by tangent  ambiguous  no host   attached
+   CONTOUR_PEAK     Contour        10306       0        0      4423         564       1676     3643    0.484
+   CONTOUR_PEAK     PEAK_CHAIN     10306    8205        0       662         280        537      622    0.888
+   ContourFragment  Contour         1336       0        0       753           0        321      262    0.564
+   ContourFragment  PEAK_CHAIN      1336       0        0       509           0        293      534    0.381
+   Corner           Contour         1085       0        0       496           0        207      382    0.457
+   Corner           PEAK_CHAIN      1085     932        0        50           0         40       63    0.905
+   EndStopped       Contour         4106       0        0      2081           0        971     1054    0.507
+   EndStopped       PEAK_CHAIN      4106       0        0      1428           0       1057     1621    0.348
+   Orientation      Contour         4446    3266      631        18           0         24      507    0.881
+   Orientation      PEAK_CHAIN      4446       0        0      1375         304        532     2235    0.378
+   RegionShape      PEAK_CHAIN      1050    1050        0         0           0          0        0    1.000
+   ALL                             43608   13453      631     11795        1148       5658    10923    0.620
+
+A2. where the features that distance alone called ambiguous go
+   feature          host         ambiguous      under Amendment 2        under the rule in force (Amendment 3)
+                                 (distance)     by tangent  ambiguous    several named  by tangent  ambiguous
+   CONTOUR_PEAK     Contour          2240             564       1676                0         564       1676
+   CONTOUR_PEAK     PEAK_CHAIN        817             280        537                0         280        537
+   ContourFragment  Contour           321               0        321                0           0        321
+   ContourFragment  PEAK_CHAIN        293               0        293                0           0        293
+   Corner           Contour           207               0        207                0           0        207
+   Corner           PEAK_CHAIN         40               0         40                0           0         40
+   EndStopped       Contour           971               0        971                0           0        971
+   EndStopped       PEAK_CHAIN       1057               0       1057                0           0       1057
+   Orientation      Contour           655              46        609              631           0         24
+   Orientation      PEAK_CHAIN        836             304        532                0         304        532
+   RegionShape      PEAK_CHAIN          0               0          0                0           0          0
+   ALL                               7437            1194       6243              631        1148       5658
+   a GUESS was needed and could not be made: distance alone 7437 of 19232 (0.387, the several-named counted as ambiguous); Amendment 2: 6243 of 19232 (0.325); in force: 5658 of 18601 (0.304, the several-named are not guesses)
+
+A3. features that SEVERAL hosts of one kind name (recorded memberships)
+   feature          host         features   hosts naming it: 2 / 3 / 4 / 5+     at the END of every one   of all but one   best two angles under 15 deg apart
+   Orientation      Contour          631     295 /   307 /    29 /     0               525 (0.832)           104           0.927 (n 631)
+
+B. features attached to at least one host of either kind
+   feature          features   attached   share
+   CONTOUR_PEAK        10306      9551    0.927
+   ContourFragment      1336       983    0.736
+   Corner               1085      1055    0.972
+   EndStopped           4106      2775    0.676
+   Orientation          4446      4073    0.916
+   RegionShape          1050      1050    1.000
+   all                 22329     19487    0.873
+
+C. the measured axes (attached pairs; median / p10 / p90 and the share ABSENT)
+   feature          host         how          n       arc_end_dist            perp_dist               tangent_angle (deg)
+   CONTOUR_PEAK     Contour     by_tangent     564    0.19  0.00  0.44 ( 9%)    0.77  0.50  0.94 ( 0%)    3.75  3.75 11.25 ( 0%)
+   CONTOUR_PEAK     Contour     unambiguous   4423    0.23  0.00  0.45 ( 9%)    0.39  0.08  0.86 ( 0%)   11.25  3.75 33.75 ( 0%)
+   CONTOUR_PEAK     PEAK_CHAIN  by_tangent     280    0.02  0.00  0.39 ( 0%)    0.71  0.39  0.92 ( 0%)    6.87  0.00 14.05 ( 0%)
+   CONTOUR_PEAK     PEAK_CHAIN  known         8205    0.16  0.00  0.43 ( 0%)    0.00  0.00  0.00 ( 0%)   15.00  0.00 62.47 ( 0%)
+   CONTOUR_PEAK     PEAK_CHAIN  unambiguous    662    0.07  0.00  0.41 ( 0%)    0.52  0.25  0.86 ( 0%)   26.56  3.69 74.04 ( 0%)
+   ContourFragment  Contour     unambiguous    753    0.24  0.00  0.45 ( 8%)    0.39  0.08  0.83 ( 0%)   ABSENT (all)          
+   ContourFragment  PEAK_CHAIN  unambiguous    509    0.24  0.00  0.46 ( 0%)    0.19  0.03  0.61 ( 0%)   ABSENT (all)          
+   Corner           Contour     unambiguous    496    0.16  0.00  0.41 ( 7%)    0.33  0.00  0.83 ( 0%)   ABSENT (all)          
+   Corner           PEAK_CHAIN  known          932    0.31  0.11  0.47 ( 0%)    0.00  0.00  0.00 ( 0%)   ABSENT (all)          
+   Corner           PEAK_CHAIN  unambiguous     50    0.18  0.00  0.42 ( 0%)    0.27  0.08  0.79 ( 0%)   ABSENT (all)          
+   EndStopped       Contour     unambiguous   2081    0.25  0.00  0.44 ( 8%)    0.39  0.08  0.80 ( 0%)   ABSENT (all)          
+   EndStopped       PEAK_CHAIN  unambiguous   1428    0.21  0.00  0.45 ( 0%)    0.28  0.04  0.80 ( 0%)   ABSENT (all)          
+   Orientation      Contour     known         3266    0.00  0.00  0.46 ( 9%)    0.00  0.00  0.00 ( 0%)    7.50  0.00 15.00 ( 0%)
+   Orientation      Contour     known_several   1627    0.00  0.00  0.00 ( 5%)    0.00  0.00  1.25 ( 0%)    7.50  0.00 15.00 ( 0%)
+   Orientation      Contour     unambiguous     18    0.44  0.19  0.50 (17%)    0.88  0.88  0.88 ( 0%)   30.00 22.50 37.50 ( 0%)
+   Orientation      PEAK_CHAIN  by_tangent     304    0.16  0.00  0.43 ( 0%)    0.61  0.25  0.88 ( 0%)    4.70  2.29 11.88 ( 0%)
+   Orientation      PEAK_CHAIN  unambiguous   1375    0.19  0.00  0.45 ( 0%)    0.31  0.08  0.80 ( 0%)    8.94  2.80 37.18 ( 0%)
+   RegionShape      PEAK_CHAIN  known         1050    0.45  0.25  0.50 ( 0%)    0.07  0.01  0.26 ( 0%)   ABSENT (all)          
+
+D. edges (one per host node and feature node), the pooling rule applied
+   feature          host          edges  pooled | tangent: measured / never / lost | arc_end_dist: measured / never / lost | perp lost | ordinal lost
+   CONTOUR_PEAK     Contour       4434    451 |   4434 (1.000) /     0 /    0      |   3818 (0.861) /  400 /  216          |   273     |   157
+   CONTOUR_PEAK     PEAK_CHAIN    7997    874 |   7828 (0.979) /     0 /  169      |   7475 (0.935) /    0 /  522          |    41     |   430
+   ContourFragment  Contour        747      6 |      0 (0.000) /   747 /    0      |    683 (0.914) /   61 /    3          |     3     |     3
+   ContourFragment  PEAK_CHAIN     508      1 |      0 (0.000) /   508 /    0      |    507 (0.998) /    0 /    1          |     0     |     0
+   Corner           Contour        483     13 |      0 (0.000) /   483 /    0      |    443 (0.917) /   34 /    6          |     8     |     5
+   Corner           PEAK_CHAIN     957     25 |      0 (0.000) /   957 /    0      |    949 (0.992) /    0 /    8          |     0     |     8
+   EndStopped       Contour       1818    117 |      0 (0.000) /  1818 /    0      |   1613 (0.887) /  164 /   41          |    52     |    34
+   EndStopped       PEAK_CHAIN    1333     58 |      0 (0.000) /  1333 /    0      |   1306 (0.980) /    0 /   27          |    27     |    22
+   Orientation      Contour       4411    388 |   4411 (1.000) /     0 /    0      |   3957 (0.897) /  336 /  118          |    97     |   307
+   Orientation      PEAK_CHAIN    1640     37 |   1637 (0.998) /     0 /    3      |   1612 (0.983) /    0 /   28          |    20     |    26
+   RegionShape      PEAK_CHAIN    1049      1 |      0 (0.000) /  1049 /    0      |   1049 (1.000) /    0 /    0          |     0     |     0
+   ALL                           25377   1971 |  18310 (0.722) /  6895 /  172      |  23412 (0.923) /  995 /  970          |   521     |   992
+
+E. the ordinal (arc position), attachments: share per decile 0-0.1 ... 0.9-1.0; exactly 0; exactly 1
+   Contour     by geometry  n   8335 | 0.11 0.06 0.08 0.09 0.09 0.12 0.09 0.09 0.08 0.20 | =0 0.074 | =1 0.139
+   Contour     known        n   4893 | 0.40 0.01 0.05 0.02 0.04 0.10 0.03 0.04 0.01 0.30 | =0 0.395 | =1 0.296
+   PEAK_CHAIN  by geometry  n   4608 | 0.19 0.08 0.07 0.08 0.09 0.08 0.08 0.08 0.08 0.19 | =0 0.121 | =1 0.123
+   PEAK_CHAIN  known        n  10187 | 0.18 0.06 0.07 0.08 0.11 0.11 0.08 0.07 0.06 0.18 | =0 0.154 | =1 0.154

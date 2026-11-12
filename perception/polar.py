@@ -80,7 +80,13 @@ def polar_boundary_fragments(contours, frag_frac=0.35, kappa_cap=8.0, min_points
             rb = float(min(7, max(0, int(min(rr, 1.0) * 8.0))))
             tvr = abs(_axial_wrap_sf(math.atan2(p1[1]-p0[1], p1[0]-p0[0]) - th))
             vb = float(min(7, int(tvr / (math.pi / 2.0) * 8.0)))
+            # [STAGE 6 / R1] the chord direction itself (axial).  `tvr` below
+            # keeps only its ABSOLUTE difference from the radial angle, so
+            # theta and tvr leave two candidate tangents (theta +/- tvr); the
+            # attachment relation needs the one that was measured.
+            chord = math.atan2(p1[1]-p0[1], p1[0]-p0[0]) % math.pi
             out.append({"contour": ci, "frag": k, "mid": mid, "arc": arc, "kappa_n": kappa_n,
+                        "tangent": chord,
                         "theta": th, "r": rr, "bins": (kb, tb, rb, vb),
                         # [GRADED POPULATION] The CONTINUOUS values of the
                         # four graded slots, so the emitter can build the

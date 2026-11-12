@@ -60,7 +60,7 @@ from __future__ import annotations
 import hashlib
 import math
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 from scipy.ndimage import convolve as nd_convolve
@@ -268,6 +268,7 @@ def field_fingerprint() -> Tuple:
         _FIELD_THREADS,
         float(_p("ENDSTOP_ENERGY_K", 3.0)),
         float(_p("ENDSTOP_EPS_Q", 0.00595069462503979)),
+        _per_channel_discard(),
     )
 
 
@@ -425,6 +426,86 @@ def _interior_margin(border_margin_px: int, h: int, w: int) -> int:
     raw = max(0, int(border_margin_px))
     cap = int(0.5 * (1.0 - _FIELD_MIN_INTERIOR_FRAC) * min(int(h), int(w)))
     return max(0, min(raw, cap))
+
+
+def _per_channel_discard() -> bool:
+    """[STAGE 6 / 0b] Is the border discard applied PER spatial-frequency
+    channel?  Read live, so a run can switch it; it is part of the field
+    fingerprint, so no cache can hand one setting the other's field."""
+    return bool(getattr(P, "FIELD_BORDER_DISCARD_PER_CHANNEL", False))
+
+
+def _channel_half_supports(bank) -> List[int]:
+    """Half the size of each channel's OWN kernel, read off the bank.
+
+    `GaborBank.build_default` builds every channel at its own size
+    (2 * ceil(3 * sigma) + 1) and zero-pads it to the largest one, so
+    `bank.kernels.shape[-1] // 2` is the half-support of the COARSEST channel
+    only.  The own support is the extent of the non-zero block.
+    """
+    k = np.abs(np.asarray(bank.kernels))
+    full = int(k.shape[-1])
+    out: List[int] = []
+    for isf in range(int(k.shape[1])):
+        blk = k[:, isf].reshape((-1, full, full)).max(axis=0)
+        rows = np.nonzero(blk.max(axis=1) > 0.0)[0]
+        cols = np.nonzero(blk.max(axis=0) > 0.0)[0]
+        if rows.size == 0 or cols.size == 0:
+            out.append(full // 2)
+            continue
+        ext = max(int(rows.max() - rows.min()) + 1,
+                  int(cols.max() - cols.min()) + 1)
+        out.append(ext // 2)
+    return out
+
+
+def _channel_margins(bank, h: int, w: int) -> List[int]:
+    """[STAGE 6 / 0b] The border clearance of each channel: its OWN kernel's
+    half-support, never below the peak-extraction floor, capped like the
+    single margin (`_interior_margin`) so an interior survives."""
+    return [
+        _interior_margin(max(_PEAK_BORDER_MARGIN_PX, half), h, w)
+        for half in _channel_half_supports(bank)
+    ]
+
+
+def _channel_zones(margins: Sequence[int]) -> List[Tuple[int, int, List[int]]]:
+    """[STAGE 6 / 0b] The frame as nested ZONES of border distance.
+
+    A zone is `(lo, hi, channels)`: the pixels whose distance to the frame
+    border is in [lo, hi), and the channels whose own band ends at or before
+    `lo` (so they are valid on the whole zone).  The innermost zone has every
+    channel; each step outwards drops the channels whose kernel no longer
+    fits.  With margins (56, 37, 24, 16, 16):
+        [56, inf) all five | [37, 56) ch 1-4 | [24, 37) ch 2-4 | [16, 24) ch 3-4
+    """
+    ms = sorted({int(m) for m in margins}, reverse=True)
+    zones: List[Tuple[int, int, List[int]]] = []
+    hi = 1 << 30
+    for lo in ms:
+        chans = [c for c, m in enumerate(margins) if int(m) <= lo]
+        if chans:
+            zones.append((lo, hi, chans))
+        hi = lo
+    return zones
+
+
+def _only_channels(arr: np.ndarray, channels: Sequence[int]) -> np.ndarray:
+    """A copy of a (n_theta, n_sf, H, W) field with every channel NOT listed
+    set to zero on the WHOLE frame.  Whole-frame on purpose: a channel removed
+    only inside its band leaves a step at the band's edge, and the ridge
+    detector reads a step as a ridge (measured: 29 % of the peaks then sit
+    within 2 px of a band edge).  Removing it everywhere and keeping only the
+    zone's own pixels has no edge to read."""
+    a = np.asarray(arr)
+    keep = set(int(c) for c in channels)
+    if a.ndim != 4 or len(keep) == a.shape[1]:
+        return a
+    out = a.copy()
+    for isf in range(a.shape[1]):
+        if isf not in keep:
+            out[:, isf] = 0
+    return out
 
 
 def _get_bank(scale: float, bank: Optional[GaborBank] = None):
@@ -1172,6 +1253,7 @@ def extract_peaks(
     border_margin_px: int = 0,
     lum: Optional[np.ndarray] = None,   # accepted for API compatibility; unused
     raw_energy: Optional[np.ndarray] = None,
+    zone: Optional[Tuple[int, int]] = None,
 ) -> List[Dict]:
     """Peak extraction per A1.
 
@@ -1216,6 +1298,11 @@ def extract_peaks(
 
         `>=` the margin on both axes: a pixel exactly on the boundary stays.
         """
+        if zone is not None:
+            # [STAGE 6 / 0b] per-channel discard: keep the candidates of this
+            # zone of border distance only (see `_channel_zones`).
+            _d = min(t[1], H - 1 - t[1], t[2], W - 1 - t[2])
+            return zone[0] <= _d < zone[1]
         return m <= t[1] < H - m and m <= t[2] < W - m
 
     # [A5#14] ONE wavelength reader (float64, list-safe) for every caller.
@@ -1550,14 +1637,53 @@ def field_from_luminance(
     integration, endstop, integration_driving = integration_field(
         complex_, sfs, cocircular_wide=cocirc,
     )
-    curvature_signed, bend_angle = curvature_field(
-        integration, wavelength_mean, lum=lum)
-    peaks = extract_peaks(
-        integration, endstop, curvature_signed, bend_angle,
-        complex_, phase, sfs,
-        border_margin_px=_border_margin_px(bank),
-        raw_energy=complex_raw,
-    )
+    if _per_channel_discard():
+        # [STAGE 6 / 0b] PER-CHANNEL border discard.  The single margin is the
+        # half-support of the LARGEST kernel (56 px of a 256 px frame) applied
+        # to every channel.  Here the frame is cut into nested zones of border
+        # distance; in each zone the peaks are extracted from the channels
+        # whose own kernel fits there, by the unchanged extractor, and only
+        # the peaks that fall in the zone are kept.  One directional NMS over
+        # the union removes the doubles at the zone seams.
+        curvature_signed, bend_angle = curvature_field(
+            integration, wavelength_mean, lum=lum)
+        _all: List[Dict] = []
+        for _lo, _hi, _chans in _channel_zones(_channel_margins(bank, H, W)):
+            if len(_chans) == integration.shape[1]:
+                _integ, _curv, _bend = integration, curvature_signed, bend_angle
+            else:
+                _integ = _only_channels(integration, _chans)
+                _curv, _bend = curvature_field(_integ, wavelength_mean, lum=lum)
+            _all.extend(extract_peaks(
+                _integ, endstop, _curv, _bend, complex_, phase, sfs,
+                border_margin_px=_lo, raw_energy=complex_raw,
+                zone=(_lo, _hi),
+            ))
+        _dn = sorted(
+            ((float(p["integration_strength"]), int(p["y"]), int(p["x"]),
+              float(p["theta"]), k) for k, p in enumerate(_all)),
+            key=lambda t: (-t[0], t[1], t[2], t[3], t[4]))
+        _keep = {
+            (y, x) for (_v, y, x, _th) in _directional_nms(
+                [(v, y, x, th) for (v, y, x, th, _k) in _dn],
+                _PEAK_RIDGE_SPACING_FRAC * wavelength_mean,
+                _SPACING_PERP_FRAC * wavelength_mean)
+        }
+        peaks = []
+        _seen = set()
+        for _v, _y, _x, _th, _k in _dn:
+            if (_y, _x) in _keep and (_y, _x) not in _seen:
+                _seen.add((_y, _x))
+                peaks.append(_all[_k])
+    else:
+        curvature_signed, bend_angle = curvature_field(
+            integration, wavelength_mean, lum=lum)
+        peaks = extract_peaks(
+            integration, endstop, curvature_signed, bend_angle,
+            complex_, phase, sfs,
+            border_margin_px=_border_margin_px(bank),
+            raw_energy=complex_raw,
+        )
     result = {
         "simple": simple,
         "complex": complex_,

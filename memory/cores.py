@@ -126,6 +126,9 @@ _V2_EDGE_TYPES = frozenset({
     EdgeType.AMODAL_LINK, EdgeType.COCIRCULAR, EdgeType.PARALLEL,
     EdgeType.BORDER_OWNERSHIP_EDGE,
     EdgeType.CURVATURE_SIGN_CONTINUITY, EdgeType.SHARED_BOUNDARY,
+    # [STAGE 6] written at the v2 emission, between v2-tier nodes
+    EdgeType.BOUNDARY_ATTACHMENT, EdgeType.BOUNDARY_SUCCESSOR,
+    EdgeType.ILLUSORY_INDUCER,
 })
 
 _V4_EDGE_TYPES = frozenset({EdgeType.CURVE_CONTAINMENT, EdgeType.SYMMETRY})
