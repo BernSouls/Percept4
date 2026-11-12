@@ -1803,3 +1803,77 @@ rival guesses.  The pin was written from memory of the rule rather than from
 it.  It now pins the two invariants that are real (refusals are counted; what
 is written is measured) and says in its docstring which obvious third one is
 NOT an invariant.  499 pass.
+
+### 7.43 PHASE 7, THE CLEANUP.  AND THE NUMBER IT EXPOSED
+
+**Four switches read nowhere** (`ASSEMBLY_LABEL_ASSIST`, `B2_COS_ENABLED`,
+`FIELD_REGION_SOURCE`, `MASS_TIEBREAKER`): a grep of every `.py` outside
+`parameters/` finds the declaration and no reader.  MARKED DEAD in place, not
+deleted: this is an EXPORT checkout, so a reader may exist in the unexported
+original and a deleted constant would turn that read into a `NameError`.  The
+mark says exactly that, and says that nothing in this repository reads it.
+
+**The getattr fallbacks: 23 disagreed with their declarations, now 0.**  A
+static audit (ast, whole tree) of every `getattr(P, "NAME", default)`: 176
+agree, 0 disagree, 0 undeclared names remain.  The disagreements were real and
+several were large:
+
+    MATCHER_USE_POPULATION_DISTANCE   declared True     fell back False
+    LENS_POOL_NORMALIZE               declared True     fell back False
+    MATCHER_PREFILTER                 declared True     fell back False
+    MATCH_NULL_CALIBRATED             declared True     fell back False
+    MASS_LCB_GATE                     declared True     fell back False
+    POPULATION_CODING_ENABLED         declared True     fell back False
+    ASPECT_V3_ENABLED                 declared True     fell back False
+    COCIRCULAR_MAX_PATH_ANGLE         declared pi/6     fell back pi/3
+    BO_GRAVITY_SCALE                  declared 10.0     fell back 4.0
+    BO_CURVATURE_WEIGHT / BO_GRAVITY_WEIGHT  0.4/0.1    fell back 0.3/0.2
+    CONTOUR_CONTENT_MODE              declared "summary" fell back "full"
+    MATCHER_POP_DIST_COVERAGE_FLOOR   declared 1.0      fell back 0.5
+    + 10 whose fallback was `None` for a declared mapping/tuple
+
+Every one is aligned to the DECLARATION (the fallback now says what the tree
+declares), so no behaviour changed: the declared value was always in force,
+the fallback was dead text that disagreed.  Pinned by
+`tests_matcher/test_parameter_fallbacks.py` (two pins: every name read with a
+fallback is declared, and every fallback equals the declaration), so the tree
+cannot drift back.
+
+**Five names read with a fallback and declared NOWHERE** --
+`V2_MAX_CANDIDATES_PER_CATEGORY`, `BO_CALIBRATION_SLOPE`,
+`BO_CALIBRATION_INTERCEPT`, `TEXTURE_CALIBRATION`,
+`JUNCTION_ARM_CLUSTER_TOL`.  These were knobs that existed only inside the
+read: nothing outside the module could set them.  Each is now declared at the
+value its fallback already supplied (no behaviour change), and
+`TEXTURE_CALIBRATION` carries a module-level assert that the declaration and
+the code's literal fallback agree.
+
+**Stale docstrings.**  `relation_walker.walk`'s beam comment still said "the
+budget is shared by the beam, and the hypothesis the seed list was built for
+must not be starved" -- 7.22 made the budget per hypothesis.  Corrected, with
+the history kept rather than erased.
+
+**Dead code left by the ablations: none found.**  The D0-D5 ablation flags
+were set on the module at run time from `--ablate`; nothing was copied into the
+tree.  The Phase-2 and Phase-3 arms (`SEED_TOPOLOGICAL`,
+`ADMIT_RELATIVE` / `ADMIT_FLOOR_ON` / `ADMIT_MARGIN` / `ADMIT_FLOOR`) stay:
+they are measured arms whose defaults were fixed by a registered rule (7.31,
+7.32) and both are OFF.
+
+**THE NUMBER THIS EXPOSED, and it has to be stated.**  Re-running M3-6 on the
+cleaned tree gives mean F1(new) - F1(old) = **-0.219**, against the -0.274 the
+stage-6 record carries.  The pin is still RED (new higher on 0 of 9) and no
+default moves, but a number changed and the reason must be named:
+
+    seeds TOPOLOGICAL (the pre-7.31 default)   mean F1 difference -0.281
+    seeds MEASURED    (the 7.31 default)       mean F1 difference -0.219
+    seeds MEASURED + R back to the union form  mean F1 difference -0.219
+
+So the 0.062 is Phase 2's seed default, measured three ways: today's walker
+would have read -0.281 with the old seed rule and reads -0.219 with the one
+7.31 selected.  The Phase-4 R change moves nothing on this metric, which is
+worth knowing: R decides how a mapping is SCORED, and M3-6 scores the mapping
+by role, not by Q.  The -0.274 in the stage-6 record was the topological seed
+rule under a slightly different walker build; the pre-registered verdict is
+unchanged either way, and the number that belongs beside today's walker is
+-0.219.

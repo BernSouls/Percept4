@@ -1261,8 +1261,7 @@ class JunctionLens(HigherLens):
                 # nearly the same bearing still counted as two arms (a 2-arm
                 # corner scored as a 3-arm T). Tolerance is PROVISIONAL.
                 pairs = _arm_bearing_clusters(
-                    pairs, float(getattr(P, "JUNCTION_ARM_CLUSTER_TOL",
-                                         math.pi / 36.0)))
+                    pairs, float(P.JUNCTION_ARM_CLUSTER_TOL))
                 n_ang = len(pairs)
                 if n_ang < 2:
                     continue

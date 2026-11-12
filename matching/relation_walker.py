@@ -890,9 +890,10 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
     seen_prefix = set()
     # [Amendment 7.10] the beam's four seed sets: the first seed, two
     # intermediate prefixes and the whole seed list (fewer when fewer seeds).
-    # They are grown LARGEST FIRST: the budget is shared by the beam, and the
-    # hypothesis the seed list was built for must not be starved by its own
-    # alternatives.
+    # They are grown LARGEST FIRST.  (Before 7.22 the budget was shared by the
+    # beam and this order kept the intended hypothesis from being starved by
+    # its own alternatives; since 7.22 each hypothesis gets the whole budget,
+    # so the order is kept for determinism, not for starvation.)
     n_seed = len(seeds)
     ks = sorted({1, max(1, n_seed // 3), max(1, (2 * n_seed) // 3), n_seed},
                 reverse=True) if n_seed else [0]

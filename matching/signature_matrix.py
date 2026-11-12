@@ -276,7 +276,7 @@ def signature_similarity_matrix(
     from core.registries import get_population_axes
 
     blocks_ok = (
-        bool(getattr(P, "POPULATION_CODING_ENABLED", False))
+        bool(getattr(P, "POPULATION_CODING_ENABLED", True))
         and T._SIMILARITY_IMPL in (T._similarity_gaussian,
                                    T._similarity_linear)
     )

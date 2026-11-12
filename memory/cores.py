@@ -1164,7 +1164,7 @@ def _mcs_accumulate(
             c_by_type[info[0]].append(nid)
 
     common_types = sorted(set(q_by_type.keys()) & set(c_by_type.keys()))
-    if not common_types and getattr(P, "MATCHER_PREFILTER", False):
+    if not common_types and getattr(P, "MATCHER_PREFILTER", True):
         # [U31 / S2c] EXACT rejection, not an approximation: node mass and
         # edge mass are both accumulated THROUGH the correspondence, so with
         # no shared lens type the score is identically 0.0.  The dense
@@ -2132,7 +2132,7 @@ def evidence_score(
         # the null-calibrated choice. This RETIRES the historical 0.85 floor
         # (EVIDENCE_ALPHA_CONJUNCTION) on the default path; that constant is
         # retained only for the legacy A/B path (MATCH_NULL_CALIBRATED=False).
-        if getattr(P, "MATCH_NULL_CALIBRATED", False):
+        if getattr(P, "MATCH_NULL_CALIBRATED", True):
             alpha = float(getattr(P, "EVIDENCE_CONJUNCTION_FLOOR", 0.0))
         else:
             alpha = getattr(P, "EVIDENCE_ALPHA_CONJUNCTION", 0.85)

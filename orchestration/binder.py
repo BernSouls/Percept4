@@ -3163,7 +3163,7 @@ class Binder:
         pairs_seen = 0
         max_pairs = P.MAX_CONTOUR_PAIRS_PER_STEP
         n_theta = P.ORIENTATION_N_THETA
-        tol = getattr(P, "COCIRCULAR_MAX_PATH_ANGLE", math.pi / 3.0)
+        tol = getattr(P, "COCIRCULAR_MAX_PATH_ANGLE", math.pi / 6.0)
         for i in range(len(orient_dets)):
             a = orient_dets[i]
             pa = anchor_positions.get(a.alpha)

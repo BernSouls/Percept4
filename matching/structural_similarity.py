@@ -188,7 +188,7 @@ def _best_cross_type_match(
     if not candidates:
         candidates.append((mapped_src, mapped_dst, et))
 
-    use_conf = bool(getattr(P, "EDGE_MATCH_USE_CONFIDENCE", use_confidence))
+    use_conf = bool(getattr(P, "EDGE_MATCH_USE_CONFIDENCE", use_confidence))  # the CALLER's value is the fallback
     best = 0.0
     for _ck in sorted(candidates, key=lambda t: (t[2].name, t[0], t[1])):
         _p_b = _lookup_edge_params(params_b, _ck[0], _ck[1], _ck[2])
@@ -231,7 +231,7 @@ def _pair_edge_sim_typed(
         _p_b = ep_b
         if et_a in UNDIRECTED_EDGE_TYPES and (a1 < a2) != (b1 < b2):
             _p_b = reverse_edge_params(_p_b) if not isinstance(_p_b, EdgeParamsMixture) else _p_b.flipped_copy()
-        use_conf = bool(getattr(P, "EDGE_MATCH_USE_CONFIDENCE", use_confidence))
+        use_conf = bool(getattr(P, "EDGE_MATCH_USE_CONFIDENCE", use_confidence))  # the CALLER's value is the fallback
         return float(polymorphic_edge_similarity(ep_a, _p_b, use_confidence=use_conf))
     return 0.0
 
@@ -726,7 +726,7 @@ def _max_weight_bipartite_matching(
             candidates_set.add((i, j, w))
 
     # Phase 2: noise-floor union.
-    theta_sim = float(getattr(P, "THETA_SIM", 0.7))
+    theta_sim = float(P.THETA_SIM)
     for i in range(n):
         for w, j in positive_entries[i]:
             if w >= theta_sim:
@@ -1157,7 +1157,7 @@ def organization_alignment(
     results = [_refine(_assign(_sig_w)), _refine(_assign(_prof_w))]
     results.sort(key=lambda r: -r[2])
     mapping, qvals, _tot = results[0]
-    theta = float(getattr(P, "THETA_SIM", 0.7))
+    theta = float(P.THETA_SIM)
     matches = {u: q for u, q in qvals.items() if q >= theta}
     return mapping, matches
 

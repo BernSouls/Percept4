@@ -394,7 +394,7 @@ def build_corpus(views: Sequence[Any],
 
 def corpus_from_parameters() -> TierCorpus:
     """The shipped corpus: the constants measured on the dev corpus."""
-    raw = getattr(P, "ASPECT_TIER_CORPUS", None) or {}
+    raw = P.ASPECT_TIER_CORPUS or {}
     try:
         d = dict(raw)
     except Exception:
@@ -653,7 +653,7 @@ SUB_TERMS: Tuple[str, ...] = (SUB_FORMATION, SUB_READOUT, SUB_COHESION,
 
 
 def _tol(sub: str) -> float:
-    table = getattr(P, "ASPECT_TIER_TOLERANCE", None) or {}
+    table = P.ASPECT_TIER_TOLERANCE or {}
     try:
         return float(dict(table).get(sub, 0.0))
     except Exception:
@@ -740,7 +740,7 @@ def tier_similarity(A: Any, B: Any, corpus: Optional[TierCorpus] = None,
         return None
     ma = _cached(A, corpus)
     mb = _cached(B, corpus)
-    weights = getattr(P, "ASPECT_TIER_WEIGHTS", None) or {}
+    weights = P.ASPECT_TIER_WEIGHTS or {}
     try:
         wtab = dict(weights)
     except Exception:

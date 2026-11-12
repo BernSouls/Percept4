@@ -89,8 +89,10 @@ from scipy.optimize import least_squares
 
 try:                                    # the documented leaf: constants only
     import parameters as P
+    from parameters import TEXTURE_CALIBRATION
 except Exception:                        # pragma: no cover - degenerate tree
     P = None  # type: ignore
+    TEXTURE_CALIBRATION = None  # type: ignore
 
 __all__ = [
     "SLANT_CENTERS_DEG",
@@ -1521,6 +1523,9 @@ _TEXTURE_CAL_CACHE: Optional[Dict[str, Any]] = None
 #: The fallback calibration, used only when the fitted file is missing.  It
 #: says "no monotone correction, wide everywhere": an uncalibrated texture cue
 #: is still evidence, but weak evidence, and it must not pretend otherwise.
+#: [STAGE 7 / PHASE 7] Declared in `parameters` (TEXTURE_CALIBRATION) so the
+#: fallback can be overridden from outside; this literal is only the default
+#: the declaration carries.
 _TEXTURE_CAL_FALLBACK: Dict[str, Any] = dict(
     anisotropy_gate=0.20,
     anisotropy_max=0.60,
@@ -1528,6 +1533,8 @@ _TEXTURE_CAL_FALLBACK: Dict[str, Any] = dict(
     slant_width=dict(measured=[45.0], sigma=[15.0]),
     tilt_width=dict(anisotropy=[0.20], sigma=[20.0]),
 )
+assert TEXTURE_CALIBRATION is None or TEXTURE_CALIBRATION == _TEXTURE_CAL_FALLBACK, (
+    "the texture-calibration declaration and the code's fallback have drifted apart")
 
 
 def texture_calibration() -> Dict[str, Any]:
@@ -1554,7 +1561,7 @@ def texture_calibration() -> Dict[str, Any]:
     except Exception:
         got = None
     if got is None:
-        got = getattr(P, "TEXTURE_CALIBRATION", None)
+        got = P.TEXTURE_CALIBRATION if P is not None else TEXTURE_CALIBRATION
     _TEXTURE_CAL_CACHE = dict(got) if isinstance(got, dict) \
         else dict(_TEXTURE_CAL_FALLBACK)
     return _TEXTURE_CAL_CACHE
