@@ -72,6 +72,13 @@ _FRONTEND_SOURCE_FILES = ("orchestration/binder.py",
                           "concept_graph.py",
                           "diagnostics/eth80_frontend.py")
 
+#: Parameters the FRONT END's output depends on that a diagnostic may set at
+#: run time (`eth80_benchmark.run_config`).  They are part of the cache key.
+_FRONTEND_SWITCHES = ("FIELD_BORDER_DISCARD_PER_CHANNEL",
+                      "BINDER_COMPLETE_POSITION_MAP",
+                      "GRAPH_STAGE6_RELATIONS",
+                      "ATTACHMENT_EVERY_NAMED_HOST")
+
 _log = logging.getLogger("eth80_frontend")
 
 
@@ -106,14 +113,39 @@ class ImageGraph:
 # cache key
 # --------------------------------------------------------------------------
 
-_SOURCE_DIGEST: Optional[str] = None
+#: switch suffix -> digest.  Keyed by that suffix, not by a single value: `run_config` changes the switches between two runs in ONE
+#: process, and a one-slot memo would hand the second arm the first arm's key.
+_SOURCE_DIGEST: Dict[str, str] = {}
+
+
+def switch_suffix() -> str:
+    """The part of the cache key that is NOT the source bytes: the values of
+    `_FRONTEND_SWITCHES` and the run's `PERCEPT_SET` override."""
+    import parameters as _P
+
+    import _bootstrap
+    return "".join("%s=%r;" % (n, getattr(_P, n, "<missing>"))
+                   for n in _FRONTEND_SWITCHES) + "set=" + _bootstrap.switch_overrides_key()
 
 
 def frontend_source_digest() -> str:
-    """sha256 over every front-end source file (path + bytes)."""
-    global _SOURCE_DIGEST
-    if _SOURCE_DIGEST is not None:
-        return _SOURCE_DIGEST
+    """sha256 over every front-end source file (path + bytes) AND the
+    parameters the front end behaves under.
+
+    [T1 FIX] The bytes were never enough: `run_config` sets
+    `parameters.GRAPH_STAGE6_RELATIONS` (and its two siblings) at run time,
+    inside the process, so the source tree is byte-identical while the graph
+    the front end emits is not.  The digest therefore also folds in the
+    declared value of every parameter in `_FRONTEND_SWITCHES`, plus any
+    `PERCEPT_SET` override, so a graph built under one set can never be served
+    under another.  (Measured before the fix: the stage-6 arm re-used the
+    stage-5 graphs -- T1 reported 0 of 75 predictions moved and identical
+    edge counts for both arms.  After it: apple's reference has 1,297 edges
+    with the switches off and 4,379 with them on.)
+    """
+    _key = switch_suffix()
+    if _key in _SOURCE_DIGEST:
+        return _SOURCE_DIGEST[_key]
     h = hashlib.sha256()
     paths: List[str] = []
     for d in _FRONTEND_SOURCE_DIRS:
@@ -126,8 +158,20 @@ def frontend_source_digest() -> str:
         h.update(os.path.relpath(p, ROOT).replace(os.sep, "/").encode())
         with open(p, "rb") as fh:
             h.update(hashlib.sha256(fh.read()).digest())
-    _SOURCE_DIGEST = h.hexdigest()
-    return _SOURCE_DIGEST
+    h.update(_key.encode())
+    _SOURCE_DIGEST[_key] = h.hexdigest()
+    return _SOURCE_DIGEST[_key]
+
+
+def digest_with_switches(source_digest: str) -> str:
+    """A source-only digest re-keyed under the CURRENT switch values.
+
+    Used only to find cache entries written when the digest was the bytes
+    alone (`diagnostics/_cache_carry.py`): it turns an old key into the key
+    the same graphs would get today.  Not part of any measurement.
+    """
+    h = hashlib.sha256((source_digest + "|" + switch_suffix()).encode())
+    return h.hexdigest()
 
 
 # --------------------------------------------------------------------------

@@ -2,12 +2,81 @@
  "full": {
   "n": 75,
   "stage5": 0.5066666666666667,
-  "stage6": 0.5066666666666667,
-  "gained": [],
-  "lost": [],
-  "pred_moved": [],
+  "stage6": 0.5333333333333333,
+  "gained": [
+   "car1-090-068.png",
+   "car1-090-090.png",
+   "car11-090-045.png",
+   "car11-090-202.png",
+   "car11-090-248.png",
+   "car11-090-270.png",
+   "car11-090-338.png",
+   "car2-068-270.png",
+   "car2-090-068.png",
+   "car2-090-158.png",
+   "car3-066-207.png",
+   "car3-066-297.png",
+   "car3-068-090.png",
+   "car3-090-068.png",
+   "car5-066-333.png",
+   "car5-090-112.png",
+   "cup5-090-292.png"
+  ],
+  "lost": [
+   "apple1-066-117.png",
+   "car1-045-270.png",
+   "car5-035-135.png",
+   "horse1-045-180.png",
+   "horse1-090-045.png",
+   "horse1-090-090.png",
+   "horse2-022-180.png",
+   "horse2-090-248.png",
+   "horse2-090-270.png",
+   "horse3-035-045.png",
+   "horse3-068-270.png",
+   "horse3-090-112.png",
+   "horse4-045-090.png",
+   "horse4-066-027.png",
+   "horse4-090-292.png"
+  ],
+  "pred_moved": [
+   "apple1-066-117.png",
+   "apple1-090-202.png",
+   "apple1-090-292.png",
+   "car1-045-270.png",
+   "car1-090-068.png",
+   "car1-090-090.png",
+   "car2-068-270.png",
+   "car2-090-068.png",
+   "car2-090-158.png",
+   "car3-066-207.png",
+   "car3-066-297.png",
+   "car3-068-090.png",
+   "car3-090-068.png",
+   "car11-090-045.png",
+   "car11-090-202.png",
+   "car11-090-248.png",
+   "car11-090-270.png",
+   "car11-090-338.png",
+   "car5-035-135.png",
+   "car5-066-333.png",
+   "car5-090-112.png",
+   "cup5-090-292.png",
+   "horse1-045-180.png",
+   "horse1-090-045.png",
+   "horse1-090-090.png",
+   "horse2-022-180.png",
+   "horse2-090-248.png",
+   "horse2-090-270.png",
+   "horse3-035-045.png",
+   "horse3-068-270.png",
+   "horse3-090-112.png",
+   "horse4-045-090.png",
+   "horse4-066-027.png",
+   "horse4-090-292.png"
+  ],
   "stage5_correct": 38,
-  "stage6_correct": 38
+  "stage6_correct": 40
  },
  "v1": {
   "n": 75,
@@ -18,5 +87,14 @@
   "pred_moved": [],
   "stage5_correct": 39,
   "stage6_correct": 39
+ },
+ "_digests": {
+  "stage5": [
+   "b4a1bcc0e9e4c083"
+  ],
+  "stage6": [
+   "71a7be72c8d740ed"
+  ],
+  "v1_identical": true
  }
 }

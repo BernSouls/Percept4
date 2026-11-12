@@ -22,6 +22,7 @@ import os
 import pickle
 import subprocess
 import sys
+from typing import List
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -46,6 +47,19 @@ def digest_of_revision(rev: str) -> str:
                               cwd=ROOT, check=True).stdout
         h.update(hashlib.sha256(data).digest())
     return h.hexdigest()
+
+
+def _source_keys(rev_digest: str, img_digest: str, n_steps: int) -> List[str]:
+    """Every cache path the OLD graphs may sit at, newest convention first.
+
+    Before the switch fix the digest was the source bytes alone; after it the
+    digest folds in the switch values (`eth80_frontend.switch_suffix`).  A
+    revision is unknown here, so both shapes are looked for and the one that
+    exists is used -- never a guess about which is right.
+    """
+    out = [_key(fe.digest_with_switches(rev_digest), img_digest, n_steps),
+           _key(rev_digest, img_digest, n_steps)]
+    return out
 
 
 def _key(digest: str, img_digest: str, n_steps: int) -> str:
@@ -99,9 +113,11 @@ def main(argv=None) -> int:
     checks = [(c, r, 1) for c, r in sample]
     checks += [(c, r, n) for n in routes if n > 1 for c, r in sample[: a.verify_multi]]
     for cls, rel, n in checks:
-        f = _key(old, img_digest(cls, rel), n)
-        if not os.path.isfile(f):
+        cands = [f for f in _source_keys(old, img_digest(cls, rel), n)
+                 if os.path.isfile(f)]
+        if not cands:
             raise SystemExit("no cached graph of %s for %s (steps %d)" % (a.rev, rel, n))
+        f = cands[0]
         with open(f, "rb") as fh:
             cached = pickle.load(fh)
         fresh = fe.build_graph(fe._load_rgb(fe.image_path(cls, rel)),
@@ -115,8 +131,9 @@ def main(argv=None) -> int:
     for cls, rel in entries:
         d = img_digest(cls, rel)
         for n in routes:
-            src, dst = _key(old, d, n), _key(new, d, n)
-            if not os.path.isfile(src):
+            dst = _key(new, d, n)
+            src = next((f for f in _source_keys(old, d, n) if os.path.isfile(f)), None)
+            if src is None:
                 missing += 1
                 continue
             if not os.path.isfile(dst):

@@ -1132,3 +1132,77 @@ added (T1: 0 of 75 queries changed).  So the stage-6 relations are real and
 repeated, and the shipped matcher does not read them.  That is the honest
 summary of the stage: the roads were built and they are there; the walker that
 would use them loses to the matcher on the metric that was fixed in advance.
+
+### 7.28 THE T1 RESULT IN 7.25 WAS NOT A MEASUREMENT.  THE CACHE KEY DID NOT CARRY THE SWITCHES, AND T1 IS RE-RUN
+
+Found by checking the review's own question -- "the front-end digest is in the
+cache key, so why would the two arms be the same?" -- against the stored files
+instead of against the intent.
+
+**WHAT WAS WRONG.**  `eth80_frontend.graph_for` keys the graph cache on
+`frontend_source_digest()`, and that was sha256 over the front-end SOURCE BYTES
+only.  `eth80_benchmark.run_config` sets the front-end switches on
+`parameters` INSIDE the process and forks the scoring pool -- the source tree
+never changes.  So both arms of T1 keyed to the same cache entry: whatever the
+first arm built, the second arm was served.  The stored files say it plainly:
+`phase6_t1_stage5_full_full.json` and `phase6_t1_stage6_full_full.json` carry
+the SAME `frontend_digest` (5b32547b) and the SAME first-pair numbers (208
+matched edges, score 0.079634), although one arm claims all four stage-6
+switches ON and the other all four OFF.  7.25's T1 row -- "38/75 both, 0 of 75
+argmaxes moved" -- was one graph measured twice.  Recorded here rather than
+deleted: it is the second time in this stage that a flat reading was accepted
+without first asking whether the two arms could differ.
+
+**THE FIX (in the code, not in a test).**
+
+  1. `frontend_source_digest()` now folds in `switch_suffix()`: the value of
+     every parameter in `_FRONTEND_SWITCHES`
+     (FIELD_BORDER_DISCARD_PER_CHANNEL, BINDER_COMPLETE_POSITION_MAP,
+     GRAPH_STAGE6_RELATIONS, ATTACHMENT_EVERY_NAMED_HOST) and the run's
+     `PERCEPT_SET` override.  The memo is keyed by that suffix, not by one
+     value: `run_config` changes the switches between two runs in ONE process,
+     and a one-slot memo would have handed the second arm the first arm's key.
+  2. `phase6_t1_old_matcher.py` now REFUSES TO REPORT when the two arms share a
+     front-end digest, prints both digests and the first pair's matched-edge
+     count, and states whether the v1 window is literally the same graph in the
+     two arms.
+  3. `MATCH_RELATION_WALKER` was in T1's `STAGE6_FLAGS`.  The script calls
+     `evidence_score` directly (`score_pair`), so the flag changed no score --
+     but it is the one flag an arm must not touch and the arm's own header read
+     "the old matcher" while the switch said the walker was on.  Removed from
+     the tuple; the arms now differ in the three front-end switches only.
+  4. `diagnostics/_cache_carry.py` looked the old entries up under the
+     bytes-only key, which after the fix carries nothing.  It now tries both
+     key shapes and uses the one that exists; it refuses on the first sample
+     that differs, as before.
+  5. Pin: `test_the_graph_cache_key_carries_the_switch_values`
+     (tests_matcher/test_stage6_relations.py) -- one switch, two values, one
+     process, two keys.  Verified RED against a reverted digest (the pin fails
+     with the switch suffix removed from the hash) and GREEN with it.
+
+**THE RE-RUN (results/phase6_t1_old_matcher.txt, same script, same split,
+nothing else changed).**  The arms are now different graphs: digests
+b4a1bcc0e9e4c083 (stage-5) and 71a7be72c8d740ed (stage-6); the first query
+against its own class has 208 matched edges in the stage-5 arm and 362 in the
+stage-6 arm.
+
+  window full:  stage-5 38/75 = 0.507, stage-6 40/75 = 0.533,
+                gained 17, lost 15, predictions moved 34 of 75
+  window v1:    stage-5 39/75 = 0.520, stage-6 39/75 = 0.520,
+                gained 0, lost 0, moved 0 -- and here the zero is REAL: the
+                two arms' v1 windows are identical graph for graph, because
+                the stage-6 relations are written to V1 nodes and v1 keeps
+                only V1 nodes.  The stage-6 structure shows in the full
+                window, where it moves 34 of 75 answers and nets +2.
+
+**WHAT THIS CHANGES IN THE STAGE'S SUMMARY.**  Not the verdict -- M3-6 stays
+RED, no default changes, and the walker still loses to the shipped matcher --
+but the sentence in 7.27 "the shipped matcher does not read them (T1: 0 of 75
+queries changed)" is WITHDRAWN: it reads them enough to move 34 answers and
+change net +2 correct.  The relations are real, they repeat (7.27), and
+adding them to the shipped matcher's graph is a wash on accuracy with a large
+reshuffle underneath.  That is the honest summary, and it is a weaker claim
+than the one 7.25 made.
+
+No constant, threshold or default was touched to produce any of the numbers
+above; the only code changes are the cache key and the T1 script's own guards.

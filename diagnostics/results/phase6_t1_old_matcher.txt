@@ -1,10 +1,46 @@
 [STAGE 6 / TRACK M] T1: the OLD matcher (evidence_score) on the stage-6 graphs, EVAL-75, both windows, paired against the stage-5 graphs
    REPORT ONLY: no default is changed by this run; the walker is not used.
+   stage-5 front-end digest b4a1bcc0e9e4c083   stage-6 front-end digest 71a7be72c8d740ed   (the two arms were built from different graphs; the script refuses to report otherwise)
+   first query vs its own class:  stage-5 208 matched edges, stage-6 362 matched edges
+   the v1 window is IDENTICAL graph for graph in the two arms, so a flat v1 row is a real zero (the stage-6 relations are written to V1 nodes, and v1 keeps only V1 nodes; the full window is where they show)
 
-  window full   n=75   stage-5 38/75 = 0.507   stage-6 38/75 = 0.507   gained 0, lost 0, predictions moved 0
+  window full   n=75   stage-5 38/75 = 0.507   stage-6 40/75 = 0.533   gained 17, lost 15, predictions moved 34
   window v1     n=75   stage-5 39/75 = 0.520   stage-6 39/75 = 0.520   gained 0, lost 0, predictions moved 0
 
    per-query changes (a query whose argmax moved between the two graphs):
-     none: the stage-6 graph changes no argmax for this matcher on EVAL-75
+     [full] apple1-066-117.png     stage-5 -> apple   stage-6 -> car   true apple
+     [full] apple1-090-202.png     stage-5 -> horse   stage-6 -> cup   true apple
+     [full] apple1-090-292.png     stage-5 -> car   stage-6 -> cup   true apple
+     [full] car1-045-270.png       stage-5 -> car   stage-6 -> cup   true car
+     [full] car1-090-068.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] car1-090-090.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] car2-068-270.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] car2-090-068.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] car2-090-158.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] car3-066-207.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] car3-066-297.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] car3-068-090.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] car3-090-068.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] car11-090-045.png      stage-5 -> horse   stage-6 -> car   true car
+     [full] car11-090-202.png      stage-5 -> horse   stage-6 -> car   true car
+     [full] car11-090-248.png      stage-5 -> horse   stage-6 -> car   true car
+     [full] car11-090-270.png      stage-5 -> horse   stage-6 -> car   true car
+     [full] car11-090-338.png      stage-5 -> horse   stage-6 -> car   true car
+     [full] car5-035-135.png       stage-5 -> car   stage-6 -> cup   true car
+     [full] car5-066-333.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] car5-090-112.png       stage-5 -> horse   stage-6 -> car   true car
+     [full] cup5-090-292.png       stage-5 -> horse   stage-6 -> cup   true cup
+     [full] horse1-045-180.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse1-090-045.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse1-090-090.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse2-022-180.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse2-090-248.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse2-090-270.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse3-035-045.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse3-068-270.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse3-090-112.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse4-045-090.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse4-066-027.png     stage-5 -> horse   stage-6 -> car   true horse
+     [full] horse4-090-292.png     stage-5 -> horse   stage-6 -> car   true horse
 
    (EVAL-75, in-sample for every decision of this work; reported, never selected on.  The split and harness are the repository's own: diagnostics/eth80_benchmark.py.)
