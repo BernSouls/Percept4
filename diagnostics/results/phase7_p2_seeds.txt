@@ -1,0 +1,43 @@
+[STAGE 7 / PHASE 2] THE SEEDS, nine registered pairs, against renderer truth
+   'right' = the seed's two ends have the SAME PHYSICAL ROLE (the M3-6
+   criterion); RECALL is against the true correspondent pairs in the smaller
+   frame, so a rule cannot win by seeding fewer.  Default rule fixed in 7.31.
+
+   pair                           rule           seeds  right  wrong P(seed)  R(seed)   ceiling mapped      P      R
+   box_over_box / box_over_box_test topological        8      7      1   0.875    0.051       136    109  0.944  0.750
+                                  measured           2      2      0   1.000    0.015       136    109  0.944  0.750
+
+   box_over_box / box_over_box_haze topological        8      4      4   0.500    0.029       139     95  0.832  0.568
+                                  measured           2      2      0   1.000    0.014       139     92  0.804  0.532
+
+   cylinder_over_box / cylinder_over_box_shift topological        5      5      0   1.000    0.028       177    118  0.921  0.593
+                                  measured           2      2      0   1.000    0.011       177    118  0.921  0.593
+
+   f_box_a / f_box_b              topological        8      1      7   0.125    0.006       155     37  0.686  0.155
+                                  measured           8      2      6   0.250    0.013       155     59  0.464  0.168
+
+   f_haze_a / f_haze_b            topological        8      0      8   0.000    0.000       117     46  0.311  0.120
+                                  measured           8      2      6   0.250    0.017       117     51  0.120  0.051
+
+   f_disk_a / f_disk_b            topological        8      2      5   0.286    0.018       113     29  0.370  0.088
+                                  measured           8      4      4   0.500    0.035       113     41  0.450  0.159
+
+   f_cyl_a / f_cyl_b              topological        8      1      7   0.125    0.008       124     41  0.220  0.073
+                                  measured           8      3      5   0.375    0.024       124     45  0.378  0.137
+
+   single_disk / f_ctrl_disk      topological        8      4      4   0.500    0.042        95     45  0.676  0.263
+                                  measured           5      3      1   0.750    0.032        95     58  0.780  0.411
+
+   single_box / f_ctrl_box        topological        8      3      5   0.375    0.034        87     41  0.244  0.115
+                                  measured           8      5      3   0.625    0.057        87     43  0.767  0.379
+
+   MEANS OVER THE NINE PAIRS
+   rule           seeds  right  wrong P(seed)  R(seed)  mapped       P       R
+   topological      7.7    3.0    4.6   0.421    0.024    62.3   0.578   0.303
+   measured         5.7    2.8    2.8   0.639    0.024    68.4   0.625   0.353
+
+   THE DEFAULT RULE (7.31): MEASURED is default iff its seed precision is
+   higher on at least 6 of the 9 pairs.
+   MEASURED higher on 8, lower on 0, equal on 1
+   VERDICT: MEASURED becomes the default
+   WHY: the topological rule's tokens (the far end's degree and closedness are part of the token) pick seeds that are wrong far more often: mean role precision 0.421 against 0.639, 4.6 wrong seeds per pair against 2.8

@@ -1296,6 +1296,13 @@ BO_CORNER_FLIP_MIN_TURN: float = 0.5
 # (many members away) still pairs.
 BO_PARTNER_RADIUS_SCALE: float = 2.0
 BO_PARTNER_EXCLUDE_NEIGHBOURS: int = 2
+# [STAGE 7 / PHASE 7] The fallback of the ownership calibration
+# (perception/fragment_ownership.py), used only when the fitted calibration
+# file is missing.  Read with an undeclared name before this: slope 1 and
+# intercept 0 say "no monotone correction", which is what the code did, but
+# the values could not be set from the tree.
+BO_CALIBRATION_SLOPE: float = 1.0
+BO_CALIBRATION_INTERCEPT: float = 0.0
 # Enclosure (interior-field difference across the edge) is sampled at several
 # scales, in multiples of INTERIOR_PROBE_PX. This replaces a separate
 # surroundedness weight with a multi-scale enclosure term.
@@ -1350,6 +1357,12 @@ ACTIVATION_EMISSION_ENABLED: bool = False
 # v2 channel shares MAX_CANDIDATES_PER_CHANNEL exactly as the legacy one
 # does (see diagnostics/_u30_phase2_plan.md).
 EDGE_TAXONOMY_V2: bool = False
+# [STAGE 7 / PHASE 7] Per-category candidate cap for the v2 channel, read in
+# `Binder._channel_process` callers.  It was read with an undeclared name and
+# an empty-dict fallback (`getattr(P, "V2_MAX_CANDIDATES_PER_CATEGORY", {})`),
+# so nothing in the tree could set it.  Declared as the empty mapping the
+# read already falls back to: no behaviour changes, the knob is now real.
+V2_MAX_CANDIDATES_PER_CATEGORY: Dict[str, int] = {}
 
 
 # --- SURFACE_GROUPING binder (v8) ---
@@ -2085,6 +2098,12 @@ ANCHOR_FALLBACK_MAX_DIST = 1.5
 
 N_EDGE = 5  # Minimum edge mass for traversability
 EDGE_COST = 1.0  # Unit cost
+# [STAGE 7 / PHASE 7] DEAD: declared, read NOWHERE in the tree (grep of
+# every .py outside parameters/).  Kept, not deleted: this tree is an
+# EXPORT checkout, so a reader may live in the unexported original, and a
+# deleted constant would turn that read into a NameError.  Nothing in this
+# repository reads it; if you are here because you need it, it was never
+# wired.
 MASS_TIEBREAKER = True  # Prefer higher total mass among equal-cost
 MAX_EXPANSIONS = 10000  # A* expansion bound
 THETA_TARGET_CONTAINMENT = 0.95
@@ -3000,6 +3019,10 @@ COCIRCULAR_R_MAX = 200.0
 COCIRCULAR_SIGMA_KAPPA = 0.15
 COCIRCULAR_SEARCH_RADIUS = 8.0
 COCIRCULAR_MAX_PATH_ANGLE: float = math.pi / 6.0
+# [STAGE 7 / PHASE 7] `lenses/v2.py` reads JUNCTION_ARM_CLUSTER_TOL with a
+# fallback of pi/36 and NO declaration anywhere: the knob existed only in the
+# call site.  Declared at the value the fallback already supplied.
+JUNCTION_ARM_CLUSTER_TOL: float = math.pi / 36.0
 PARALLEL_THETA_TOL = 0.15
 PARALLEL_MIN_OFFSET = 0.5
 PARALLEL_MAX_OFFSET = 5.0
@@ -3068,6 +3091,12 @@ LENS_POOL_NORMALIZE: bool = True
 LENS_POOL_PRIOR_MASS: float = 1.0
 
 
+# [STAGE 7 / PHASE 7] DEAD: declared, read NOWHERE in the tree (grep of
+# every .py outside parameters/).  Kept, not deleted: this tree is an
+# EXPORT checkout, so a reader may live in the unexported original, and a
+# deleted constant would turn that read into a NameError.  Nothing in this
+# repository reads it; if you are here because you need it, it was never
+# wired.
 # --- [B2c] Front-end two-component cross-orientation pool -------------------
 B2_COS_ENABLED: bool = False
 B2_COS_ALPHA: float = 0.5
@@ -3145,6 +3174,12 @@ COCIRCULAR_WAVELENGTHS: float = 4.0
 # DARK (not silently alive). [ROUND 11 / O4]
 BINOCULAR_DISPARITY_FROM_Z: bool = False
 
+# [STAGE 7 / PHASE 7] DEAD: declared, read NOWHERE in the tree (grep of
+# every .py outside parameters/).  Kept, not deleted: this tree is an
+# EXPORT checkout, so a reader may live in the unexported original, and a
+# deleted constant would turn that read into a NameError.  Nothing in this
+# repository reads it; if you are here because you need it, it was never
+# wired.
 # --- [W1] Entity source for the Shape/identity lenses ----------------------
 # True  -> entities come from FIELD regions built on PEAK_CHAINs
 #          (perception/chain_regions.py). No segmenter, no boundary tracer.
@@ -3431,6 +3466,12 @@ ASSEMBLY_EPISODE_MIN_SUPPORT: int = 2
 # Minimum member-set overlap for two live concepts to be recorded as competing
 # assemblies (the overlap-link cache).
 ASSEMBLY_OVERLAP_MIN: float = 0.25
+# [STAGE 7 / PHASE 7] DEAD: declared, read NOWHERE in the tree (grep of
+# every .py outside parameters/).  Kept, not deleted: this tree is an
+# EXPORT checkout, so a reader may live in the unexported original, and a
+# deleted constant would turn that read into a NameError.  Nothing in this
+# repository reads it; if you are here because you need it, it was never
+# wired.
 # Label members MAY assist activation/completion during the build/test phase.
 # DECLARED CHEAT: every number produced while a label member is present is
 # tagged "label-assisted".

@@ -1,0 +1,35 @@
+[STAGE 7 / PHASE 5] THE SHIPPED MATCHER'S ABSENCE BIAS, EVAL-75, both windows
+   p_r = share of queries whose argmax is reference r; e_r = r's share of the four
+   references' edges, per query, averaged (the four e_r sum to 1); B = max_r |p_r - e_r|.
+   The criterion was fixed in 7.34: (i) B < 0.10, (ii) rank(p) == rank(e).
+
+   window full
+     form        acc    preds (of 75)                B      rho   criterion
+     core       0.453     0  p=0.00 e=0.38         18  p=0.24 e=0.25         27  p=0.36 e=0.24         30  p=0.40 e=0.13         0.376  -1.00   fail
+     symmetric  0.453     7  p=0.09 e=0.38         32  p=0.43 e=0.25         24  p=0.32 e=0.24         12  p=0.16 e=0.13         0.283  -0.20   fail
+       per-class hits: apple cor->0  car cor->7  cup cor->15  horse cor->12   |   apple sym->6  car sym->13  cup sym->14  horse sym->1
+
+   window v1
+     form        acc    preds (of 75)                B      rho   criterion
+     core       0.480     1  p=0.01 e=0.34         11  p=0.15 e=0.25         24  p=0.32 e=0.27         39  p=0.52 e=0.14         0.385  -0.80   fail
+     symmetric  0.520     6  p=0.08 e=0.34         32  p=0.43 e=0.25         25  p=0.33 e=0.27         12  p=0.16 e=0.14         0.264  -0.40   fail
+       per-class hits: apple cor->1  car cor->5  cup cor->14  horse cor->16   |   apple sym->6  car sym->15  cup sym->15  horse sym->3
+
+   THE CRITERION, AS REGISTERED
+     core form        passes on both windows: False   (B 0.376 / 0.385; rho -1.00 / -0.80)
+     symmetric form   passes on both windows: False   (B 0.283 / 0.264; rho -0.20 / -0.40)
+     accuracy change from the symmetric form: full +0.000, v1 +0.040
+
+   THE DEFAULT RULE (7.34): symmetric becomes the default iff it meets the
+   criterion on BOTH windows AND does not lower accuracy.  VERDICT: NO CHANGE: the core form stays the default
+
+   THE FINDING BEHIND THE CRITERION.  Under the core form p_r and e_r are
+   ANTI-correlated on both windows (rho -1.00 / -0.80): the reference with the
+   fewest edges is predicted most often and the one with the most edges least.
+   That is what an absence term with a REFERENCE-side denominator does -- a big
+   reference has more edges the correspondence fails to cover, so it is punished
+   for being big.  The symmetric form counts the query side too, which is the
+   same size whoever the reference is: it moves rho towards 0 (-0.20 / -0.40)
+   and it does NOT reach the registered bar, so by 7.34 the default does not
+   change.  The bias is real and the symmetric form only halves it: reported, no
+   default flipped, and the design question left where 7.34 put it.

@@ -574,7 +574,7 @@ def _across_anchor_pool(
         run_cell.append(key)
         grid[key].append(r)
 
-    normalize = bool(getattr(P, "LENS_POOL_NORMALIZE", False))
+    normalize = bool(getattr(P, "LENS_POOL_NORMALIZE", True))
     prior = float(getattr(P, "LENS_POOL_PRIOR_MASS", 1.0))
 
     # --- the neighbour runs of every run, in INDEX order ------------------

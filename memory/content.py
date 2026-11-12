@@ -385,7 +385,7 @@ def content_signature(
             return None
         if len(sigma.quantized) != 7 + getattr(P, "CONTOUR_N_SEQ", 20):
             return None
-        if getattr(P, "CONTOUR_CONTENT_MODE", "full") == "summary":
+        if getattr(P, "CONTOUR_CONTENT_MODE", 'summary') == "summary":
             return TypedSignature(
                 kind="CANONICAL",
                 class_="CONTOUR_CONTENT",

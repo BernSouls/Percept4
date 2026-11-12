@@ -996,3 +996,39 @@ def test_a_terminator_with_two_near_equal_parents_writes_nothing(params):
     assert edges == []
     assert b.diagnostics["stage6_attachment"]["line_termination|ambiguous_parent"] == 1
     assert (1, 2) in run(apart, [term, near, far])[0]                    # a clear nearest is kept
+
+
+# --------------------------------------------------------------------------
+# THE CACHE KEY.  A switch is not source bytes, and a diagnostic sets the
+# switches INSIDE the process (eth80_benchmark.run_config): if the key does not
+# carry their values, the second arm of a paired run is served the first arm's
+# graphs and reports "nothing moved" for a change it never built.
+# --------------------------------------------------------------------------
+
+def test_the_graph_cache_key_carries_the_switch_values(params):
+    """PIN (T1).  Two arm values of one front-end switch -- same source bytes,
+    same image, same process -- must key to two different cache entries.  The
+    committed T1 run did not: both arms recorded the same `frontend_digest`
+    and the same 208 matched edges, and the run reported 0 of 75 predictions
+    moved because it had measured one graph twice."""
+    # the front end lives in diagnostics/, which is not on the pins' path
+    diag = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "diagnostics")
+    if diag not in sys.path:
+        sys.path.insert(0, diag)
+    import eth80_frontend as fe
+
+    params(GRAPH_STAGE6_RELATIONS=False)
+    off = fe.frontend_source_digest()
+    params(GRAPH_STAGE6_RELATIONS=True)
+    on = fe.frontend_source_digest()
+    assert off != on
+
+    # the same value twice is the same key (the digest is cached, not random)
+    assert fe.frontend_source_digest() == on
+
+    # and the suffix that separates them names the switch and the value
+    params(GRAPH_STAGE6_RELATIONS=False)
+    assert "GRAPH_STAGE6_RELATIONS=False" in fe.switch_suffix()
+    params(GRAPH_STAGE6_RELATIONS=True)
+    assert "GRAPH_STAGE6_RELATIONS=True" in fe.switch_suffix()

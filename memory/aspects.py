@@ -722,7 +722,7 @@ def match_views(
     """
     if mode == "legacy":
         mode = None
-    elif mode is None and not bool(getattr(P, "ASPECT_V3_ENABLED", False)):
+    elif mode is None and not bool(getattr(P, "ASPECT_V3_ENABLED", True)):
         mode = None
     else:
         return [], match_views_v2(A, B, mode or "full")
@@ -1177,7 +1177,7 @@ def _texture2_similarity(A: ViewRecord, B: ViewRecord) -> Optional[float]:
 
 def _group_nulls() -> Dict[str, float]:
     """Each group's own corpus null (measured, label-free)."""
-    raw = getattr(P, "ASPECT_V3_GROUP_NULL", None)
+    raw = P.ASPECT_V3_GROUP_NULL
     if not raw:
         return {}
     try:
@@ -1483,7 +1483,7 @@ class AspectGraph:
         """
         if mode == "legacy":
             return AspectGraph._legacy_resonance(A, B)
-        if mode is not None or bool(getattr(P, "ASPECT_V3_ENABLED", False)):
+        if mode is not None or bool(getattr(P, "ASPECT_V3_ENABLED", True)):
             arm = mode or "full"
             if arm in _V3_MODES:
                 return resonance_v3(A, B, arm)

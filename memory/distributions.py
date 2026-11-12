@@ -131,7 +131,7 @@ def _mass_from_counts(pos_count, neg_count, n_pos, n_neg, disc, prior,
     _content_discriminative_filter, _mass_for_key, and the two extension
     mass helpers): optional RULE K2-LCB gate (dark flag, live read so tests
     can toggle without reimport) followed by _shared_mass."""
-    if getattr(P, "MASS_LCB_GATE", False):
+    if getattr(P, "MASS_LCB_GATE", True):
         if not _lcb_beats_chance(pos_count, neg_count, n_pos, n_neg):
             return 0.0
     return _shared_mass(disc, prior, exponent)

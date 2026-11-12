@@ -1,0 +1,193 @@
+{
+ "carrier": {
+  "n": 15927,
+  "median": 40.47027494015039,
+  "p90": 45.00408674557255,
+  "under15": 0.45451120738368805,
+  "under30": 0.48439756388522637
+ },
+ "carrier_turned": {
+  "n": 15927,
+  "median": 49.529725059849625,
+  "p90": 90.0,
+  "under15": 0.02511458529541031,
+  "under30": 0.05324292082626986
+ },
+ "stream2": {
+  "n": 1531,
+  "median": 90.0,
+  "p90": 90.0,
+  "under15": 0.0032658393207054214,
+  "under30": 0.003919007184846506
+ },
+ "frag_raw": {
+  "n": 236,
+  "median": 90.0,
+  "p90": 90.0,
+  "under15": 0.0,
+  "under30": 0.0
+ },
+ "frag_chord": {
+  "n": 268,
+  "median": 90.0,
+  "p90": 90.0,
+  "under15": 0.0,
+  "under30": 0.0
+ },
+ "outcomes": {
+  "box_over_box": {
+   "known": 121,
+   "known_several": 2,
+   "unambiguous": 104,
+   "by_tangent": 12,
+   "ambiguous": 20,
+   "no_host": 94
+  },
+  "box_over_box_haze": {
+   "known": 120,
+   "known_several": 0,
+   "unambiguous": 109,
+   "by_tangent": 9,
+   "ambiguous": 5,
+   "no_host": 107
+  },
+  "box_over_box_test": {
+   "known": 108,
+   "known_several": 2,
+   "unambiguous": 102,
+   "by_tangent": 8,
+   "ambiguous": 10,
+   "no_host": 102
+  },
+  "cylinder_over_box": {
+   "known": 117,
+   "known_several": 12,
+   "unambiguous": 92,
+   "by_tangent": 4,
+   "ambiguous": 24,
+   "no_host": 116
+  },
+  "cylinder_over_box_shift": {
+   "known": 133,
+   "known_several": 11,
+   "unambiguous": 109,
+   "by_tangent": 8,
+   "ambiguous": 38,
+   "no_host": 79
+  },
+  "disk_on_box": {
+   "known": 76,
+   "known_several": 7,
+   "unambiguous": 130,
+   "by_tangent": 7,
+   "ambiguous": 30,
+   "no_host": 126
+  },
+  "f_box_a": {
+   "known": 150,
+   "known_several": 0,
+   "unambiguous": 148,
+   "by_tangent": 9,
+   "ambiguous": 11,
+   "no_host": 78
+  },
+  "f_box_b": {
+   "known": 139,
+   "known_several": 6,
+   "unambiguous": 120,
+   "by_tangent": 9,
+   "ambiguous": 44,
+   "no_host": 87
+  },
+  "f_ctrl_box": {
+   "known": 76,
+   "known_several": 3,
+   "unambiguous": 76,
+   "by_tangent": 0,
+   "ambiguous": 12,
+   "no_host": 84
+  },
+  "f_ctrl_disk": {
+   "known": 58,
+   "known_several": 0,
+   "unambiguous": 134,
+   "by_tangent": 0,
+   "ambiguous": 7,
+   "no_host": 94
+  },
+  "f_cyl_a": {
+   "known": 116,
+   "known_several": 9,
+   "unambiguous": 104,
+   "by_tangent": 9,
+   "ambiguous": 34,
+   "no_host": 74
+  },
+  "f_cyl_b": {
+   "known": 108,
+   "known_several": 12,
+   "unambiguous": 235,
+   "by_tangent": 4,
+   "ambiguous": 167,
+   "no_host": 75
+  },
+  "f_disk_a": {
+   "known": 76,
+   "known_several": 4,
+   "unambiguous": 106,
+   "by_tangent": 4,
+   "ambiguous": 32,
+   "no_host": 109
+  },
+  "f_disk_b": {
+   "known": 83,
+   "known_several": 2,
+   "unambiguous": 108,
+   "by_tangent": 5,
+   "ambiguous": 30,
+   "no_host": 121
+  },
+  "f_haze_a": {
+   "known": 119,
+   "known_several": 4,
+   "unambiguous": 106,
+   "by_tangent": 6,
+   "ambiguous": 21,
+   "no_host": 76
+  },
+  "f_haze_b": {
+   "known": 119,
+   "known_several": 3,
+   "unambiguous": 100,
+   "by_tangent": 1,
+   "ambiguous": 17,
+   "no_host": 78
+  },
+  "single_box": {
+   "known": 92,
+   "known_several": 0,
+   "unambiguous": 131,
+   "by_tangent": 9,
+   "ambiguous": 3,
+   "no_host": 43
+  },
+  "single_disk": {
+   "known": 79,
+   "known_several": 0,
+   "unambiguous": 135,
+   "by_tangent": 1,
+   "ambiguous": 9,
+   "no_host": 23
+  }
+ },
+ "totals": {
+  "known": 1890,
+  "known_several": 77,
+  "unambiguous": 2149,
+  "by_tangent": 105,
+  "ambiguous": 514,
+  "no_host": 1566
+ },
+ "ambiguous_share": 0.08157435327725758,
+ "tangent_share": 0.016664021583875574
+}

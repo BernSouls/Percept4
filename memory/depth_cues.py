@@ -374,7 +374,7 @@ def measure(view: Any) -> DepthMeasures:
 
 def _tol(cue: str) -> float:
     """The cue's tolerance (corpus-derived; see parameters)."""
-    table = getattr(P, "ASPECT_DEPTH_TOLERANCE", None) or {}
+    table = P.ASPECT_DEPTH_TOLERANCE or {}
     try:
         return float(dict(table).get(cue, 0.0))
     except Exception:
@@ -407,7 +407,7 @@ def cue_similarity(a: DepthMeasures, b: DepthMeasures, cue: str) -> Optional[flo
 
 def admitted_cues() -> Tuple[str, ...]:
     """The cues that passed their own repeatability gate (parameters)."""
-    raw = getattr(P, "ASPECT_DEPTH_CUES", None) or ()
+    raw = P.ASPECT_DEPTH_CUES or ()
     try:
         return tuple(str(c) for c in raw)
     except Exception:
@@ -425,7 +425,7 @@ def depth_similarity(A: Any, B: Any) -> Optional[float]:
     mb = _measures(B)
     if ma is None or mb is None:
         return None
-    weights = getattr(P, "ASPECT_DEPTH_WEIGHTS", None) or {}
+    weights = P.ASPECT_DEPTH_WEIGHTS or {}
     num = 0.0
     den = 0.0
     for cue in admitted_cues():

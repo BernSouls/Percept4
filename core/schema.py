@@ -1637,7 +1637,7 @@ class EdgeParams:
             if _axes is None:
                 _axes = U30_EDGE_POPULATION_AXES.get(self.class_)
             _base = None
-            if (getattr(P, "MATCHER_USE_POPULATION_DISTANCE", False)
+            if (getattr(P, "MATCHER_USE_POPULATION_DISTANCE", True)
                     and self.class_ in U30_EDGE_UNIT_TABLE
                     and self.population and other.population):
                 # [U31 / S2b] The graded-distance metric.  Identity slots are
@@ -1652,7 +1652,7 @@ class EdgeParams:
                     self.population, other.population, _units,
                     agg=str(getattr(P, "MATCHER_POP_DIST_AGG", "mean")),
                     coverage_floor=float(getattr(
-                        P, "MATCHER_POP_DIST_COVERAGE_FLOOR", 0.5)),
+                        P, "MATCHER_POP_DIST_COVERAGE_FLOOR", 1.0)),
                 )
                 if _dist_sim is not None:
                     _base = _dist_sim

@@ -509,17 +509,17 @@ HIGHER_LENS_NAMES: Tuple[str, ...] = (
     "TextureBoundary", "Surface", "RegionShape", "IllusoryContour",
 )
 
-BO_CURVATURE_WEIGHT = getattr(P, "BO_CURVATURE_WEIGHT", 0.30)
+BO_CURVATURE_WEIGHT = getattr(P, "BO_CURVATURE_WEIGHT", 0.4)
 
 BO_TEXTURE_WEIGHT = getattr(P, "BO_TEXTURE_WEIGHT", 0.30)
 
 BO_COLOR_WEIGHT = getattr(P, "BO_COLOR_WEIGHT", 0.20)
 
-BO_GRAVITY_WEIGHT = getattr(P, "BO_GRAVITY_WEIGHT", 0.20)
+BO_GRAVITY_WEIGHT = getattr(P, "BO_GRAVITY_WEIGHT", 0.1)
 
 BO_CUE_SCALE = getattr(P, "BO_CUE_SCALE", 2.0)
 
-BO_GRAVITY_SCALE = getattr(P, "BO_GRAVITY_SCALE", 4.0)
+BO_GRAVITY_SCALE = getattr(P, "BO_GRAVITY_SCALE", 10.0)
 
 BO_TEXTURE_BIN_MAX = getattr(P, "BO_TEXTURE_BIN_MAX", 9.0)
 

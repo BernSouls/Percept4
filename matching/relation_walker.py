@@ -94,9 +94,43 @@ SMALL_FRAME_PRODUCT: int = 1000
 #: exactly the pre-registered walker; a diagnostic may set one False to report
 #: which mechanism moved which number.  Nothing in the pipeline sets them.
 #: ---------------------------------------------------------------------------
-#: D1: seeds from topological tokens (False: the Amendment-4 rule, seeds by
-#: relations that agree within one bin)
-SEED_TOPOLOGICAL: bool = True
+#: ---------------------------------------------------------------------------
+#: [STAGE 7 / PHASE 3] ADMISSION BY STRENGTH.  Pre-registered in 7.32, BEFORE
+#: the run.  A proposal's own agreement (`_agreement`, one value per proposal)
+#: is compared with the best agreement offered by ANY rival on the same node
+#: when it is popped.  Both arms are OFF until the pre-registered default rule
+#: (7.32) names one, so this adds nothing to the behaviour until then.
+#: ---------------------------------------------------------------------------
+#: Arm A, relative only: admit within this much of the best rival agreement.
+#: ONE BIN, of four -- the widest tolerance that still separates two proposals
+#: by more than the quantisation unit the walker declares elsewhere
+#: (BIN_TOLERANCE = 1.0).  The quantity is declared in BINS because that is the
+#: unit 7.32 fixed it in; `_agreement` already divides by CONTRADICTION_MARGIN,
+#: so `_admitted` converts (one bin = 1/4 of the agreement scale).  The first
+#: run of Phase 3 compared 1.0 of AGREEMENT against agreements that live in
+#: [0, 1], i.e. a margin the width of the whole scale, and Arm A could not
+#: reject a single proposal -- that run is in the report, superseded.
+ADMIT_RELATIVE: bool = False
+ADMIT_MARGIN: float = 1.0        # in BINS
+#: Arm B: Arm A AND an absolute floor.  0.5 = agreeing within 2 of the 4 bins on
+#: every shared axis; the smallest floor STRICTER than the node gate the
+#: pipeline already applies (NODE_FLOOR = 0.30).
+ADMIT_FLOOR_ON: bool = False
+ADMIT_FLOOR: float = 0.5
+#: THE SEED RULE.  [STAGE 7 / PHASE 2, pre-registration 7.31]  True: seeds from
+#: topological tokens (D1).  False: the rule D1 replaced, seeds by relations
+#: that agree within one bin.
+#:
+#: DEFAULT IS False -- THE MEASURED RULE -- and the reason is measured, not
+#: chosen: on the nine registered pairs, against renderer truth (same physical
+#: role, the M3-6 criterion), the topological rule seeds at precision 0.421
+#: (3.0 right, 4.6 wrong per pair) and the measured rule at 0.639 (2.8 right,
+#: 2.8 wrong), with the mapping that grows from them reaching role F1 0.383 and
+#: 0.444.  The pre-registered rule (7.31) was "measured becomes the default iff
+#: its seed precision is higher on at least 6 of the 9 pairs"; it was higher on
+#: 8, lower on 0, equal on 1.  diagnostics/results/phase7_p2_seeds.txt.
+#: The topological rule is KEPT behind this flag, unchanged.
+SEED_TOPOLOGICAL: bool = False
 #: D2: only a contradiction past the margin vetoes
 CONTRADICTION_VETO: bool = True
 #: D3: the node gate relative to the node's best rival (False: the floor alone)
@@ -380,8 +414,15 @@ class WalkResult:
     order_rejections: int = 0
     gate_rejections: int = 0
     contradicts: int = 0
+    #: [STAGE 7 / PHASE 3] candidates POPPED from the proposal heap (the fan-out)
+    pops: int = 0
+    #: [STAGE 7 / PHASE 3] proposals rejected by an admission arm
+    admission_rejections: int = 0
     #: the terms of the Amendment-7 objective of this mapping
     terms: Dict[str, Any] = field(default_factory=dict)
+    #: [7.33 (a)] Q * |M| / min(frame_q, frame_r), the score that can arbitrate
+    #: across node sets.  REPORTED ONLY: nothing in the pipeline selects on it.
+    score_for_class: float = 0.0
     #: the hypotheses of the beam: seed count, mapped, Q
     beam: List[Dict[str, Any]] = field(default_factory=list)
     #: every graded signature similarity this walk PAID for, by pair
@@ -498,6 +539,26 @@ def _node_gate(sim: Optional[float], best: float) -> bool:
     if sim is None or sim <= NODE_FLOOR:
         return False
     return sim >= best - NODE_MARGIN if GATE_RELATIVE else True
+
+
+def _admitted(a: Optional[float], best: float) -> bool:
+    """[STAGE 7 / PHASE 3] an admission arm's verdict on one proposal.
+
+    `a` is the proposal's own agreement (its evidence), `best` the best any
+    rival of the same query node has offered.  Arm A allows a proposal within
+    ADMIT_MARGIN of the best; Arm B also demands the absolute floor.  A
+    proposal with NO agreement at all (an order proposal) is admitted: the arms
+    filter on evidence, they do not require it, which is the pre-registered
+    scope (7.32).
+    """
+    if a is None:
+        return True
+    # ADMIT_MARGIN is in BINS; agreement is in [0, 1] with 1 = 0 bins apart
+    if a < best - ADMIT_MARGIN / CONTRADICTION_MARGIN:
+        return False
+    if ADMIT_FLOOR_ON and a < ADMIT_FLOOR:
+        return False
+    return True
 
 
 def _seeds(gq: "_Index", gr: "_Index", sim: _Sim,
@@ -651,6 +712,10 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
     support: Dict[Tuple[int, int], Dict[Tuple[int, int], Tuple[float, bool]]] = {}
     via: Dict[Tuple[int, int], List[Tuple]] = {}
     heap: List[Tuple] = []
+    #: [STAGE 7 / PHASE 3] the agreement each proposal carried, by pair, and the
+    #: best agreement any rival of a QUERY node has offered yet
+    agreement: Dict[Tuple[int, int], float] = {}
+    best_agree: Dict[int, float] = {}
 
     def propose(u: int, v: int, sup: Tuple[int, int], slack: float, how: Tuple,
                 measured: bool = True) -> None:
@@ -663,6 +728,15 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
         sup_d = support.setdefault((u, v), {})
         _record_support(sup_d, sup, slack, measured)          # 7.19
         via.setdefault((u, v), []).append(how)
+        if measured and sup is not None:
+            # [PHASE 3] the agreement this proposal carries: `slack` is
+            # 1 - agreement for a measured proposal.  An ORDER proposal carries
+            # no measurement and is therefore not ranked against the arms.
+            a = 1.0 - float(slack)
+            if a > agreement.get((u, v), -1.0):
+                agreement[(u, v)] = a
+            if a > best_agree.get(u, -1.0):
+                best_agree[u] = a
         heapq.heappush(heap, _serve_key(how, len(sup_d), _measured_slack(sup_d), s,
                                         gq.key[u], gr.key[v], u, v))
 
@@ -763,6 +837,7 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
 
     while heap:
         _tier, _neg, _slack_sum, _nsim, _ku, _kv, u, v = heapq.heappop(heap)
+        out.pops += 1
         if u in map_q or v in map_r or (u, v) in rejected:
             continue
         sup_d = support.get((u, v))
@@ -771,6 +846,10 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
         s = sim(u, v)
         if not _node_gate(s, best.get(u, 0.0)):
             out.gate_rejections += 1
+            continue
+        if ADMIT_RELATIVE and not _admitted(agreement.get((u, v)), best_agree.get(u, 0.0)):
+            out.admission_rejections += 1
+            rejected.add((u, v))
             continue
         if contradicted(u, v):
             out.contradicts += 1
@@ -811,9 +890,10 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
     seen_prefix = set()
     # [Amendment 7.10] the beam's four seed sets: the first seed, two
     # intermediate prefixes and the whole seed list (fewer when fewer seeds).
-    # They are grown LARGEST FIRST: the budget is shared by the beam, and the
-    # hypothesis the seed list was built for must not be starved by its own
-    # alternatives.
+    # They are grown LARGEST FIRST.  (Before 7.22 the budget was shared by the
+    # beam and this order kept the intended hypothesis from being starved by
+    # its own alternatives; since 7.22 each hypothesis gets the whole budget,
+    # so the order is kept for determinism, not for starvation.)
     n_seed = len(seeds)
     ks = sorted({1, max(1, n_seed // 3), max(1, (2 * n_seed) // 3), n_seed},
                 reverse=True) if n_seed else [0]
@@ -844,6 +924,10 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
         hypotheses[0].terms = objective({}, gq, gr, lambda u, v: 0.0)
         beam_cost += hyp_res.examined
     res.examined += beam_cost
+    # [STAGE 7 / PHASE 3] the fan-out and the arm's rejections are paid by the
+    # HYPOTHESES, so they are summed over the beam like the similarity bill.
+    res.pops = sum(getattr(h, "pops", 0) for h in hypotheses)
+    res.admission_rejections = sum(getattr(h, "admission_rejections", 0) for h in hypotheses)
     # [Amendment 7.11] the choice among the beam's hypotheses
     best = _choose(hypotheses)
     # the reported walk is the best hypothesis, with the shared cost counts
@@ -853,8 +937,10 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
                      budget_exhausted=res.budget_exhausted,
                      order_rejections=best.order_rejections,
                      gate_rejections=best.gate_rejections,
-                     contradicts=best.contradicts, terms=best.terms)
+                     contradicts=best.contradicts, terms=best.terms,
+                     pops=res.pops, admission_rejections=res.admission_rejections)
     _score(out, gq, gr, lambda u, v: 1.0)
+    out.score_for_class = score_for_class(out.terms, out.frame_q, out.frame_r)
     out.beam = [{"seeds": len(h.seeds), "mapped": len(h.mapping), "q": h.terms["q"],
                  "order_rejections": h.order_rejections,
                  "examined": h.examined} for h in hypotheses]
@@ -891,6 +977,11 @@ def objective(mapping: Dict[int, int], gq: "_Index", gr: "_Index",
     # union of 7.0 cannot be a set union of edge keys.  It is counted: (edges
     # with at least one end in M) + (edges with at least one end in the image
     # of M) - (edges with both ends mapped, the P candidates).
+    #
+    # [STAGE 7 / PHASE 4(b), Amendments 7.33 and 7.39] THIS COUNT IS NO LONGER
+    # THE DENOMINATOR.  It is kept and reported: it is the union form every
+    # stage-6 number was stated under.  The relation denominator is now the
+    # QUERY's own relation mass over its whole frame (`r_frame`, below).
     n_q_any = n_r_any = 0
     for s_, d_, name in gq.edges:
         if s_ in m and d_ in m:
@@ -933,15 +1024,45 @@ def objective(mapping: Dict[int, int], gq: "_Index", gr: "_Index",
                     hits += 1
             a_mass += hits / len(finer)
 
+    # [7.39] the query's own relation mass, both ends in the FRAME: a node the
+    # mapping does not reach is a MISSED relation, not an absent one.  Selected
+    # by the closed-sub-mapping test, where the union form let a closed region
+    # score 8 of 22 cases at or above the whole mapping and this form did not.
+    frame_q = set(gq.frame)
+    r_frame = sum(1 for s_, d_, _n in gq.edges if s_ in frame_q and d_ in frame_q)
+
     num = W_NODE * s_node + W_RELATION * (p_mass + a_mass)
     # Amendment 7.8: the attribute units are in the denominator too, the same
     # (mapped pair, lens type) units the attribute mass is summed over, so the
     # objective stays in [0, 1].
-    den = W_NODE * len(m) + W_RELATION * (r_union + a_units)
-    jac = (p_mass / r_union) if r_union else 0.0
+    den = W_NODE * len(m) + W_RELATION * (r_frame + a_units)
+    jac = (p_mass / r_frame) if r_frame else 0.0
     return {"q": (num / den) if den > 0 else 0.0, "mapped": len(m),
-            "S": s_node, "P": p_mass, "A": a_mass, "R": r_union,
-            "A_units": a_units, "p_candidates": p_candidates, "jaccard": jac}
+            "S": s_node, "P": p_mass, "A": a_mass, "R": r_frame,
+            "A_units": a_units, "p_candidates": p_candidates, "jaccard": jac,
+            "R_union": r_union}
+
+
+def score_for_class(terms: Dict[str, Any], frame_q: int, frame_r: int) -> float:
+    """[Stage 7 / Phase 4(a), Amendment 7.33] Q paid for the share of the
+    SMALLER frame the mapping covers.
+
+        score_for_class = Q * |M| / min(frame_q, frame_r)
+
+    No constant is tuned: the factor is read off the two frames.  Raw Q is a
+    mean over the union of the terms the mapping contains, so a small closed
+    mapping can outscore a large honest one; this factor charges a mapping for
+    the frame it does not reach.  REPORTED ONLY -- `match_evidence` still
+    returns raw Q, and no default is flipped on it.
+    """
+    m = int(terms.get("mapped", 0))
+    smaller = max(1, min(frame_q, frame_r))
+    # a mapping cannot cover MORE than the smaller frame: without the clamp the
+    # factor exceeds 1 whenever |M| > min(frame_q, frame_r), which is possible
+    # (|M| is one-to-one but the frames are not the same size), and the score
+    # would read 1.0 * 10 / 4 for a perfect mapping of a 10-node frame against
+    # a 4-node one.
+    return float(terms.get("q", 0.0)) * min(m / smaller, 1.0)
 
 
 def _score(res: WalkResult, gq: "_Index", gr: "_Index", similarity: Any) -> None:

@@ -1,0 +1,20 @@
+[STAGE 6 / TRACK M] T2: the Amendment-7 objective (7.0) on three mappings of the 9 registered pairs
+   Q = (S + P + A) / (|M| + R); the walker as it stands (a), renderer truth restricted to the FRAME (b),
+   the old matcher's correspondence (c).  Nothing gates: the objective sees every similarity.
+
+   pair                                          |  WALKER  mapped   S     P     A     R   |  TRUTH   mapped   S     P     A     R   |  OLD     mapped   S     P     A     R
+   box_over_box / box_over_box_test              |  0.691    109 107.4 283.7  52.0   470 |  0.667    135 125.4 266.8  56.0   470 |  0.783    169 162.5 332.5  57.0   470
+   box_over_box / box_over_box_haze              |  0.398     92  85.3 129.0  35.0   470 |  0.454    120 101.7 159.1  38.0   470 |  0.573    172 156.0 214.6  40.0   470
+   cylinder_over_box / cylinder_over_box_shift   |  0.597    118 113.8 277.5  51.0   554 |  0.600    147 134.2 274.8  57.0   554 |  0.675    192 179.1 323.6  58.0   554
+   f_box_a / f_box_b                             |  0.237     59  51.3  60.2  22.0   461 |  0.235     96  75.2  46.6  15.0   461 |  0.414    186 162.0 102.7  35.0   461
+   f_haze_a / f_haze_b                           |  0.207     51  40.7  45.9  17.0   411 |  0.234     75  62.4  39.3  24.0   411 |  0.437    178 153.5 100.5  38.0   411
+   f_disk_a / f_disk_b                           |  0.152     41  31.6  32.0  13.0   423 |  0.167     62  48.4  23.9  16.0   423 |  0.339    154 131.3  66.2  23.0   423
+   f_cyl_a / f_cyl_b                             |  0.183     45  38.3  50.2  20.0   498 |  0.158     71  56.4  18.8  20.0   498 |  0.340    159 136.8  84.5  32.0   498
+   single_disk / f_ctrl_disk                     |  0.289     58  52.5  69.1  12.0   374 |  0.357     64  57.3  95.4  11.0   374 |  0.513    116 104.8 155.5   9.0   374
+   single_box / f_ctrl_box                       |  0.205     43  37.0  36.9  11.0   346 |  0.172     62  54.3  11.3  10.0   346 |  0.330    107  95.0  50.8  17.0   346
+
+   truth Q > walker Q on 5 of 9 pairs; walker Q > truth Q on 4
+   median Q: walker 0.237, truth 0.235, old matcher 0.437
+   median mapped: walker 58, truth 75, old 169 (of a smaller frame of median 175)
+
+   THE TEST (7.7): (b) must beat (a).  VERDICT: the objective ranks truth above the walker on at least half the pairs

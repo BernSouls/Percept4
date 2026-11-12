@@ -1,0 +1,32 @@
+[STAGE 7 / PHASE 1] the fragment tangent, 18 synthetic scenes, against renderer truth
+   pre-registered (7.30): after the fix, fragment median <= 15 deg and the share
+   within 15 deg >= 0.75; the ambiguity share must fall.
+
+1. THE CARRIER -- the angle of the dominant Gabor channel at pixels near a boundary
+   per scene, median error of the raw index: box_over_box 0, box_over_box_haze 0, box_over_box_test 0, cylinder_over_box 45, cylinder_over_box_shift 45, disk_on_box 29, f_box_a 45, f_box_b 0, f_ctrl_box 0, f_ctrl_disk 41, f_cyl_a 45, f_cyl_b 45, f_disk_a 17, f_disk_b 14, f_haze_a 45, f_haze_b 0, single_box 0, single_disk 41
+   as the index stands     : n 15927  median   40.5 deg  p90   45.0  under 20 deg 0.45
+   with the +90 the code adds: n 15927  median   49.5 deg  p90   90.0  under 20 deg 0.03
+   VERDICT: the bank's index is the TANGENT; the tracer's `+pi/2` is the defect.
+
+2. THE TRACER'S OWN POLYLINES -- local direction of each stream-2 polyline
+   n 3561  median 0.0 deg  p90 18.1  under 15 deg 0.87  under 30 deg 0.96
+
+3. THE FRAGMENT TANGENT the detection carries (`raw_orientation`)
+   n 433  median 2.0 deg  p90 14.5  under 15 deg 0.91  under 30 deg 0.99
+
+4. THE FRAGMENT CHORD (`polar_boundary_fragments` -> `_frag_tangent`)
+   n 483  median 2.0 deg  p90 14.9  under 15 deg 0.90  under 30 deg 0.99
+
+5. THE ATTACHMENTS (`perception.attachment.attach`, the rule in force)
+
+   outcome                            box_over_ box_over_ box_over_ cylinder_ cylinder_ disk_on_b   f_box_a   f_box_b f_ctrl_bo f_ctrl_di   f_cyl_a   f_cyl_b  f_disk_a  f_disk_b  f_haze_a  f_haze_b single_bo single_di
+   ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   ambiguous                                 23         5         9        26        42        44        10        47        15        14        36       173        33        40        23        16         3        10
+   by_tangent                                12         9         8         4         8         7         9         9         0         0         9         4         4         5         6         1         9         1
+   known                                    121       120       108       117       133        76       150       139        76        58       116       108        76        83       119       119        92        79
+   known_several                              2         0         2        12        11         7         0         6         3         0         9        12         4         2         4         3         0         0
+   no_host                                  102       115       109       120        85       131        80        89        87       102        79        80       111       126        80        88        39        29
+   unambiguous                              121       129       122       104       121       145       167       135        86       177       117       246       101       119       128       125       145       158
+
+   all outcomes 6739; AMBIGUOUS 569 = 0.084; decided by TANGENT 105 = 0.016
+

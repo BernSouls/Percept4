@@ -111,7 +111,7 @@ def _weights() -> Dict[str, float]:
         base.update(fitted)
         _WEIGHTS_CACHE = base
         return dict(base)
-    w = getattr(P, "BO_LOGODDS_WEIGHTS", None)
+    w = P.BO_LOGODDS_WEIGHTS
     _WEIGHTS_CACHE = dict(w) if isinstance(w, dict) and w else dict(DEFAULT_WEIGHTS)
     return dict(_WEIGHTS_CACHE)
 

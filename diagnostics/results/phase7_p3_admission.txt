@@ -1,0 +1,59 @@
+[STAGE 7 / PHASE 3] ADMISSION BY STRENGTH, nine registered pairs
+   fan-out = candidates POPPED per role-correct mapped pair; the budget is
+   the walker's own (0.05 of the frame product, floor 8 per node).  Arms and
+   constants pre-registered in 7.32 (ADMIT_MARGIN 1.0, ADMIT_FLOOR 0.5).
+
+   pair                           arm                       mapped  corr.  fan-out      P      R     F1   spent  budget
+   box_over_box / box_over_box_test shipped                      109    102     58.6  0.944  0.750  0.836    2.60    1598
+                                  arm A (relative)             109    102     58.6  0.944  0.750  0.836    2.60    1598
+                                  arm B (relative + floor)     109    102     58.6  0.944  0.750  0.836    2.60    1598
+
+   box_over_box / box_over_box_haze shipped                       92     74     42.8  0.804  0.532  0.641    2.51    1739
+                                  arm A (relative)              90     74     42.8  0.822  0.532  0.646    2.51    1739
+                                  arm B (relative + floor)      90     74     42.8  0.822  0.532  0.646    2.51    1739
+
+   cylinder_over_box / cylinder_over_box_shift shipped                      118    105     85.2  0.921  0.593  0.722    3.32    1996
+                                  arm A (relative)             118    105     85.2  0.921  0.593  0.722    3.32    1996
+                                  arm B (relative + floor)     118    105     85.2  0.921  0.593  0.722    3.32    1996
+
+   f_box_a / f_box_b              shipped                       59     26     72.9  0.464  0.168  0.246    1.86    2152
+                                  arm A (relative)              36      8    134.0  0.235  0.052  0.085    1.55    2152
+                                  arm B (relative + floor)      36      8    134.0  0.235  0.052  0.085    1.55    2152
+
+   f_haze_a / f_haze_b            shipped                       51      6    249.8  0.120  0.051  0.072    1.82    1748
+                                  arm A (relative)              45      4    338.5  0.091  0.034  0.050    1.74    1748
+                                  arm B (relative + floor)      45      4    338.5  0.091  0.034  0.050    1.74    1748
+
+   f_disk_a / f_disk_b            shipped                       41     18     43.7  0.450  0.159  0.235    1.46    1603
+                                  arm A (relative)              38     19     36.9  0.514  0.168  0.253    1.40    1603
+                                  arm B (relative + floor)      38     19     36.9  0.514  0.168  0.253    1.40    1603
+
+   f_cyl_a / f_cyl_b              shipped                       45     17    133.9  0.378  0.137  0.201    2.10    1610
+                                  arm A (relative)              45     17    133.1  0.378  0.137  0.201    2.09    1610
+                                  arm B (relative + floor)      45     17    131.3  0.378  0.137  0.201    2.07    1610
+
+   single_disk / f_ctrl_disk      shipped                       58     39     75.6  0.780  0.411  0.538    3.52    1096
+                                  arm A (relative)              58     39     75.6  0.780  0.411  0.538    3.52    1096
+                                  arm B (relative + floor)      58     39     75.6  0.780  0.411  0.538    3.52    1096
+
+   single_box / f_ctrl_box        shipped                       43     33     38.3  0.767  0.379  0.508    2.33     976
+                                  arm A (relative)              38     23     53.3  0.605  0.264  0.368    2.29     976
+                                  arm B (relative + floor)      38     23     53.3  0.605  0.264  0.368    2.29     976
+
+   MEANS
+   arm                        mapped   corr.  fan-out      P      R     F1   spent
+   shipped                      68.4    46.7     89.0  0.625  0.353  0.444    2.39
+   arm A (relative)             64.1    43.4    106.4  0.588  0.327  0.411    2.34
+   arm B (relative + floor)     64.1    43.4    106.2  0.588  0.327  0.411    2.33
+
+   arm A (relative) against the shipped setting
+     fan-out falls on 3 of 9 pairs; recall RISES on 1, falls on 3
+     mean fan-out -17.5, mean recall -0.027, mean precision -0.038, mean F1 -0.033
+     DEFAULT RULE (7.32): does not qualify (needs recall up on >= 6 and precision down on <= 2)
+
+   arm B (relative + floor) against the shipped setting
+     fan-out falls on 3 of 9 pairs; recall RISES on 1, falls on 3
+     mean fan-out -17.3, mean recall -0.027, mean precision -0.038, mean F1 -0.033
+     DEFAULT RULE (7.32): does not qualify (needs recall up on >= 6 and precision down on <= 2)
+
+   THE FALSIFIER: fan-out fell on 3 pairs, recall rose on 1 -- the pre-registered mechanism (both, together) does NOT hold.
