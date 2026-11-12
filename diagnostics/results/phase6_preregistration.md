@@ -1460,3 +1460,84 @@ writes ABSENT, never a guess); and a pin that the cache key moves when a
 graph-side switch moves (written in 7.28).  Phase 7 is mechanical and is done
 last, after every number above exists, so no diagnostic can be re-run against
 a half-cleaned tree.
+
+### 7.36 PHASE 0 AND PHASE 1, RUN.  THE GATE PASSED; PHASE 1 FIXED THE TANGENT AND ITS SECOND FALSIFIER FIRED
+
+**PHASE 0 (results/phase7_p0_slot_information.txt).**  79 EVAL graphs, class-6
+relations on, 75 images, 91,283 edges.  The registered bar (7.29): RATIO >
+1.25, I >= 0.01 bits, I/H >= 0.02, RATIO >= p95 of 200 label permutations.
+
+    structural relation slots tested          63
+    INFORMATIVE                               5
+      EDGE_JUNCTION_CONTOUR   topology_class   RATIO 12.68  I 0.0784 bits  p100
+      EDGE_PARALLEL           perp_dist        RATIO  9.80  I 0.0456 bits  p100
+      EDGE_RADIALITY          hub_bearing      RATIO  9.68  I 0.0908 bits  p100
+      EDGE_CONCENTRICITY      ecc_difference   RATIO  3.36  I 0.0358 bits  p 99
+      EDGE_LINE_TERMINATION   curvature        RATIO  2.94  I 0.1274 bits  p 95
+    the three relations the review named        7 slots, 0 informative
+    node control slots INFORMATIVE               30 of 210
+    best mutual information: relation 0.269 bits (EDGE_CONTACT/normal_angle),
+      node 0.522 bits; relation slots with I >= 0.10 bits: 6 of 63, nodes 22 of 210
+
+THE FALSIFIER DID NOT FIRE: the gate passes, on five slots that are none of
+the three the review named.  Two things must be said with it, because they
+decide how much the pass is worth:
+
+  * The three relations Phase 2-4 is built on carry NO class information:
+    BOUNDARY_ATTACHMENT's own three slots read RATIO 119.8 / 20.2 / 17.0, all
+    with a permutation percentile of 100 and I / I-H far under the bar
+    (0.0207 / 0.0062 / 0.0045 bits; I/H 0.0103 / 0.0023 / 0.0021).  They vary
+    with the class and tell the classes apart not at all.
+  * The ratio is not the effect size.  A slot whose 30,000 observations sit at
+    two values with a narrow within-class spread yields a huge F however little
+    the class moves: eta-squared beside every ratio is 0.002-0.043 where it is
+    large.  The mutual information is the scale-free reading, and by it the
+    relations are an order of magnitude poorer than the node signatures they
+    would have to improve on (best 0.27 vs 0.52 bits; 6 of 63 vs 22 of 210).
+
+**PHASE 1 (results/phase7_p1_tangent_before.txt, phase7_p1_tangent.txt).**  The
+turn was found and fixed at the source.  `_extract_association_field_contours`
+computed `tangent_rad = carrier_idx * pi/nt + pi/2` ("the Gabor carrier is
+normal; the tangent is theta_carrier + pi/2").  Measured on the bank itself:
+the index AS IT STANDS is the boundary tangent -- median error 0.0 deg on every
+axis-aligned scene (single_box 0.0, f_box_b 0.0, box_over_box 0.0, f_haze_b
+0.0) and 14-45 deg on the curved ones, where a 15-deg channel quantises a
+tangent that turns across the aperture; with the +pi/2 it is a median 49.5 deg
+and 3 % under 20 deg.  The line is now `carrier_rad % pi`; no consumer is
+patched for it, and no direction is fabricated for EndStopped or Corner.
+
+    measure (18 scenes, renderer truth, smooth boundary)   before   after
+    tracer's own polyline, local direction, median          90.0     0.0
+      ... share within 15 deg                                 0.00    0.87
+    ContourFragment tangent (`raw_orientation`), median     90.0     2.0
+      ... share within 15 deg                                 0.00    0.91
+    ContourFragment chord (`_frag_tangent`), median          90.0     2.0
+      ... share within 15 deg                                 0.00    0.90
+    AMBIGUOUS attachments, all 18 scenes                     514/6301  569/6739
+      ... as a share                                         0.082    0.084
+    BY_TANGENT attachments                                   105/6301  105/6739
+      ... as a share                                         0.017    0.016
+
+THE TANGENT EXPECTATION IS MET (median 2.0 deg, 0.91 within 15).  THE SECOND
+FALSIFIER FIRED: the ambiguity share did not fall (0.082 -> 0.084) and the
+tangent-decided share did not rise (0.017 -> 0.016).  By 7.30 that says the
+ambiguity is not direction-limited and no consumer change is made on its
+account.  The mechanism is visible in the same table: the corrected tangent
+lets the tracer follow the ridge it was already following, the polylines are
+2.3 times longer in total (1,531 to 3,561 sampled vertices) and the features
+that attach unambiguously rise from 1,818 to 2,798, so the extracted structure
+gets BETTER while the AMBIGUOUS count stays flat -- ambiguity is a property of
+where detections sit between hosts, not of whether they point the right way.
+The census' 30 % ambiguity figure of the diagnosis is not reproduced here either
+(8.2 %); the difference is the population (this table counts every feature x
+host kind, the census counted the attachment outcomes of the
+census' own feature list), and both are reported rather than reconciled after
+the fact.
+
+WHAT THIS DOES AND DOES NOT LICENSE.  The tangent fix is kept: it is a
+correctness fix with a registered measurement behind it, it makes every
+ContourFragment's chord a real tangent, and it costs nothing downstream (the
+matcher pins are unchanged, 491 passed).  It does NOT flip ContourFragment into
+`TANGENT_KINDS`: that admission is a separate, pre-registered decision and the
+falsifier that was meant to license it fired.  ContourFragment therefore stays
+ABSENT for the attachment, which is the honest outcome of Phase 1.

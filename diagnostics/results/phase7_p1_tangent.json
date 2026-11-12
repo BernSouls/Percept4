@@ -1,0 +1,193 @@
+{
+ "carrier": {
+  "n": 15927,
+  "median": 40.47027494015039,
+  "p90": 45.00408674557255,
+  "under15": 0.45451120738368805,
+  "under30": 0.48439756388522637
+ },
+ "carrier_turned": {
+  "n": 15927,
+  "median": 49.529725059849625,
+  "p90": 90.0,
+  "under15": 0.02511458529541031,
+  "under30": 0.05324292082626986
+ },
+ "stream2": {
+  "n": 3561,
+  "median": 0.0,
+  "p90": 18.128104973874393,
+  "under15": 0.8668913226621735,
+  "under30": 0.9553496208930076
+ },
+ "frag_raw": {
+  "n": 433,
+  "median": 1.974934010881973,
+  "p90": 14.462774851065715,
+  "under15": 0.9145496535796767,
+  "under30": 0.9884526558891455
+ },
+ "frag_chord": {
+  "n": 483,
+  "median": 1.974934010881973,
+  "p90": 14.93141212176016,
+  "under15": 0.8985507246376812,
+  "under30": 0.989648033126294
+ },
+ "outcomes": {
+  "box_over_box": {
+   "known": 121,
+   "known_several": 2,
+   "unambiguous": 121,
+   "by_tangent": 12,
+   "ambiguous": 23,
+   "no_host": 102
+  },
+  "box_over_box_haze": {
+   "known": 120,
+   "known_several": 0,
+   "unambiguous": 129,
+   "by_tangent": 9,
+   "ambiguous": 5,
+   "no_host": 115
+  },
+  "box_over_box_test": {
+   "known": 108,
+   "known_several": 2,
+   "unambiguous": 122,
+   "by_tangent": 8,
+   "ambiguous": 9,
+   "no_host": 109
+  },
+  "cylinder_over_box": {
+   "known": 117,
+   "known_several": 12,
+   "unambiguous": 104,
+   "by_tangent": 4,
+   "ambiguous": 26,
+   "no_host": 120
+  },
+  "cylinder_over_box_shift": {
+   "known": 133,
+   "known_several": 11,
+   "unambiguous": 121,
+   "by_tangent": 8,
+   "ambiguous": 42,
+   "no_host": 85
+  },
+  "disk_on_box": {
+   "known": 76,
+   "known_several": 7,
+   "unambiguous": 145,
+   "by_tangent": 7,
+   "ambiguous": 44,
+   "no_host": 131
+  },
+  "f_box_a": {
+   "known": 150,
+   "known_several": 0,
+   "unambiguous": 167,
+   "by_tangent": 9,
+   "ambiguous": 10,
+   "no_host": 80
+  },
+  "f_box_b": {
+   "known": 139,
+   "known_several": 6,
+   "unambiguous": 135,
+   "by_tangent": 9,
+   "ambiguous": 47,
+   "no_host": 89
+  },
+  "f_ctrl_box": {
+   "known": 76,
+   "known_several": 3,
+   "unambiguous": 86,
+   "by_tangent": 0,
+   "ambiguous": 15,
+   "no_host": 87
+  },
+  "f_ctrl_disk": {
+   "known": 58,
+   "known_several": 0,
+   "unambiguous": 177,
+   "by_tangent": 0,
+   "ambiguous": 14,
+   "no_host": 102
+  },
+  "f_cyl_a": {
+   "known": 116,
+   "known_several": 9,
+   "unambiguous": 117,
+   "by_tangent": 9,
+   "ambiguous": 36,
+   "no_host": 79
+  },
+  "f_cyl_b": {
+   "known": 108,
+   "known_several": 12,
+   "unambiguous": 246,
+   "by_tangent": 4,
+   "ambiguous": 173,
+   "no_host": 80
+  },
+  "f_disk_a": {
+   "known": 76,
+   "known_several": 4,
+   "unambiguous": 101,
+   "by_tangent": 4,
+   "ambiguous": 33,
+   "no_host": 111
+  },
+  "f_disk_b": {
+   "known": 83,
+   "known_several": 2,
+   "unambiguous": 119,
+   "by_tangent": 5,
+   "ambiguous": 40,
+   "no_host": 126
+  },
+  "f_haze_a": {
+   "known": 119,
+   "known_several": 4,
+   "unambiguous": 128,
+   "by_tangent": 6,
+   "ambiguous": 23,
+   "no_host": 80
+  },
+  "f_haze_b": {
+   "known": 119,
+   "known_several": 3,
+   "unambiguous": 125,
+   "by_tangent": 1,
+   "ambiguous": 16,
+   "no_host": 88
+  },
+  "single_box": {
+   "known": 92,
+   "known_several": 0,
+   "unambiguous": 145,
+   "by_tangent": 9,
+   "ambiguous": 3,
+   "no_host": 39
+  },
+  "single_disk": {
+   "known": 79,
+   "known_several": 0,
+   "unambiguous": 158,
+   "by_tangent": 1,
+   "ambiguous": 10,
+   "no_host": 29
+  }
+ },
+ "totals": {
+  "known": 1890,
+  "known_several": 77,
+  "unambiguous": 2446,
+  "by_tangent": 105,
+  "ambiguous": 569,
+  "no_host": 1652
+ },
+ "ambiguous_share": 0.08443389226888262,
+ "tangent_share": 0.015580946728001187
+}

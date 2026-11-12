@@ -1,0 +1,315 @@
+[STAGE 7 / PHASE 0] THE GATE: does any relation slot carry class information?
+   75 EVAL graphs, stage-6 relations ON, no matcher run; edges as the unit of
+   measurement; class label = the image's class.  Thresholds pre-registered (7.29):
+   RATIO > 1.25, I >= 0.01 bits, I/H >= 0.02, RATIO >= p95 of 200 label permutations.
+
+   edges per class: apple 18138, car 28201, cup 23405, horse 21539
+
+1. THE STRUCTURAL RELATION SLOTS (the gate is decided here)
+   class                          slot                  n   RATIO    eta2   I bits      I/H   pctl  verdict
+   ----------------------------------------------------------------------------------------------------------------------
+   EDGE_BOUNDARY_ATTACHMENT       tangent_angle     17198 119.757  0.0205   0.0207   0.0103  100.0  
+   EDGE_CO_LOCATED                salience_ratio    16660  64.306  0.0114   0.0395   0.0163  100.0  
+   EDGE_BOUNDARY_SUCCESSOR        turn               5335  21.340  0.0119   0.0191   0.0135  100.0  
+   EDGE_BOUNDARY_ATTACHMENT       arc_end_dist      22034  20.243  0.0027   0.0062   0.0023  100.0  
+   EDGE_BOUNDARY_ATTACHMENT       perp_dist         23382  17.040  0.0022   0.0045   0.0021  100.0  
+   EDGE_CURVATURE_SIGN_CONTINUITY dist               2323  15.917  0.0202   0.0189   0.0088  100.0  
+   EDGE_ORIENTATION_CONTINUITY    cocirc_asym        3866  13.617  0.0105   0.0118   0.0041  100.0  
+   EDGE_JUNCTION_CONTOUR          topology_class     5276  12.676  0.0072   0.0784   0.0431  100.0  INFORMATIVE
+   EDGE_CURVE_CONTAINMENT         rel_dist           1323  12.338  0.0273   0.0368   0.0134  100.0  
+   EDGE_PARALLEL                  perp_dist           957   9.799  0.0299   0.0456   0.0249  100.0  INFORMATIVE
+   EDGE_RADIALITY                 hub_bearing        1588   9.683  0.0180   0.0908   0.0201  100.0  INFORMATIVE
+   EDGE_ORIENTATION_JUNCTION      angle_delta        1457   8.363  0.0170   0.0150   0.0105  100.0  
+   EDGE_JUNCTION_CONTOUR          incidence          5276   7.831  0.0044   0.0095   0.0026  100.0  
+   EDGE_ORIENTATION_CONTINUITY    head_role          3866   6.738  0.0052   0.0095   0.0070  100.0  
+   EDGE_CONTOUR_CONTINUITY        dist               2608   6.244  0.0071   0.0081   0.0060  100.0  
+   EDGE_BOUNDARY_SUCCESSOR        arc_gap            5247   5.917  0.0034   0.0111   0.0045  100.0  
+   EDGE_ORIENTATION_CONTINUITY    tail_role          3866   5.338  0.0041   0.0051   0.0037  100.0  
+   EDGE_SPIRALITY                 consistency         874   5.189  0.0176   0.0343   0.0133  100.0  
+   EDGE_ORIENTATION_JUNCTION      bisector_theta     1457   4.716  0.0096   0.0482   0.0132   99.5  
+   EDGE_ORIENTATION_CONTINUITY    dist               3866   4.426  0.0034   0.0082   0.0055   99.5  
+   EDGE_ORIENTATION_CONTINUITY    perp               3866   4.321  0.0033   0.0113   0.0058   99.0  
+   EDGE_CONCENTRICITY             ecc_difference      338   3.361  0.0293   0.0358   0.0354   99.0  INFORMATIVE
+   EDGE_LINE_TERMINATION          curvature           201   2.938  0.0428   0.1274   0.0475   95.0  INFORMATIVE
+   EDGE_ORIENTATION_BEND          angle_delta        2189   2.898  0.0040   0.0113   0.0074   96.5  
+   EDGE_CURVE_CONTAINMENT         scale_ratio        1323   2.749  0.0062   0.0087   0.0050   94.5  
+   EDGE_SPIRALITY                 pitch               874   2.375  0.0081   0.0330   0.0120   92.0  
+   EDGE_JUNCTION_CONTOUR          dist               5276   2.239  0.0013   0.0038   0.0053   89.5  
+   EDGE_AMODAL_LINK               gap                 473   2.181  0.0138   0.0454   0.0227   89.0  INFORMATIVE-BUT-NOISE
+   EDGE_ORIENTATION_BEND          bisector_theta     2189   2.175  0.0030   0.0701   0.0168   90.0  
+   EDGE_CURVE_CONTAINMENT         polar_angle        1312   2.157  0.0049   0.0409   0.0090   93.0  
+   EDGE_CONTOUR_CONTINUITY        turn               2608   2.098  0.0024   0.0282   0.0124   92.0  
+   EDGE_AMODAL_LINK               error               473   1.900  0.0120   0.0280   0.0116   87.0  
+   EDGE_LINE_TERMINATION          sharpness           201   1.744  0.0259   0.0365   0.0196   87.5  
+   EDGE_LINE_TERMINATION          junction_type       201   1.585  0.0236   0.0581   0.0299   82.5  INFORMATIVE-BUT-NOISE
+   EDGE_SYMMETRY                  dist                377   1.561  0.0124   0.0244   0.0128   80.5  
+   EDGE_COCIRCULAR                cocirc_asym         842   1.420  0.0051   0.0200   0.0075   77.0  
+   EDGE_CONTACT                   normal_angle        257   1.369  0.0160   0.2689   0.0602   69.5  INFORMATIVE-BUT-NOISE
+   EDGE_CONCENTRICITY             radial_ratio        338   1.267  0.0112   0.0384   0.0177   71.0  
+   EDGE_SYMMETRY                  sym_score           377   1.164  0.0093   0.0151   0.0103   71.0  
+   EDGE_CONCENTRICITY             offset              338   1.157  0.0103   0.0374   0.0439   66.5  
+   EDGE_ORIENTATION_CONTINUITY    turn               3866   1.019  0.0008   0.0010   0.0010   63.5  
+   EDGE_CURVATURE                 signed_turn          87   0.907  0.0317   0.1724   0.1455   56.0  
+   EDGE_ILLUSORY_INDUCER          gap                 243   0.878  0.0109   0.1449   0.0490   58.5  
+   EDGE_RADIALITY                 spoke_separation   1588   0.796  0.0015   0.0699   0.0208   51.5  
+   EDGE_SPIRALITY                 chirality           874   0.732  0.0025   0.0122   0.0119   44.0  
+   EDGE_CONTACT                   dist                257   0.695  0.0082   0.0211   0.0316   39.5  
+   EDGE_PARALLEL                  stagger_dist        957   0.646  0.0020   0.0224   0.0097   37.5  
+   EDGE_CONCENTRICITY             extent              338   0.503  0.0045   0.0539   0.0360   32.0  
+   EDGE_ILLUSORY_INDUCER          alignment           243   0.410  0.0051   0.1140   0.0387   25.5  
+   EDGE_SYMMETRY                  axis_angle          377   0.364  0.0029   0.0691   0.0208   23.0  
+   EDGE_RADIALITY                 hub_ratio          1588   0.154  0.0003   0.0106   0.0122    6.0  
+   EDGE_COCIRCULAR                dist                842   0.149  0.0005   0.0055   0.0025    6.0  
+   EDGE_LINE_TERMINATION          parent_theta        201   0.084  0.0013   0.1178   0.0350    1.5  
+   EDGE_PARALLEL                  convergence         957   0.042  0.0001   0.0053   0.0025    2.5  
+   EDGE_CONTACT                   depth_step          257   0.000  0.0000   0.0000   0.0000  100.0  
+   EDGE_CONTOUR_CONTINUITY        curv_agree         2608   0.000  0.0000   0.0000   0.0000  100.0  
+   EDGE_CONTOUR_ORIENTATION       containment        9727   0.000  0.0000   0.0000   0.0000  100.0  
+   EDGE_CURVATURE_SIGN_CONTINUITY curv_diff          2323   0.000  0.0000   0.0000   0.0000  100.0  
+   EDGE_JUNCTION_ORIENTATION      containment         711   0.000  0.0000   0.0000   0.0000  100.0  
+   EDGE_ORIENTATION_BEND          spatial_dist       2189   0.000  0.0000   0.0000   0.0000  100.0  
+   EDGE_ORIENTATION_CONTINUITY    polarity_rel       3866   0.000  0.0000   0.0000   0.0000  100.0  
+   EDGE_ORIENTATION_JUNCTION      spatial_dist       1457   0.000  0.0000   0.0000   0.0000  100.0  
+   EDGE_REGION_CONTENT            containment        5191   0.000  0.0000   0.0000   0.0000  100.0  
+
+2. THE ATTRIBUTE-ONLY RELATION SLOTS (reported, never part of the gate)
+   class                          slot                  n   RATIO    eta2   I bits      I/H   pctl  verdict
+   ----------------------------------------------------------------------------------------------------------------------
+   EDGE_COLOR_OPPONENT_BORDER     contrast           4188 112.809  0.0748   0.0641   0.0337  100.0  INFORMATIVE
+   EDGE_COLOR_OPPONENT_BORDER     lum_indep          4188  22.851  0.0161   0.0731   0.0396  100.0  INFORMATIVE
+   EDGE_COLOR_OPPONENT_BORDER     extent             4188  18.224  0.0129   0.0186   0.0075  100.0  
+   EDGE_COLOR_OPPONENT_BORDER     opp_angle          4188  10.621  0.0076   0.2935   0.0720  100.0  INFORMATIVE
+
+3. THE CONTROL: node signature slots (what the shipped matcher already reads)
+   class                          slot                  n   RATIO    eta2   I bits      I/H   pctl  verdict
+   ----------------------------------------------------------------------------------------------------------------------
+   TextureBoundary                6                  6971 471.273  0.1687   0.1886   0.0991  100.0  INFORMATIVE
+   TextureBoundary                5                  6971 278.024  0.1069   0.1480   0.0632  100.0  INFORMATIVE
+   TextureBoundary                2                  6971 232.702  0.0911   0.1077   0.0877  100.0  INFORMATIVE
+   Orientation                    1                  3957 227.917  0.1475   0.1293   0.0625  100.0  INFORMATIVE
+   CONTOUR_PEAK                   7                  7682 208.608  0.0754   0.0739   0.0412  100.0  INFORMATIVE
+   TextureBoundary                3                  6971 141.511  0.0574   0.0756   0.0542  100.0  INFORMATIVE
+   CONTOUR_PEAK                   6                  7682 139.374  0.0516   0.0386   0.0435  100.0  INFORMATIVE
+   Boundary                       1                  5482 107.973  0.0558   0.0606   0.0216  100.0  INFORMATIVE
+   TextureBoundary                7                  6971  85.606  0.0356   0.0795   0.0454  100.0  INFORMATIVE
+   Surface                        2                  1020  72.550  0.1764   0.3546   0.1033  100.0  INFORMATIVE
+   ContourFragment                3                  1252  64.311  0.1339   0.1406   0.0491  100.0  INFORMATIVE
+   TextureBoundary                4                  6971  61.718  0.0259   0.1015   0.0646  100.0  INFORMATIVE
+   CONTOUR_PEAK                   0                  7682  57.304  0.0219   0.0906   0.0268  100.0  INFORMATIVE
+   ContourFragment                2                  1252  45.768  0.0991   0.1412   0.0502  100.0  INFORMATIVE
+   Surface                        4                  1020  42.955  0.1126   0.1302   0.0464  100.0  INFORMATIVE
+   CONTOUR_PEAK                   1                  7682  42.054  0.0162   0.0174   0.0628  100.0  INFORMATIVE
+   Surface                        3                  1020  37.351  0.0993   0.0955   0.0560  100.0  INFORMATIVE
+   EndStopped                     3                  2590  27.180  0.0306   0.0226   0.0554  100.0  INFORMATIVE
+   Surface                        1                  1020  26.911  0.0736   0.0942   0.0623  100.0  INFORMATIVE
+   TextureBoundary                1                  6971  25.235  0.0107   0.1195   0.0292  100.0  INFORMATIVE
+   CONTOUR_PEAK                   3                  7682  25.185  0.0097   0.0122   0.0056  100.0  
+   PEAK_CHAIN                     0                  1360  20.336  0.0431   0.0622   0.0200  100.0  
+   BorderOwnership                1                  5433  15.445  0.0085   0.0208   0.0072  100.0  
+   Corner                         3                   929  15.031  0.0465   0.0324   0.0472  100.0  INFORMATIVE
+   CONTOUR_PEAK                   5                  7682  14.374  0.0056   0.0040   0.0142  100.0  
+   Texture                        1                  2218  13.434  0.0179   0.0361   0.0112  100.0  
+   PEAK_CHAIN                     5                  1360  12.412  0.0267   0.0336   0.0120  100.0  
+   CONTOUR_PEAK                   2                  7682  10.515  0.0041   0.0059   0.0047  100.0  
+   BorderOwnership                3                  5433   9.658  0.0053   0.0200   0.0071  100.0  
+   CurveComplex                   6                   673   7.672  0.0333   0.0555   0.0329  100.0  INFORMATIVE
+   Texture                        0                  2218   7.425  0.0100   0.0472   0.0186  100.0  
+   CurveComplex                   1                   673   7.320  0.0318   0.0502   0.0447  100.0  INFORMATIVE
+   CurveComplex                   5                   673   5.356  0.0235   0.0298   0.0192  100.0  
+   RegionShape                    7                   980   5.267  0.0159   0.0398   0.0184  100.0  
+   Color                          0                  2765   5.195  0.0056   0.0527   0.0155   99.0  
+   RegionShape                    8                   980   5.178  0.0157   0.0375   0.0155  100.0  
+   PEAK_CHAIN                     4                  1360   4.460  0.0098   0.0088   0.0953  100.0  
+   CurveComplex                   29                  673   4.180  0.0184   0.0211   0.0179   99.5  
+   Color                          1                  2765   3.610  0.0039   0.0487   0.0147   99.0  
+   CurveComplex                   28                  673   3.549  0.0157   0.0121   0.0112   98.5  
+   RegionShape                    0                   980   3.482  0.0106   0.0264   0.0284   98.5  INFORMATIVE
+   Contour                        21                 1424   3.449  0.0072   0.0072   0.0084   99.0  
+   RegionShape                    9                   980   3.436  0.0105   0.0391   0.0293   99.0  INFORMATIVE
+   Junction                       2                    94   3.322  0.0997   0.1215   0.1083   96.5  INFORMATIVE
+   Contour                        12                 1424   3.194  0.0067   0.0056   0.0064   98.5  
+   Corner                         1                   929   3.193  0.0102   0.0612   0.0161   98.0  
+   Junction                       17                   94   3.098  0.0936   0.1378   0.0778   95.5  INFORMATIVE
+   RegionShape                    17                  980   3.065  0.0093   0.0178   0.0097   96.0  
+   Boundary                       0                  5482   2.933  0.0016   0.0011   0.0019   95.5  
+   Junction                       3                    94   2.736  0.0836   0.1180   0.0640   97.0  INFORMATIVE
+   Junction                       13                   94   2.667  0.0816   0.0761   0.0489   95.0  INFORMATIVE
+   RegionShape                    19                  980   2.651  0.0081   0.0650   0.0186   95.0  
+   CurveComplex                   38                  673   2.600  0.0115   0.0097   0.0081   93.5  
+   Corner                         15                  142   2.474  0.0510   0.0368   0.0445   90.5  
+   Color                          2                  2765   2.460  0.0027   0.0347   0.0110   95.5  
+   Corner                         2                   929   2.352  0.0076   0.0312   0.0132   93.0  
+   Orientation                    0                  3957   2.285  0.0017   0.0483   0.0111   92.0  
+   Junction                       0                    94   2.284  0.0708   0.0783   0.0594   95.0  INFORMATIVE
+   CurveComplex                   34                  673   2.266  0.0101   0.0089   0.0077   94.5  
+   CurveComplex                   41                  673   2.257  0.0100   0.0086   0.0137   94.5  
+   CurveComplex                   9                   673   2.252  0.0100   0.0283   0.0172   91.0  
+   EndStopped                     1                  2590   2.223  0.0026   0.0034   0.0017   95.5  
+   Corner                         13                  142   2.203  0.0457   0.0334   0.0337   92.5  
+   RegionShape                    13                  980   2.146  0.0066   0.0239   0.0592   90.0  
+   RegionShape                    18                  980   2.128  0.0065   0.0230   0.0080   90.5  
+   CurveComplex                   13                  673   2.121  0.0094   0.0069   0.0126   87.0  
+   RegionShape                    20                  980   2.082  0.0064   0.0044   0.0057   92.5  
+   CurveComplex                   0                   673   2.039  0.0091   0.0321   0.0165   91.5  
+   Contour                        22                 1424   2.021  0.0043   0.0038   0.0047   88.5  
+   Corner                         8                   142   1.788  0.0374   0.0446   0.0252   86.0  
+   Orientation                    2                  3957   1.769  0.0013   0.1748   0.0425   85.0  
+   CurveComplex                   30                  673   1.754  0.0078   0.0108   0.0287   86.0  
+   CurveComplex                   32                  673   1.729  0.0077   0.0162   0.0419   82.0  
+   CurveComplex                   27                  673   1.714  0.0076   0.0126   0.0192   84.0  
+   CurveComplex                   39                  673   1.704  0.0076   0.0064   0.0059   83.0  
+   RegionShape                    5                   980   1.643  0.0050   0.0176   0.0311   83.5  
+   Corner                         0                   929   1.603  0.0052   0.0245   0.0099   79.5  
+   Junction                       8                    94   1.601  0.0507   0.0768   0.0463   82.5  
+   RegionShape                    10                  980   1.578  0.0048   0.0209   0.0341   78.0  
+   CurveComplex                   40                  673   1.543  0.0069   0.0079   0.0127   79.0  
+   Contour                        24                 1424   1.524  0.0032   0.0033   0.0084   81.0  
+   CONTOUR_PEAK                   4                  7682   1.522  0.0006   0.0026   0.0013   80.0  
+   CurveComplex                   7                   673   1.515  0.0067   0.0309   0.0201   80.0  
+   CurveComplex                   12                  673   1.498  0.0067   0.0050   0.0077   77.5  
+   CurveComplex                   14                  673   1.493  0.0066   0.0049   0.0263   79.5  
+   CurveComplex                   10                  673   1.447  0.0064   0.0351   0.0211   75.5  
+   CurveComplex                   33                  673   1.396  0.0062   0.0066   0.0057   83.0  
+   Junction                       7                    94   1.338  0.0427   0.1382   0.0672   74.5  
+   CurveComplex                   15                  673   1.310  0.0058   0.0041   0.0198   73.0  
+   Contour                        23                 1424   1.305  0.0027   0.0025   0.0067   72.0  
+   Contour                        15                 1424   1.282  0.0027   0.0060   0.0260   78.5  
+   Contour                        11                 1424   1.281  0.0027   0.0027   0.0033   68.5  
+   RegionShape                    6                   980   1.245  0.0038   0.0252   0.0187   71.0  
+   Junction                       4                    94   1.243  0.0398   0.0241   0.2831   68.5  
+   ContourFragment                1                  1252   1.214  0.0029   0.0417   0.0092   72.0  
+   CurveComplex                   18                  673   1.193  0.0053   0.0038   0.0052   70.0  
+   CurveComplex                   17                  673   1.190  0.0053   0.0068   0.0072   67.0  
+   Junction                       15                   94   1.188  0.0381   0.0940   0.0734   64.5  
+   Junction                       6                    94   1.176  0.0377   0.1676   0.0709   67.0  
+   T                              8                    30   1.156  0.1176   0.2125   0.1456   67.5  
+   Contour                        17                 1424   1.156  0.0024   0.0026   0.0026   68.5  
+   Corner                         4                   142   1.127  0.0239   0.0454   0.0319   70.0  
+   Corner                         5                   142   1.127  0.0239   0.0454   0.0319   67.0  
+   CurveComplex                   36                  673   1.126  0.0050   0.0123   0.0266   68.5  
+   CurveComplex                   23                  673   1.118  0.0050   0.0059   0.0067   58.0  
+   RegionShape                    3                   980   1.112  0.0034   0.0073   0.0280   66.5  
+   CurveComplex                   25                  673   1.104  0.0049   0.0038   0.0128   63.0  
+   Contour                        13                 1424   1.081  0.0023   0.0046   0.0213   64.5  
+   CurveComplex                   16                  673   1.061  0.0047   0.0058   0.0062   62.5  
+   CurveComplex                   35                  673   1.049  0.0047   0.0050   0.0100   60.5  
+   IllusoryContour                0                   122   0.992  0.0246   0.2167   0.0624   60.0  
+   RegionShape                    4                   980   0.989  0.0030   0.0146   0.0423   56.5  
+   Contour                        7                  1424   0.977  0.0021   0.0014   0.0047   53.5  
+   Contour                        26                 1424   0.968  0.0020   0.0025   0.0079   52.5  
+   Junction                       18                   94   0.957  0.0309   0.0542   0.0451   61.0  
+   Contour                        16                 1424   0.912  0.0019   0.0020   0.0020   55.0  
+   CurveComplex                   22                  673   0.903  0.0040   0.0030   0.0036   56.5  
+   Corner                         10                  142   0.903  0.0193   0.0227   0.0771   53.0  
+   EndStopped                     0                  2590   0.894  0.0010   0.0120   0.0034   52.5  
+   Contour                        18                 1424   0.884  0.0019   0.0021   0.0073   62.0  
+   Boundary                       2                  5482   0.883  0.0005   0.0279   0.0070   54.5  
+   Contour                        19                 1424   0.878  0.0019   0.0039   0.0150   51.5  
+   Junction                       5                    94   0.877  0.0284   0.0947   0.0611   54.5  
+   Corner                         9                   142   0.871  0.0186   0.0184   0.1242   63.0  
+   Contour                        20                 1424   0.856  0.0018   0.0017   0.0083   48.0  
+   CurveComplex                   20                  673   0.856  0.0038   0.0027   0.0036   54.0  
+   RegionShape                    1                   980   0.816  0.0025   0.0146   0.0162   52.0  
+   CurveComplex                   21                  673   0.813  0.0036   0.0026   0.0123   47.0  
+   BorderOwnership                2                  5433   0.806  0.0004   0.0174   0.0086   56.0  
+   Contour                        2                  1424   0.804  0.0017   0.0021   0.0146   54.5  
+   CurveComplex                   11                  673   0.795  0.0036   0.0087   0.0107   57.0  
+   EndStopped                     2                  2590   0.791  0.0009   0.0020   0.0020   53.5  
+   CurveComplex                   3                   673   0.773  0.0035   0.0095   0.0111   49.5  
+   RegionShape                    12                  980   0.760  0.0023   0.0137   0.0490   49.0  
+   CurveComplex                   8                   673   0.751  0.0034   0.0143   0.0084   45.0  
+   Contour                        0                  1424   0.733  0.0015   0.0037   0.0045   51.0  
+   RegionShape                    11                  980   0.699  0.0021   0.0159   0.0479   41.5  
+   Junction                       1                    94   0.679  0.0221   0.1586   0.0556   44.0  
+   CurveComplex                   37                  673   0.675  0.0030   0.0031   0.0084   42.5  
+   Contour                        14                 1424   0.671  0.0014   0.0039   0.0155   44.5  
+   Contour                        10                 1424   0.657  0.0014   0.0034   0.0081   44.5  
+   Contour                        8                  1424   0.655  0.0014   0.0011   0.0061   48.0  
+   CurveComplex                   42                  673   0.651  0.0029   0.0024   0.0099   45.0  
+   CurveComplex                   26                  673   0.608  0.0027   0.0027   0.0044   38.0  
+   Contour                        3                  1424   0.571  0.0012   0.0008   0.0022   37.5  
+   PEAK_CHAIN                     1                  1360   0.569  0.0013   0.0583   0.0168   34.0  
+   CurveComplex                   43                  673   0.544  0.0024   0.0040   0.0078   29.5  
+   TextureBoundary                0                  6971   0.540  0.0002   0.0042   0.0014   35.0  
+   T                              15                   30   0.535  0.0582   0.0642   0.0700   38.0  
+   T                              13                   30   0.535  0.0582   0.0642   0.0700   34.0  
+   T                              17                   30   0.535  0.0582   0.0642   0.0700   37.0  
+   T                              4                    30   0.535  0.0582   0.0642   0.0700   37.5  
+   RegionShape                    15                  980   0.516  0.0016   0.0160   0.0107   31.5  
+   IllusoryContour                1                   122   0.472  0.0118   0.1476   0.0499   29.0  
+   Contour                        25                 1424   0.439  0.0009   0.0007   0.0052   32.0  
+   Contour                        1                  1424   0.428  0.0009   0.0799   0.0184   22.5  
+   CurveComplex                   24                  673   0.408  0.0018   0.0013   0.0026   27.0  
+   CurveComplex                   4                   673   0.400  0.0018   0.0202   0.0162   24.0  
+   CurveComplex                   31                  673   0.394  0.0018   0.0047   0.0106   24.0  
+   Contour                        9                  1424   0.373  0.0008   0.0006   0.0017   21.0  
+   Junction                       10                   94   0.367  0.0121   0.0116   0.0455   24.5  
+   RegionShape                    2                   980   0.358  0.0011   0.0174   0.0491   20.5  
+   T                              1                    30   0.357  0.0396   0.5218   0.1827   21.0  
+   RegionShape                    14                  980   0.343  0.0011   0.0193   0.0217   21.0  
+   PEAK_CHAIN                     2                  1360   0.337  0.0007   0.0079   0.0059   24.5  
+   BorderOwnership                0                  5433   0.334  0.0002   0.0021   0.0007   19.0  
+   IllusoryContour                2                   122   0.281  0.0071   0.0743   0.0328   12.5  
+   Corner                         17                  142   0.251  0.0054   0.0043   0.0063   13.0  
+   CurveComplex                   19                  673   0.191  0.0009   0.0007   0.0070    8.0  
+   CurveComplex                   2                   673   0.183  0.0008   0.0109   0.0042    9.5  
+   Contour                        4                  1424   0.163  0.0003   0.0017   0.0033    9.5  
+   Contour                        6                  1424   0.158  0.0003   0.0002   0.0024    5.0  
+   T                              5                    30   0.117  0.0133   0.1013   0.0647    4.0  
+   ContourFragment                0                  1252   0.103  0.0002   0.0525   0.0449    3.5  
+   T                              6                    30   0.088  0.0101   0.0073   0.0076    7.0  
+   Position                       0                  7376   0.069  0.0000   0.0009   0.0002    1.5  
+   Orientation                    3                   140   0.057  0.0013   0.0807   0.0273    1.5  
+   Position                       1                  7376   0.032  0.0000   0.0053   0.0013    0.5  
+   Contour                        5                  1424   0.000  0.0000   0.0000   0.0000  100.0  
+   Corner                         6                   142   0.000  0.0000   0.0000   0.0000  100.0  
+   Corner                         7                   142   0.000  0.0000   0.0000   0.0000  100.0  
+   Corner                         11                  142   0.000  0.0000   0.0000   0.0000  100.0  
+   Corner                         12                  142   0.000  0.0000   0.0000   0.0000  100.0  
+   Corner                         14                  142   0.000  0.0000   0.0000   0.0000  100.0  
+   Corner                         16                  142   0.000  0.0000   0.0000   0.0000  100.0  
+   Corner                         18                  142   0.000  0.0000   0.0000   0.0000  100.0  
+   Junction                       9                    94   0.000  0.0000   0.0000   0.0000  100.0  
+   Junction                       11                   94   0.000  0.0000   0.0000   0.0000  100.0  
+   Junction                       12                   94   0.000  0.0000   0.0000   0.0000  100.0  
+   Junction                       14                   94   0.000  0.0000   0.0000   0.0000  100.0  
+   Junction                       16                   94   0.000  0.0000   0.0000   0.0000  100.0  
+   Onset                          0                    75   0.000  0.0000   0.0000   0.0000  100.0  
+   PEAK_CHAIN                     3                  1360   0.000  0.0000   0.0000   0.0000  100.0  
+   Polarity                       0                   225   0.000  0.0000   0.0000   0.0000    0.5  
+   Position                       2                  7376   0.000  0.0000   0.0000   0.0000  100.0  
+   RegionShape                    16                  980   0.000  0.0000   0.0000   0.0000  100.0  
+   Surface                        0                  1020   0.000  0.0000   0.0000   0.0000  100.0  
+   Surface                        5                  1020   0.000  0.0000   0.0000   0.0000  100.0  
+   Surface                        6                  1020   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              0                    30   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              2                    30   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              3                    30   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              7                    30   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              9                    30   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              10                   30   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              11                   30   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              12                   30   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              14                   30   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              16                   30   0.000  0.0000   0.0000   0.0000  100.0  
+   T                              18                   30   0.000  0.0000   0.0000   0.0000  100.0  
+
+4. THE VERDICT OF THE GATE
+   structural relation slots tested: 63
+   INFORMATIVE: 5
+   the three relations the review named (BOUNDARY_ATTACHMENT,
+   BOUNDARY_SUCCESSOR, ILLUSORY_INDUCER): 7 slots, 0 informative
+   node slots INFORMATIVE: 30 of 210
+
+5. SCALE CHECK: the same statistics on the two sides, best of each
+   relation slots: best I 0.2689 bits (median 0.0200); node slots: best I 0.5218 bits (median 0.0120)
+   relation slots with I >= 0.10 bits: 6 of 63; node slots: 22 of 210
+   THE READING: the gate is decided by the registered bar, which 5 structural slots clear.
+
+   GATE: PASSED -- 5 structural relation slot(s) carry class information:
+     EDGE_JUNCTION_CONTOUR          topology_class   RATIO 12.676   I 0.0784 bits   pctl 100.0
+     EDGE_PARALLEL                  perp_dist        RATIO  9.799   I 0.0456 bits   pctl 100.0
+     EDGE_RADIALITY                 hub_bearing      RATIO  9.683   I 0.0908 bits   pctl 100.0
+     EDGE_CONCENTRICITY             ecc_difference   RATIO  3.361   I 0.0358 bits   pctl  99.0
+     EDGE_LINE_TERMINATION          curvature        RATIO  2.938   I 0.1274 bits   pctl  95.0
+   the slot that removes the most class uncertainty: EDGE_CONTACT / normal_angle, I 0.2689 bits (6.0 % of its own entropy), RATIO 1.369

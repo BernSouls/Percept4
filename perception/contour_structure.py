@@ -299,9 +299,23 @@ def _extract_association_field_contours(
         return []
     strength_norm = strength_map / s_ref
 
-    # 2. Physics Correction: Gabor carrier is normal; tangent is theta_carrier + pi/2
+    # 2. THE BANK'S INDEX IS THE TANGENT.  [STAGE 7 / PHASE 1]
+    # The dominant channel's angle, AS THE INDEX STANDS, is the boundary
+    # TANGENT on this bank: measured against renderer truth on 18 synthetic
+    # scenes it is a median 0.0 deg from the true tangent on every
+    # axis-aligned scene (single_box 0.0, f_box_b 0.0, box_over_box 0.0) and
+    # 14-45 deg on the curved ones, where a 15-deg channel quantises a
+    # tangent that moves across the aperture; adding pi/2 gives a median
+    # 49.5 deg with 3 % under 20 deg (diagnostics/results/
+    # phase7_p1_tangent_before.txt / phase7_p1_tangent.txt).
+    # The old line added pi/2 ("the Gabor carrier is normal"), which made
+    # every traced polyline run ACROSS its edge: the polylines' own local
+    # direction was a median 90.0 deg from truth, which is where the
+    # fragment's chord -- and so `tau_angle` and the stream-2 channel index
+    # -- got a constant quarter turn.  Nothing downstream is patched for it;
+    # the tracer now follows the ridge it was already following.
     carrier_rad = carrier_idx.astype(np.float64) * (math.pi / float(nt))
-    tangent_rad = (carrier_rad + (math.pi / 2.0)) % math.pi
+    tangent_rad = carrier_rad % math.pi
 
     # 3. Dense Non-Maximum Suppression with bounded seed budget
     local_max = maximum_filter(strength_norm, size=3)
