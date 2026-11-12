@@ -374,8 +374,16 @@ def test_a_seed_is_two_shared_topological_tokens_and_no_measurement():
             b.params[(s_, d_, et)] = dataclasses.replace(
                 ep, quantized=(ep.quantized[0] + 2.0,) + tuple(ep.quantized[1:]))
     moved_sg, moved_sigs = b.done()
-    ident = W.walk(a_sg, a_sg, a_sigs, a_sigs).seeds
-    shifted = W.walk(a_sg, moved_sg, a_sigs, moved_sigs).seeds
+    # [STAGE 7 / PHASE 2] the TOPOLOGICAL rule is no longer the default (the
+    # measured rule is, on a pre-registered 8-0-1 precision comparison); this
+    # pin is about the topological rule, so it states that it wants it.
+    old_flag = W.SEED_TOPOLOGICAL
+    W.SEED_TOPOLOGICAL = True
+    try:
+        ident = W.walk(a_sg, a_sg, a_sigs, a_sigs).seeds
+        shifted = W.walk(a_sg, moved_sg, a_sigs, moved_sigs).seeds
+    finally:
+        W.SEED_TOPOLOGICAL = old_flag
     assert ident == shifted and len(ident) >= 3
     # the tokens carry no measurements at all
     g = W._Index(a_sg, a_sigs)
@@ -716,17 +724,24 @@ def test_seeds_are_few_rare_and_one_to_one():
     """RULE (M2): at most N_SEEDS seeds; a seed shares at least two relation
     tokens that at most two nodes carry in each graph; one-to-one."""
     sg, sigs = two_boundaries()
-    res = W.walk(sg, sg, sigs, sigs)
-    assert 1 <= len(res.seeds) <= W.N_SEEDS == 8
-    assert len({u for u, _v in res.seeds}) == len(res.seeds) == len({v for _u, v in res.seeds})
-    assert all(u == v for u, v in res.seeds)
-    # a boundary whose every feature sits in ONE bin has one token: no seed
-    b = Build()
-    b.boundary(100, chain_sig(4), [(i + 1, tex(i, i), 0.26 + 0.004 * i) for i in range(4)],
-               successors=False)
-    lone_sg, lone_sigs = b.done()
-    lone = W.walk(lone_sg, lone_sg, lone_sigs, lone_sigs)
-    assert lone.seeds == [] and lone.mapping == {} and not lone.supported
+    # [STAGE 7 / PHASE 2] this is the TOPOLOGICAL rule's pin; the default seed
+    # rule is the measured one now, so the pin states which rule it tests.
+    old_flag = W.SEED_TOPOLOGICAL
+    W.SEED_TOPOLOGICAL = True
+    try:
+        res = W.walk(sg, sg, sigs, sigs)
+        assert 1 <= len(res.seeds) <= W.N_SEEDS == 8
+        assert len({u for u, _v in res.seeds}) == len(res.seeds) == len({v for _u, v in res.seeds})
+        assert all(u == v for u, v in res.seeds)
+        # a boundary whose every feature sits in ONE bin has one token: no seed
+        b = Build()
+        b.boundary(100, chain_sig(4), [(i + 1, tex(i, i), 0.26 + 0.004 * i) for i in range(4)],
+                   successors=False)
+        lone_sg, lone_sigs = b.done()
+        lone = W.walk(lone_sg, lone_sg, lone_sigs, lone_sigs)
+        assert lone.seeds == [] and lone.mapping == {} and not lone.supported
+    finally:
+        W.SEED_TOPOLOGICAL = old_flag
 
 
 # --------------------------------------------------------------------------

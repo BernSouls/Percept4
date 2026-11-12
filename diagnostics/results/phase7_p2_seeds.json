@@ -1,0 +1,398 @@
+{
+ "rows": [
+  {
+   "pair": "box_over_box / box_over_box_test",
+   "topological": {
+    "seeds": 8,
+    "right": 7,
+    "wrong": 1,
+    "no_role": 0,
+    "precision": 0.875,
+    "recall": 0.051470588235294115,
+    "ceiling": 136,
+    "mapped": 109,
+    "p": 0.9444444444444444,
+    "r": 0.75,
+    "f1": 0.8360655737704917,
+    "seed_lens": {
+     "Contour": 6,
+     "Corner": 2
+    },
+    "examined": 4311,
+    "budget": 1598
+   },
+   "measured": {
+    "seeds": 2,
+    "right": 2,
+    "wrong": 0,
+    "no_role": 0,
+    "precision": 1.0,
+    "recall": 0.014705882352941176,
+    "ceiling": 136,
+    "mapped": 109,
+    "p": 0.9444444444444444,
+    "r": 0.75,
+    "f1": 0.8360655737704917,
+    "seed_lens": {
+     "Orientation": 2
+    },
+    "examined": 4158,
+    "budget": 1598
+   }
+  },
+  {
+   "pair": "box_over_box / box_over_box_haze",
+   "topological": {
+    "seeds": 8,
+    "right": 4,
+    "wrong": 4,
+    "no_role": 0,
+    "precision": 0.5,
+    "recall": 0.02877697841726619,
+    "ceiling": 139,
+    "mapped": 95,
+    "p": 0.8315789473684211,
+    "r": 0.5683453237410072,
+    "f1": 0.6752136752136753,
+    "seed_lens": {
+     "CurveComplex": 1,
+     "Contour": 5,
+     "PEAK_CHAIN": 2
+    },
+    "examined": 3863,
+    "budget": 1739
+   },
+   "measured": {
+    "seeds": 2,
+    "right": 2,
+    "wrong": 0,
+    "no_role": 0,
+    "precision": 1.0,
+    "recall": 0.014388489208633094,
+    "ceiling": 139,
+    "mapped": 92,
+    "p": 0.8043478260869565,
+    "r": 0.5323741007194245,
+    "f1": 0.6406926406926406,
+    "seed_lens": {
+     "Orientation": 2
+    },
+    "examined": 4365,
+    "budget": 1739
+   }
+  },
+  {
+   "pair": "cylinder_over_box / cylinder_over_box_shift",
+   "topological": {
+    "seeds": 5,
+    "right": 5,
+    "wrong": 0,
+    "no_role": 0,
+    "precision": 1.0,
+    "recall": 0.02824858757062147,
+    "ceiling": 177,
+    "mapped": 118,
+    "p": 0.9210526315789473,
+    "r": 0.5932203389830508,
+    "f1": 0.7216494845360825,
+    "seed_lens": {
+     "Contour": 5
+    },
+    "examined": 5518,
+    "budget": 1996
+   },
+   "measured": {
+    "seeds": 2,
+    "right": 2,
+    "wrong": 0,
+    "no_role": 0,
+    "precision": 1.0,
+    "recall": 0.011299435028248588,
+    "ceiling": 177,
+    "mapped": 118,
+    "p": 0.9210526315789473,
+    "r": 0.5932203389830508,
+    "f1": 0.7216494845360825,
+    "seed_lens": {
+     "Orientation": 2
+    },
+    "examined": 6627,
+    "budget": 1996
+   }
+  },
+  {
+   "pair": "f_box_a / f_box_b",
+   "topological": {
+    "seeds": 8,
+    "right": 1,
+    "wrong": 7,
+    "no_role": 0,
+    "precision": 0.125,
+    "recall": 0.0064516129032258064,
+    "ceiling": 155,
+    "mapped": 37,
+    "p": 0.6857142857142857,
+    "r": 0.15483870967741936,
+    "f1": 0.25263157894736843,
+    "seed_lens": {
+     "Corner": 2,
+     "Contour": 4,
+     "CurveComplex": 1,
+     "PEAK_CHAIN": 1
+    },
+    "examined": 2901,
+    "budget": 2152
+   },
+   "measured": {
+    "seeds": 8,
+    "right": 2,
+    "wrong": 6,
+    "no_role": 0,
+    "precision": 0.25,
+    "recall": 0.012903225806451613,
+    "ceiling": 155,
+    "mapped": 59,
+    "p": 0.4642857142857143,
+    "r": 0.16774193548387098,
+    "f1": 0.2464454976303318,
+    "seed_lens": {
+     "Orientation": 7,
+     "CONTOUR_PEAK": 1
+    },
+    "examined": 4005,
+    "budget": 2152
+   }
+  },
+  {
+   "pair": "f_haze_a / f_haze_b",
+   "topological": {
+    "seeds": 8,
+    "right": 0,
+    "wrong": 8,
+    "no_role": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "ceiling": 117,
+    "mapped": 46,
+    "p": 0.3111111111111111,
+    "r": 0.11965811965811966,
+    "f1": 0.17283950617283952,
+    "seed_lens": {
+     "Contour": 7,
+     "PEAK_CHAIN": 1
+    },
+    "examined": 2536,
+    "budget": 1748
+   },
+   "measured": {
+    "seeds": 8,
+    "right": 2,
+    "wrong": 6,
+    "no_role": 0,
+    "precision": 0.25,
+    "recall": 0.017094017094017096,
+    "ceiling": 117,
+    "mapped": 51,
+    "p": 0.12,
+    "r": 0.05128205128205128,
+    "f1": 0.0718562874251497,
+    "seed_lens": {
+     "Orientation": 7,
+     "CONTOUR_PEAK": 1
+    },
+    "examined": 3190,
+    "budget": 1748
+   }
+  },
+  {
+   "pair": "f_disk_a / f_disk_b",
+   "topological": {
+    "seeds": 8,
+    "right": 2,
+    "wrong": 5,
+    "no_role": 1,
+    "precision": 0.2857142857142857,
+    "recall": 0.017699115044247787,
+    "ceiling": 113,
+    "mapped": 29,
+    "p": 0.37037037037037035,
+    "r": 0.08849557522123894,
+    "f1": 0.14285714285714285,
+    "seed_lens": {
+     "Junction": 2,
+     "PEAK_CHAIN": 2,
+     "Contour": 4
+    },
+    "examined": 1746,
+    "budget": 1603
+   },
+   "measured": {
+    "seeds": 8,
+    "right": 4,
+    "wrong": 4,
+    "no_role": 0,
+    "precision": 0.5,
+    "recall": 0.035398230088495575,
+    "ceiling": 113,
+    "mapped": 41,
+    "p": 0.45,
+    "r": 0.1592920353982301,
+    "f1": 0.23529411764705885,
+    "seed_lens": {
+     "Orientation": 8
+    },
+    "examined": 2343,
+    "budget": 1603
+   }
+  },
+  {
+   "pair": "f_cyl_a / f_cyl_b",
+   "topological": {
+    "seeds": 8,
+    "right": 1,
+    "wrong": 7,
+    "no_role": 0,
+    "precision": 0.125,
+    "recall": 0.008064516129032258,
+    "ceiling": 124,
+    "mapped": 41,
+    "p": 0.21951219512195122,
+    "r": 0.07258064516129033,
+    "f1": 0.1090909090909091,
+    "seed_lens": {
+     "Contour": 5,
+     "CurveComplex": 1,
+     "PEAK_CHAIN": 2
+    },
+    "examined": 2674,
+    "budget": 1610
+   },
+   "measured": {
+    "seeds": 8,
+    "right": 3,
+    "wrong": 5,
+    "no_role": 0,
+    "precision": 0.375,
+    "recall": 0.024193548387096774,
+    "ceiling": 124,
+    "mapped": 45,
+    "p": 0.37777777777777777,
+    "r": 0.13709677419354838,
+    "f1": 0.2011834319526627,
+    "seed_lens": {
+     "Orientation": 8
+    },
+    "examined": 3373,
+    "budget": 1610
+   }
+  },
+  {
+   "pair": "single_disk / f_ctrl_disk",
+   "topological": {
+    "seeds": 8,
+    "right": 4,
+    "wrong": 4,
+    "no_role": 0,
+    "precision": 0.5,
+    "recall": 0.042105263157894736,
+    "ceiling": 95,
+    "mapped": 45,
+    "p": 0.6756756756756757,
+    "r": 0.2631578947368421,
+    "f1": 0.3787878787878788,
+    "seed_lens": {
+     "Orientation": 8
+    },
+    "examined": 4695,
+    "budget": 1096
+   },
+   "measured": {
+    "seeds": 5,
+    "right": 3,
+    "wrong": 1,
+    "no_role": 1,
+    "precision": 0.75,
+    "recall": 0.031578947368421054,
+    "ceiling": 95,
+    "mapped": 58,
+    "p": 0.78,
+    "r": 0.4105263157894737,
+    "f1": 0.5379310344827587,
+    "seed_lens": {
+     "Orientation": 5
+    },
+    "examined": 3853,
+    "budget": 1096
+   }
+  },
+  {
+   "pair": "single_box / f_ctrl_box",
+   "topological": {
+    "seeds": 8,
+    "right": 3,
+    "wrong": 5,
+    "no_role": 0,
+    "precision": 0.375,
+    "recall": 0.034482758620689655,
+    "ceiling": 87,
+    "mapped": 41,
+    "p": 0.24390243902439024,
+    "r": 0.11494252873563218,
+    "f1": 0.15625,
+    "seed_lens": {
+     "PEAK_CHAIN": 3,
+     "Contour": 5
+    },
+    "examined": 2206,
+    "budget": 976
+   },
+   "measured": {
+    "seeds": 8,
+    "right": 5,
+    "wrong": 3,
+    "no_role": 0,
+    "precision": 0.625,
+    "recall": 0.05747126436781609,
+    "ceiling": 87,
+    "mapped": 43,
+    "p": 0.7674418604651163,
+    "r": 0.3793103448275862,
+    "f1": 0.5076923076923077,
+    "seed_lens": {
+     "Orientation": 4,
+     "CONTOUR_PEAK": 4
+    },
+    "examined": 2272,
+    "budget": 976
+   }
+  }
+ ],
+ "verdict": "measured",
+ "higher": 8,
+ "lower": 0,
+ "equal": 1,
+ "means": {
+  "topological": {
+   "seeds": 7.666666666666667,
+   "right": 3.0,
+   "wrong": 4.555555555555555,
+   "precision": 0.42063492063492064,
+   "recall": 0.02414438000869689,
+   "mapped": 62.333333333333336,
+   "p": 0.5781513444899553,
+   "r": 0.30280434843495563,
+   "f1": 0.3828206388195987
+  },
+  "measured": {
+   "seeds": 5.666666666666667,
+   "right": 2.7777777777777777,
+   "wrong": 2.7777777777777777,
+   "precision": 0.6388888888888888,
+   "recall": 0.024337004411346785,
+   "mapped": 68.44444444444444,
+   "p": 0.6254833616265508,
+   "r": 0.353427099630804,
+   "f1": 0.4443122639810538
+  }
+ }
+}

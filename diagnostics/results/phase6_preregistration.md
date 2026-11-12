@@ -1541,3 +1541,30 @@ matcher pins are unchanged, 491 passed).  It does NOT flip ContourFragment into
 `TANGENT_KINDS`: that admission is a separate, pre-registered decision and the
 falsifier that was meant to license it fired.  ContourFragment therefore stays
 ABSENT for the attachment, which is the honest outcome of Phase 1.
+
+### 7.37 PHASE 2, RUN.  THE MEASURED SEED RULE BECOMES THE DEFAULT: 8-0-1
+
+**results/phase7_p2_seeds.txt.**  Nine registered pairs, renderer truth, the
+M3-6 "same physical role" criterion for a right seed, recall against the true
+correspondent pairs in the smaller frame (so seeding fewer never helps).
+
+    rule          seeds  right  wrong  P(seed)  R(seed)  mapped     P      R     role F1
+    topological     7.7    3.0    4.6    0.421    0.024    62.3   0.578  0.303   0.383
+    measured        5.7    2.8    2.8    0.639    0.024    68.4   0.625  0.353   0.444
+
+    MEASURED higher on seed precision on 8 of 9 pairs, lower on 0, equal on 1.
+
+THE PRE-REGISTERED DEFAULT RULE (7.31) FIRED: MEASURED is now the default
+(`SEED_TOPOLOGICAL = False`), the topological rule stays behind the flag
+unchanged, and the reason is written at the declaration.  Two pins that pin the
+TOPOLOGICAL rule now say so explicitly instead of inheriting the default; no
+pin was weakened (491 pass).
+
+Two things this does NOT do.  It does not change the verdict: the walker is
+still behind its switch and M3-6 is still red.  And it does not hide the seed
+problem: the measured rule is still only 0.639 precise and its recall (0.024,
+2.8 right seeds against a median 124 true correspondent pairs) is why the growth
+has so little to grow from.  Under the rule fixed in 7.31 the next arm is the
+DISTINCTIVENESS RANK (rarity of the agreeing bin pattern), which is registered
+there and not built: the second rule has now been measured, which is the
+condition for building a third.

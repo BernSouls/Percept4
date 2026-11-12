@@ -94,9 +94,20 @@ SMALL_FRAME_PRODUCT: int = 1000
 #: exactly the pre-registered walker; a diagnostic may set one False to report
 #: which mechanism moved which number.  Nothing in the pipeline sets them.
 #: ---------------------------------------------------------------------------
-#: D1: seeds from topological tokens (False: the Amendment-4 rule, seeds by
-#: relations that agree within one bin)
-SEED_TOPOLOGICAL: bool = True
+#: THE SEED RULE.  [STAGE 7 / PHASE 2, pre-registration 7.31]  True: seeds from
+#: topological tokens (D1).  False: the rule D1 replaced, seeds by relations
+#: that agree within one bin.
+#:
+#: DEFAULT IS False -- THE MEASURED RULE -- and the reason is measured, not
+#: chosen: on the nine registered pairs, against renderer truth (same physical
+#: role, the M3-6 criterion), the topological rule seeds at precision 0.421
+#: (3.0 right, 4.6 wrong per pair) and the measured rule at 0.639 (2.8 right,
+#: 2.8 wrong), with the mapping that grows from them reaching role F1 0.383 and
+#: 0.444.  The pre-registered rule (7.31) was "measured becomes the default iff
+#: its seed precision is higher on at least 6 of the 9 pairs"; it was higher on
+#: 8, lower on 0, equal on 1.  diagnostics/results/phase7_p2_seeds.txt.
+#: The topological rule is KEPT behind this flag, unchanged.
+SEED_TOPOLOGICAL: bool = False
 #: D2: only a contradiction past the margin vetoes
 CONTRADICTION_VETO: bool = True
 #: D3: the node gate relative to the node's best rival (False: the floor alone)
