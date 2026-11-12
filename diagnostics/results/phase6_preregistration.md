@@ -1721,3 +1721,48 @@ break ties) differs from the raw-Q-only pick on 5 of 9 pairs; a pick on
 score_for_class differs from the raw-Q pick on 2 of 9
 (box_over_box_haze: 91 pairs Q 0.400 vs 92 pairs Q 0.397; f_haze: 46/0.211 vs
 51/0.194).  Measured, not applied: `_choose` is unchanged.
+
+### 7.41 PHASE 5, RUN.  THE BIAS IS REAL, THE SYMMETRIC FORM HALVES IT, THE CRITERION FAILS -- NO DEFAULT CHANGED
+
+**A units bug in the first run, recorded.**  The first run used `c_edge_total`
+as a SHARE; it is an absolute edge count (1459.50 for the largest reference),
+so `B` read 1459.5 and the criterion could not be read at all.  The share is
+now the reference's count divided by the four references' counts FOR THE SAME
+QUERY and averaged over the 75 queries; the four `e_r` sum to 1.  Fixed in the
+script, no constant touched, re-run.
+
+**The measurement (results/phase7_p5_absence_bias.txt), EVAL-75, both windows.**
+
+    window full   core       acc 0.453   B 0.376   rho -1.00   FAIL
+                  symmetric  acc 0.453   B 0.283   rho -0.20   FAIL
+    window v1     core       acc 0.480   B 0.385   rho -0.80   FAIL
+                  symmetric  acc 0.520   B 0.264   rho -0.40   FAIL
+
+Per-reference prediction counts (of 75), full window:
+
+    reference   share of edges   core predicted   symmetric predicted
+    apple (16 queries)  0.34        0              7
+    car                 0.25       18             32
+    cup                 0.27       27             24
+    horse               0.14       30             12
+
+**THE FINDING.**  Under the core form the prediction distribution is the
+INVERSE of the references' size on both windows (rho -1.00 and -0.80): the
+smallest reference is never predicted (apple: 0 of 75, and 1 of its own 16
+queries right) and the largest is predicted least.  That is exactly the design
+defect the review named: `edge_absence` has a REFERENCE-side denominator, so a
+reference with more edges has more edges the correspondence fails to cover and
+is punished for being large.  The symmetric (union) form counts the query side
+too, which is the same size whichever reference is compared: it moves the
+ranking from exactly inverse to nearly flat (-0.20 / -0.40), halves `B`
+(0.376 -> 0.283, 0.385 -> 0.264) and, incidentally, does not lower accuracy
+(full +0.000, v1 +0.040).
+
+**NO DEFAULT CHANGED.**  7.34 required `B < 0.10` AND rho = 1 on both windows;
+the symmetric form reaches neither (B 0.264-0.283, rho -0.20 / -0.40).  So
+`EVIDENCE_QUERY_SIDE_TERMS` stays `()` and the core form stays the default.
+This is the rule working as written: a real, measured, direction-correct
+improvement that does not meet a bar fixed before the numbers existed does not
+become a default.  The bias is recorded as OPEN, with the number that shows it
+is a size effect (rho = -1 on the full window) and the number that shows the
+symmetric form is only half a fix.
