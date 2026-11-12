@@ -89,6 +89,23 @@ MIN_SUPPORT_FRACTION: float = 0.10
 #: below this many pairs the whole matrix is cheaper than any fraction of it
 SMALL_FRAME_PRODUCT: int = 1000
 
+#: ---------------------------------------------------------------------------
+#: [Amendment 7.21] ABLATION FLAGS.  Every one is True by default, which is
+#: exactly the pre-registered walker; a diagnostic may set one False to report
+#: which mechanism moved which number.  Nothing in the pipeline sets them.
+#: ---------------------------------------------------------------------------
+#: D1: seeds from topological tokens (False: the Amendment-4 rule, seeds by
+#: relations that agree within one bin)
+SEED_TOPOLOGICAL: bool = True
+#: D2: only a contradiction past the margin vetoes
+CONTRADICTION_VETO: bool = True
+#: D3: the node gate relative to the node's best rival (False: the floor alone)
+GATE_RELATIVE: bool = True
+#: D4: the arc order proposes (False: admission only by a measured relation)
+ORDER_PROPOSES: bool = True
+#: D5: the beam over seed sets (False: one hypothesis from the whole seed list)
+BEAM: bool = True
+
 
 def budget(frame_q: int, frame_r: int) -> int:
     """How many pairs one walk may examine.
@@ -367,6 +384,8 @@ class WalkResult:
     terms: Dict[str, Any] = field(default_factory=dict)
     #: the hypotheses of the beam: seed count, mapped, Q
     beam: List[Dict[str, Any]] = field(default_factory=list)
+    #: every graded signature similarity this walk PAID for, by pair
+    seen: Dict[Tuple[int, int], float] = field(default_factory=dict)
     dense: int = 0               # |nodes_q| x |nodes_r|, the old matcher's matrix
     #: the admissions in order: (query node, reference node, "seed" or the
     #: relation classes that supported it).  For diagnostics; decides nothing.
@@ -440,6 +459,12 @@ def _choose(hypotheses: List["WalkResult"]) -> "WalkResult":
     return best
 
 
+def _cached(res: "WalkResult", u: int, v: int) -> float:
+    """A similarity already charged to a hypothesis' budget (the objective
+    never spends: it reads what the growth paid for)."""
+    return float(res.seen.get((u, v), 0.0))
+
+
 class _Sim:
     """Graded signature similarity with ONE budget for the whole walk."""
 
@@ -447,7 +472,8 @@ class _Sim:
         from matching.structural_similarity import _sig_sim
         self._f = _sig_sim
         self.gq, self.gr, self.res = gq, gr, res
-        self.cache: Dict[Tuple[int, int], float] = {}
+        #: every similarity this hypothesis has PAID for (its own budget)
+        self.cache: Dict[Tuple[int, int], float] = res.seen
 
     def __call__(self, u: int, v: int) -> Optional[float]:
         got = self.cache.get((u, v))
@@ -467,8 +493,11 @@ class _Sim:
 
 def _node_gate(sim: Optional[float], best: float) -> bool:
     """[D3] relative node gate: above the floor and within a margin of the
-    node's best similarity in the other graph."""
-    return sim is not None and sim > NODE_FLOOR and sim >= best - NODE_MARGIN
+    node's best similarity in the other graph.  With GATE_RELATIVE off the
+    gate is the floor alone (the pre-D3 gate)."""
+    if sim is None or sim <= NODE_FLOOR:
+        return False
+    return sim >= best - NODE_MARGIN if GATE_RELATIVE else True
 
 
 def _seeds(gq: "_Index", gr: "_Index", sim: _Sim,
@@ -487,6 +516,9 @@ def _seeds(gq: "_Index", gr: "_Index", sim: _Sim,
             for t in g.tok[n]:
                 out.setdefault(t, []).append(n)
         return out
+
+    if not SEED_TOPOLOGICAL:
+        return _seeds_by_measurement(gq, gr, sim, res)
 
     cq, cr = carriers(gq), carriers(gr)
     shared: Dict[Tuple[int, int], int] = {}
@@ -519,6 +551,52 @@ def _seeds(gq: "_Index", gr: "_Index", sim: _Sim,
         out.append((u, v))
         used_q.add(u)
         used_r.add(v)
+    return out
+
+
+def _seeds_by_measurement(gq: "_Index", gr: "_Index", sim: "_Sim",
+                          res: WalkResult) -> List[Tuple[int, int]]:
+    """[Amendment 4 / 7.21 ablation] seeds from relations that AGREE within one
+    bin: a pair of frame nodes shares a relation class in which some relation
+    agrees on every axis measured on both.  Ranked by (agreeing relations,
+    node similarity, canonical keys), one-to-one.  This is the rule D1
+    replaced; it is kept so a report can say what D1 changed, and it is used
+    only when SEED_TOPOLOGICAL is off.
+
+    (It was written with `gr.half.get(cls)`, a class looked up in a table keyed
+    by NODE: it returned None for every pair and produced no seed at all.  That
+    is what the first D1 ablation row measured -- the fallback, not the old
+    rule.  Fixed here and the row is re-run.)
+    """
+    agree: Dict[Tuple[int, int], int] = {}
+    for u in gq.frame:
+        for v in gr.frame:
+            n = 0
+            for cls, mine in gq.half[u].items():
+                theirs = gr.half[v].get(cls)
+                if not theirs:
+                    continue
+                if any(_slack(hu, hv) is not None for hu in mine for hv in theirs):
+                    n += 1
+            if n:
+                agree[(u, v)] = n
+    cands = []
+    for (u, v), n in sorted(agree.items()):
+        s = sim(u, v)
+        if s is None or s <= NODE_FLOOR:
+            continue
+        cands.append((-n, -s, gq.key[u], gr.key[v], u, v))
+    cands.sort()
+    out: List[Tuple[int, int]] = []
+    used_u, used_v = set(), set()
+    for _n, _s, _ku, _kv, u, v in cands:
+        if len(out) >= N_SEEDS:
+            break
+        if u in used_u or v in used_v:
+            continue
+        used_u.add(u)
+        used_v.add(v)
+        out.append((u, v))
     return out
 
 
@@ -591,6 +669,8 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
     def order_propose(hq: int, hr: int) -> None:
         """[D4] two admitted boundaries with enough admitted features in order
         propose the features attached to both."""
+        if not ORDER_PROPOSES:
+            return
         fa, fb = gq.hosts.get(hq, {}), gr.hosts.get(hr, {})
         if not fa or not fb:
             return
@@ -671,7 +751,7 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
                 order_propose(hq, hr)
 
     for u, v in seeds:
-        if contradicted(u, v):
+        if CONTRADICTION_VETO and contradicted(u, v):
             out.contradicts += 1
             rejected.add((u, v))
             continue
@@ -709,13 +789,24 @@ def _grow(gq: "_Index", gr: "_Index", sim: _Sim, res: WalkResult,
 def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
          r_sigs: Dict[int, Tuple[str, Any]]) -> WalkResult:
     """[Amendment 7] One walk: seeds (D1), a beam of hypotheses over seed
-    prefixes (D5), the objective (D0) choosing among them."""
+    prefixes (D5), the objective (D0) choosing among them.
+
+    [Amendment 7.22] The budget is PER HYPOTHESIS, not shared by the beam:
+    four hypotheses against one budget of 7.6 starved all four (measured: the
+    self-match examined == budget on 16 of 18 scenes and mapped 0.29 of FRAME
+    where the pre-D0 walker mapped 0.83; the M3-6 median spent 1427 of 1470
+    against 300-700 of 900-2000 before).  Each hypothesis is a walk of its own
+    and gets the whole pre-registered budget; the cost of the beam is their
+    sum and is reported as such."""
     gq, gr = _Index(Q, q_sigs), _Index(R, r_sigs)
     res = WalkResult(frame_q=len(gq.frame), frame_r=len(gr.frame),
                      dense=len(q_sigs) * len(r_sigs))
     res.budget = budget(len(gq.frame), len(gr.frame))
-    sim = _Sim(gq, gr, res)
-    seeds = _seeds(gq, gr, sim, res)
+    seed_res = WalkResult(frame_q=len(gq.frame), frame_r=len(gr.frame),
+                          budget=res.budget)
+    seeds = _seeds(gq, gr, _Sim(gq, gr, seed_res), seed_res)
+    res.examined += seed_res.examined
+    res.budget_exhausted |= seed_res.budget_exhausted
     hypotheses: List[WalkResult] = []
     seen_prefix = set()
     # [Amendment 7.10] the beam's four seed sets: the first seed, two
@@ -726,30 +817,47 @@ def walk(Q: Any, R: Any, q_sigs: Dict[int, Tuple[str, Any]],
     n_seed = len(seeds)
     ks = sorted({1, max(1, n_seed // 3), max(1, (2 * n_seed) // 3), n_seed},
                 reverse=True) if n_seed else [0]
+    if not BEAM:
+        ks = [n_seed]
+    beam_cost = 0
     for k in ks[:BEAM_WIDTH]:
         prefix = tuple(seeds[:k])
         if prefix in seen_prefix:
             continue
         seen_prefix.add(prefix)
-        h = _grow(gq, gr, sim, res, list(prefix))
-        h.terms = objective(h.mapping, gq, gr, lambda u, v: sim.cache.get((u, v), 0.0))
+        hyp_res = WalkResult(frame_q=len(gq.frame), frame_r=len(gr.frame),
+                            budget=res.budget)
+        h = _grow(gq, gr, _Sim(gq, gr, hyp_res), hyp_res, list(prefix))
+        h.terms = objective(h.mapping, gq, gr,
+                            lambda u, v: _cached(hyp_res, u, v))
+        beam_cost += hyp_res.examined
+        res.edge_checks += h.edge_checks
+        res.budget_exhausted |= hyp_res.budget_exhausted
+        h.budget = hyp_res.budget
+        h.examined = hyp_res.examined
+        h.budget_exhausted = hyp_res.budget_exhausted
         hypotheses.append(h)
     if not hypotheses:
-        hypotheses = [_grow(gq, gr, sim, res, [])]
+        hyp_res = WalkResult(frame_q=len(gq.frame), frame_r=len(gr.frame),
+                            budget=res.budget)
+        hypotheses = [_grow(gq, gr, _Sim(gq, gr, hyp_res), hyp_res, [])]
         hypotheses[0].terms = objective({}, gq, gr, lambda u, v: 0.0)
+        beam_cost += hyp_res.examined
+    res.examined += beam_cost
     # [Amendment 7.11] the choice among the beam's hypotheses
     best = _choose(hypotheses)
     # the reported walk is the best hypothesis, with the shared cost counts
-    out = WalkResult(frame_q=best.frame_q, frame_r=best.frame_r, dense=best.dense,
+    out = WalkResult(frame_q=best.frame_q, frame_r=best.frame_r, dense=res.dense,
                      budget=res.budget, seeds=best.seeds, mapping=best.mapping,
                      log=best.log, examined=res.examined, edge_checks=res.edge_checks,
                      budget_exhausted=res.budget_exhausted,
                      order_rejections=best.order_rejections,
                      gate_rejections=best.gate_rejections,
                      contradicts=best.contradicts, terms=best.terms)
-    _score(out, gq, gr, lambda u, v: sim.cache.get((u, v), 0.0))
+    _score(out, gq, gr, lambda u, v: 1.0)
     out.beam = [{"seeds": len(h.seeds), "mapped": len(h.mapping), "q": h.terms["q"],
-                 "order_rejections": h.order_rejections} for h in hypotheses]
+                 "order_rejections": h.order_rejections,
+                 "examined": h.examined} for h in hypotheses]
     return out
 
 

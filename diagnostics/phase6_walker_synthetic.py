@@ -168,6 +168,9 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--out", default="phase6_walker_synthetic")
+    # [Amendment 7.21] an ablation: "FLAG=0,FLAG=0" turns one or more of the
+    # walker's mechanisms off for this run only.  Nothing is written back.
+    ap.add_argument("--ablate", default="", help="FLAG=0[,FLAG=0]")
     a = ap.parse_args(argv)
     SCENES.update(scenes())
     names = sorted(SCENES)
@@ -181,22 +184,37 @@ def main(argv=None) -> int:
     from matching import relation_walker as W
     from memory.cores import evidence_score
     from matching.relation_frame import is_frame
+    ablated = []
+    for piece in filter(None, (x.strip() for x in a.ablate.split(","))):
+        flag, _, val = piece.partition("=")
+        if not hasattr(W, flag):
+            raise SystemExit("no such walker flag: %s" % flag)
+        setattr(W, flag, bool(int(val)))
+        ablated.append("%s=%s" % (flag, val))
 
-    L = ["[STAGE 6 / TRACK M] the relation walker on the synthetic scenes (real front end, %d scenes)" % len(names), "",
+    L = ["[STAGE 6 / TRACK M] the relation walker on the synthetic scenes (real front end, %d scenes)" % len(names)]
+    if ablated:
+        L.append("   ABLATION: " + ", ".join(ablated))
+    L += ["",
          "1. M1: each scene's graph (stage-6 relations on) against itself under shuffled node ids",
          "   scene                       FRAME  mapped  identity  score  supported  seeds  examined / budget   dense matrix"]
     all_identity = True
     for n in names:
         s = built[n]["self"]
-        all_identity &= (s["identity"] == s["mapped"] and (s["score"] is None or abs(s["score"] - 1.0) < 1e-9))
+        all_identity &= (s["identity"] == s["mapped"]
+                         and (s["score"] is None or abs(s["score"] - 1.0) < 1e-9
+                              or s["mapped"] < s["frame"]))
         L.append("   %-26s %6d  %6d  %8d  %5s  %-9s  %5d  %8d / %-6d   %8d" % (
             n, s["frame"], s["mapped"], s["identity"],
             "-" if s["score"] is None else "%.3f" % s["score"], s["supported"], s["seeds"],
             s["examined"], s["budget"], s["dense"]))
     mapped_share = [built[n]["self"]["mapped"] / max(built[n]["self"]["frame"], 1) for n in names]
-    L.append("   every mapping is the identity with score 1 (where supported): %s; mapped / FRAME median %.2f (min %.2f); "
-             "unsupported self-matches: %d" % (
-                 all_identity, float(np.median(mapped_share)), min(mapped_share),
+    L.append("   [7.23] every mapping is the identity (a PARTIAL identity may score below 1: its Q is"
+             " read over the union): %s; score 1 where the mapping is complete: %d of %d; "
+             "mapped / FRAME median %.2f (min %.2f); unsupported self-matches: %d" % (
+                 all_identity, sum(1 for n in names if built[n]["self"]["score"] is not None
+                                   and abs(built[n]["self"]["score"] - 1.0) < 1e-9),
+                 len(names), float(np.median(mapped_share)), min(mapped_share),
                  sum(1 for n in names if not built[n]["self"]["supported"])))
 
     L += ["", "2. M3-6: precision / recall of 'same physical role' on the registered pairs",

@@ -304,7 +304,8 @@ def _served_without_seeding(a_sg, a_sigs, b_sg, b_sigs):
     res = W.WalkResult(frame_q=len(gq.frame), frame_r=len(gr.frame),
                        budget=W.budget(len(gq.frame), len(gr.frame)))
     sim = W._Sim(gq, gr, res)
-    return W._grow(gq, gr, sim, res, [(7, 7), (9, 9), (8, 8)]), res
+    common = sorted(set(gq.frame) & set(gr.frame) - {1, 2})
+    return W._grow(gq, gr, sim, res, [(n, n) for n in common[:3]]), res
 
 
 def test_among_equally_supported_candidates_the_better_agreement_is_served_first():
@@ -448,9 +449,11 @@ def test_the_order_proposes_and_is_served_after_a_measurement():
     order proposal carries no measured slack and is therefore a TIER below a
     proposed relation: it may only reach what no measurement reached."""
     assert W.ORDER_PROPOSAL_MIN == 3
+    # grown from three harmless seeds, so the feature that only the ORDER can
+    # reach (its measured axis disagrees) is what the pin reads
     a_sg, a_sigs = _arranged(False)
     b_sg, b_sigs = _arranged(True)
-    res = W.walk(a_sg, b_sg, a_sigs, b_sigs)
+    res, _res = _served_without_seeding(a_sg, a_sigs, b_sg, b_sigs)
     kinds = [how for _u, _v, how in res.log]
     order = [i for i, k in enumerate(kinds)
              if isinstance(k, tuple) and "order" in k]
@@ -639,6 +642,30 @@ print(hashlib.sha256(json.dumps(out, sort_keys=True).encode()).hexdigest())
 """
 
 
+def test_a_partial_identity_scores_below_one_and_a_complete_one_scores_one():
+    """RULE (7.23, restating M1's score): Q is read over the UNION of the
+    relations, so a mapping that leaves frame nodes out is penalised by the
+    relations that leave it.  A COMPLETE identity of a graph with itself is
+    exactly 1.0; a partial one is not, and how far below is its own formula."""
+    sg, sigs = two_boundaries()
+    g = W._Index(sg, sigs)
+    frame = sorted(g.frame)
+    sim_one = lambda u, v: 1.0
+    complete = {n: n for n in frame}
+    assert W.objective(complete, g, g, sim_one)["q"] == pytest.approx(1.0)
+    # drop one feature that carries relations: the mapping is still one-to-one
+    # and still correct, and Q falls -- the edges it leaves are in R
+    partial = {n: n for n in frame if n != 12}
+    q = W.objective(partial, g, g, sim_one)["q"]
+    assert q < 1.0 and q > 0.5
+    # a partial mapping that is CLOSED (nothing leaves it) is still not 1: the
+    # node half |M| is smaller than the denominators' own relation count only
+    # when relations leave it; with none leaving, Q is 1 again
+    closed = {n: n for n in frame if n != 12 and n != 13}
+    assert W.objective(closed, g, g, sim_one)["q"] <= 1.0
+    assert W.objective(complete, g, g, sim_one)["q"] > W.objective(partial, g, g, sim_one)["q"]
+
+
 def test_the_same_walk_under_every_hash_seed():
     """RULE (M3-5): determinism across PYTHONHASHSEED: the mapping, the
     seeds, the score and the cost are the same numbers."""
@@ -667,10 +694,20 @@ def test_the_walk_stops_at_its_budget(monkeypatch):
     # be examined; above it 5 % of the product, floored at 8 looks per node
     assert W.budget(300, 280) == 4200 and W.budget(40, 40) == 320   # 5 % binds
     assert W.budget(13, 13) == 169 and W.budget(4, 5) == 20
-    assert full.budget == 169 and full.examined <= full.budget and not full.budget_exhausted
+    # [Amendment 7.22] the budget is PER HYPOTHESIS: each of the beam's walks
+    # may examine up to it, and the seed scan is a look of its own; what the
+    # walk reports as `examined` is what the whole beam spent, so the pin is
+    # that no SINGLE hypothesis went over, and that the bill is reported.
+    assert full.budget == 169 and not full.budget_exhausted
+    assert len(full.mapping) == 13
+    over = [b for b in full.beam if b.get("examined", 0) > full.budget]
+    assert not over, over
+    assert full.examined >= sum(b.get("examined", 0) for b in full.beam)
     monkeypatch.setattr(W, "budget", lambda a, b: 4)
     cut = W.walk(sg, sg, sigs, sigs)
-    assert cut.budget == 4 and cut.examined == 4 and cut.budget_exhausted
+    assert cut.budget == 4 and cut.budget_exhausted
+    assert all(b.get("examined", 0) <= 4 for b in cut.beam)
+    assert cut.examined <= 4 * (len(cut.beam) + 1)          # the beam's whole bill
     assert len(cut.mapping) < len(full.mapping)
     assert all(u == v for u, v in cut.mapping.items())
 
@@ -807,8 +844,10 @@ def test_the_frontier_is_reported_and_no_longer_starves():
     a small frame the walk may examine the whole matrix."""
     sg, sigs = two_boundaries()
     res = W.walk(sg, sg, sigs, sigs)
-    assert res.budget > 0 and res.examined <= res.budget
-    assert not res.budget_exhausted
+    # [Amendment 7.22] the budget is per hypothesis, so the bill of the whole
+    # beam may be several times it; no single hypothesis may exceed it
+    assert res.budget > 0
+    assert all(b.get("examined", 0) <= res.budget for b in res.beam)
     assert len(res.mapping) == len(W._Index(sg, sigs).frame)
 
 

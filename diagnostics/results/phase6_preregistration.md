@@ -1011,3 +1011,41 @@ pins use (a rarity rule that changes ranking alone, and whose ranking never
 separates a candidate on those graphs).  No mutation was swapped for a
 catchable one; a mutation that did not catch anything was replaced by a pin on
 the rule it actually tests (the node gate on a seed), and that is recorded.
+
+### 7.22 THE BUDGET IS PER HYPOTHESIS (D5's design flaw, found by M1)
+
+7.6 kept the budget and D5 gave the walk a beam; 7.10 made the beam share that
+one budget.  Four hypotheses at ~1500 looks each against ~1470 in total starve
+all four.  Measured on the M1 run: `examined == budget` on 16 of 18
+self-matches, mapped/FRAME median 0.29 where the pre-D0 walker managed 0.83,
+and on M3-6 the median pair spent 1427 of 1470 where before D0 it spent 300-700
+of 900-2000 and never bound.  This is a flaw in the design, not a tuning miss:
+each hypothesis IS a walk, and the pre-registered number is the budget of a
+walk.  Each hypothesis now gets the whole budget; the beam's bill is their sum
+and is reported (`WalkResult.examined` is the sum, each beam entry carries its
+own).  Nothing else about the budget changes: 0.05 of the product, floored at
+8 looks per node, the whole matrix on a small frame (7.13).  The seed scan is
+charged to the walk (it is one look per pair it needs) and is reported apart.
+
+### 7.23 WHAT A PARTIAL IDENTITY SCORES, stated (a reading of 7.0, not a change)
+
+A graph matched against ITSELF, mapping 50 of 174 frame nodes, all 50 correctly,
+scores 0.535 -- not 1.0.  This is deliberate and it is 7.0 read literally: R(M)
+is "the number of measured edges with at least one end in M, plus the number
+with at least one end in the image of M, minus the edges with both ends
+mapped".  An edge from a mapped node to an UNMAPPED one is in R and cannot be
+in P, so every node left out of the correspondence costs the objective.  7.0
+states the intent in as many words ("a walk that drops most of the frame is now
+visibly worse than one that maps it"); the MCS form is over the union, not over
+the mapped part alone.  Consequences, written down before the next measurement:
+  * M1's pin is restated.  The invariant is "the mapping is the identity AND
+    every mapped pair is the same node AND Q = 1 WHEN THE MAPPING IS COMPLETE".
+    A partial identity must show Q < 1, and its Q is its own formula's number:
+    checked directly, the full identity of the same graph scores exactly 1.0
+    (P = R = 453, S = |M| = 174, A = A_units).  An M1 row that maps less than
+    the whole frame and still reads 1.000 is saying that the mapping is CLOSED
+    (no measured edge leaves it), which on a 126-of-174 mapping of one graph is
+    possible and is reported, not assumed.
+  * The walk's own `score` is therefore a number that can be compared across
+    pairs of different sizes, and 1.0 is achievable only by a complete,
+    closed mapping.  Any claim that a partial mapping "scores 1" is withdrawn.

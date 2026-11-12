@@ -1,0 +1,6 @@
+all-on (pre-registered)            mapped   57.4  P 0.556  R 0.301  F1 0.378  seeds  6.0
+D1 off (seeds by measurement)      mapped   64.0  P 0.636  R 0.360  F1 0.451  seeds  4.9
+D2 off (no contradiction veto)     mapped   66.2  P 0.559  R 0.343  F1 0.420  seeds  6.0
+D3 off (floor-only gate)           mapped   60.6  P 0.566  R 0.311  F1 0.390  seeds  5.7
+D4 off (order does not propose)    mapped   57.4  P 0.556  R 0.301  F1 0.378  seeds  6.0
+D5 off (one hypothesis)            mapped   56.2  P 0.551  R 0.296  F1 0.372  seeds  8.0
