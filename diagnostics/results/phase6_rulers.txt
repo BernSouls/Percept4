@@ -1,0 +1,44 @@
+[STAGE 6 / R4] the rulers, 79 graphs (4 references + 75 EVAL); PERCEPT_SET: GRAPH_STAGE6_RELATIONS=1
+edges matched to their constructor call: by identity 72970, by class and bins 24383, not matched 0
+
+A. DISTANCE SLOTS (the rule: re-ruled when more than 25 % of the measured values are in the last bin or
+   outside the span; new upper end = 99th percentile rounded up to the next 0.5 of the unit)
+   class.slot                                  unit             span        n     median    p90    p99    max   last bin+   first bin   verdict
+   AMODAL_LINK.gap                             wavelengths     [0, 5]     508     2.80   5.00   5.00   5.00      0.12        0.00     kept
+   BORDER_OWNERSHIP.dist                       wavelengths     [0, 2]       0   no measured value in these graphs
+   BOUNDARY_ATTACHMENT.perp_dist               wavelengths     [0, 1]   24851     0.06   0.74   1.25   5.30      0.05        0.59     kept
+   BOUNDARY_SUCCESSOR.arc_gap                  wavelengths     [0, 1.1]    5564     0.57   0.94   1.06   1.75      0.09        0.00     kept
+   COCIRCULAR.dist                             wavelengths     [0, 5]     921     2.80   4.51   5.00   5.00      0.15        0.00     kept
+   CONTACT.dist                                median_spacings [0, 1]     274     1.92   2.84   5.07   6.54      0.90        0.00     RE-RULED -> [0, 5.5]
+   CONTOUR_CONTINUITY.dist                     wavelengths     [0, 2]    2802     2.59   3.84   4.68   5.64      0.76        0.00     RE-RULED -> [0, 5]
+   CURVATURE.chord_len                         wavelengths     [0, 3]       0   no measured value in these graphs
+   CURVATURE_SIGN_CONTINUITY.dist              wavelengths     [0, 4]    2496     2.50   3.75   3.95   3.95      0.23        0.11     kept
+   CURVE_CONTAINMENT.rel_dist                  wavelengths     [0, 5]    1395     1.57   3.90   6.61   8.89      0.07        0.09     kept
+   ILLUSORY_INDUCER.gap                        wavelengths     [0, 6]     249     3.32   5.48   5.94   5.95      0.14        0.09     kept
+   JUNCTION_CONTOUR.dist                       wavelengths     [0, 2.5]    5500     7.10  13.01  15.91  17.70      0.90        0.01     RE-RULED -> [0, 16]
+   ORIENTATION_BEND.spatial_dist               wavelengths     [0, 1]    2288     2.50   2.80   3.95   6.73      1.00        0.00     RE-RULED -> [0, 4]
+   ORIENTATION_CONTINUITY.dist                 median_spacings [0, 4]    4261     1.00   1.41   2.83   3.61      0.00        0.00     kept
+   ORIENTATION_CONTINUITY.perp                 median_spacings [0, 2]    4261     0.45   0.82   1.00   1.41      0.00        0.34     kept
+   ORIENTATION_JUNCTION.spatial_dist           wavelengths     [0, 1]    1536     2.80   3.54   5.15  16.01      1.00        0.00     RE-RULED -> [0, 5.5]
+   PARALLEL.perp_dist                          wavelengths     [0, 6]    1029     0.82   2.08   3.76   5.34      0.00        0.47     kept
+   PARALLEL.stagger_dist                       wavelengths     [-6, 6]    1029     1.24   2.82   4.56   5.95      0.01        0.62     kept
+   PART_CONTAINMENT.rel_dist                   wavelengths     [0, 5]       0   no measured value in these graphs
+   SHARED_BOUNDARY.dist                        wavelengths     [0, 2.5]       0   no measured value in these graphs
+   SYMMETRY.dist                               wavelengths     [0, 4]     405     2.80   3.95   3.95   3.95      0.38        0.06     RE-RULED -> [0, 4]
+
+   the re-ruled slots: edges that change bin, entropy of the bin histogram (bits; 3 = uniform over 8 bins)
+   class.slot                                  old span    new span     n     change bin     entropy before -> after    histogram before -> after
+   CONTACT.dist                                [0, 1]   [0, 5.5]     274      270 (0.99)      0.64 -> 2.33              [0, 0, 0, 0, 8, 11, 9, 246] -> [11, 66, 69, 88, 25, 8, 3, 4]
+   CONTOUR_CONTINUITY.dist                     [0, 2]   [0, 5]    2802     2727 (0.97)      1.35 -> 2.73              [0, 61, 44, 100, 92, 246, 124, 2135] -> [63, 234, 457, 472, 637, 538, 326, 75]
+   JUNCTION_CONTOUR.dist                       [0, 2.5]   [0, 16]    5500     5213 (0.95)      0.72 -> 2.92              [28, 35, 75, 51, 117, 105, 129, 4960] -> [480, 800, 1006, 824, 793, 749, 589, 259]
+   ORIENTATION_BEND.spatial_dist               [0, 1]   [0, 4]    2288     2202 (0.96)      -0.00 -> 1.53              [0, 0, 0, 0, 0, 0, 0, 2288] -> [0, 0, 341, 525, 0, 1336, 0, 86]
+   ORIENTATION_JUNCTION.spatial_dist           [0, 1]   [0, 5.5]    1536     1510 (0.98)      -0.00 -> 2.17              [0, 0, 0, 0, 0, 0, 0, 1536] -> [0, 94, 219, 286, 693, 201, 17, 26]
+   SYMMETRY.dist                               [0, 4]   [0, 4]     405        0 (0.00)      1.90 -> 1.90              [25, 0, 21, 49, 0, 155, 0, 155] -> [25, 0, 21, 49, 0, 155, 0, 155]
+
+B. THE FROZEN SLOTS, from the raw values of the edges in the graphs
+   CURVATURE_SIGN_CONTINUITY.curv_diff          unit radians                span [0, 6.28319] x 8 bins: edges 2496, measured 2496 (None 0); distinct raw values 1; min 0, median 0, max 0; first values [0.0]
+      -> CONSTANT (one value)
+   CONTACT.depth_step                           unit depth_units            span [0, 3] x 8 bins: edges 274, measured 274 (None 0); distinct raw values 1; min 0, median 0, max 0; first values [0.0]
+      -> CONSTANT (one value)
+   CONTOUR_CONTINUITY.curv_agree                unit fraction               span [0, 1] x 8 bins: edges 2802, measured 2802 (None 0); distinct raw values 2; min 0.875, median 1, max 1; first values [0.875, 1.0]
+      -> 2 distinct values inside one bin width

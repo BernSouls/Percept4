@@ -1049,3 +1049,57 @@ the mapped part alone.  Consequences, written down before the next measurement:
   * The walk's own `score` is therefore a number that can be compared across
     pairs of different sizes, and 1.0 is achievable only by a complete,
     closed mapping.  Any claim that a partial mapping "scores 1" is withdrawn.
+
+### 7.25 T2, M1 AND T1, each re-run ONCE under the current walker and objective
+
+Order as the review set it: T2 (the gate), M1, M3-6, then T1.  Nothing was
+selected on: no constant moved between these runs, and MATCH_RELATION_WALKER
+stays OFF.
+
+**T2 (results/phase6_t2_objective_d05.txt).**  Under 7.0/7.8/7.14 with the
+walker as it now stands, on the nine registered pairs: truth Q > walker Q on
+6 of 9 (walker > truth on 3); median Q walker 0.252, truth 0.239, old matcher
+0.421; median mapped walker 43, truth 71, old 158.  The registered test is
+"truth must beat the walker on at least half the pairs" and it passes (6 of 9),
+but the MEDIAN says the walker's own mapping now scores higher than renderer
+truth, because the walker maps far fewer nodes and Q is a mean over the union:
+a small closed mapping can beat a large honest one.  Both readings are
+reported; the test as pre-registered is met, the median is not flattering.
+
+**M1 (results/phase6_walker_synthetic_d05b.txt).**  After 7.22 (budget per
+hypothesis): identity on 18 of 18 self-matches, score 1.000 on 16 of 18,
+mapped/FRAME median 0.82 (min 0.13); the two below 1 are partial identities
+(7.23).  Before 7.22 the same run mapped 0.29 of FRAME and read 0.436-1.000.
+
+**M3-6: RED.**  F1(new) - F1(old) mean -0.274, better on 0 of 9; precision
+mean 0.556 against 0.632, recall 0.301 against 0.678.  This is worse than the
+pre-D0 run's -0.306 only in the sense that recall rose (0.166 -> 0.301) while
+the old matcher's own numbers did not move.  THE VERDICT DOES NOT CHANGE: the
+walker loses to the matcher the repository ships, on the metric the review
+fixed, on every pair.  The final measurement therefore does not run.
+
+**T1 (results/phase6_t1_old_matcher.txt): flat.**  The old matcher on EVAL-75,
+both windows, stage-5 graphs against stage-6 graphs: full 38/75 both, v1
+39/75 both, no argmax moved by a single query.  The stage-6 structure -- the
+relations R6 counted 848 of, the 248-node component, the measured share 0.83 --
+changes NOTHING for the matcher the repository actually uses.  Read with R6,
+this is the sharpest negative result of the stage: a graph change that
+increases structure by an order of magnitude leaves the matcher's accuracy
+untouched to the query, which says the matcher is not reading the structure
+it is given.
+
+### 7.26 WHAT MOVED WHICH NUMBER, listed once
+
+Each fix, and the number it moved, all measured (not estimated):
+  * 7.22 budget per hypothesis: M1 mapped/FRAME 0.29 -> 0.82, M1 score
+    0.436-1.000 -> 1.000 on 16 of 18, M3-6 recall 0.166 -> 0.301.
+  * 7.19 order slack bug: no mapping move on any pin (measured); it removed a
+    latent mis-ranking and is pinned.
+  * 7.14 R counted instead of set-unioned: identity Q 0.643 -> 1.000 on the
+    pin graph.
+  * 7.13 small-frame budget: 13-node pin growth 9 of 13 -> 13 of 13.
+  * D1 topological seeds: F1 0.451 (the rule it replaced) -> 0.378.  WORSE.
+  * D2 contradiction margin: F1 0.420 (no veto) -> 0.378.  WORSE; too tight.
+  * D3 relative gate: F1 0.390 (floor only) -> 0.378.  WORSE by a little.
+  * D4 order proposing: no change to three decimals.  DEAD on this workload.
+  * D5 beam: F1 0.372 (one hypothesis) -> 0.378.  The only D that helps.

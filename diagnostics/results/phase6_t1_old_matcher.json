@@ -1,0 +1,22 @@
+{
+ "full": {
+  "n": 75,
+  "stage5": 0.5066666666666667,
+  "stage6": 0.5066666666666667,
+  "gained": [],
+  "lost": [],
+  "pred_moved": [],
+  "stage5_correct": 38,
+  "stage6_correct": 38
+ },
+ "v1": {
+  "n": 75,
+  "stage5": 0.52,
+  "stage6": 0.52,
+  "gained": [],
+  "lost": [],
+  "pred_moved": [],
+  "stage5_correct": 39,
+  "stage6_correct": 39
+ }
+}

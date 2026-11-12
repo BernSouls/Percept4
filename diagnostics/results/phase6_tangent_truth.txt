@@ -32,18 +32,34 @@
       CONTOUR_PEAK     PEAK_CHAIN  by_tangent   n     0   | n    10  median   0.0  p90  56.4  under 15: 0.70  under 30: 0.70   |   0.0
       CONTOUR_PEAK     PEAK_CHAIN  known        n   782  median   0.0  p90   9.5  under 15: 0.95  under 30: 0.98   | n   941  median   3.4  p90  15.9  under 15: 0.89  under 30: 0.92   |   3.4
       CONTOUR_PEAK     PEAK_CHAIN  unambiguous  n    16  median   2.7  p90  10.9  under 15: 1.00  under 30: 1.00   | n    29  median   9.0  p90  44.9  under 15: 0.69  under 30: 0.69   |   9.0
-      ContourFragment  Contour     unambiguous  n   141  median  86.2  p90  86.2  under 15: 0.00  under 30: 0.00   | n   141  median  86.2  p90  86.2  under 15: 0.00  under 30: 0.00   |  86.2
-      ContourFragment  PEAK_CHAIN  unambiguous  n   166  median  83.6  p90  90.0  under 15: 0.00  under 30: 0.00   | n   166  median  83.6  p90  90.0  under 15: 0.00  under 30: 0.00   |  83.7
-      Corner           Contour     by_tangent   n     1  median   3.7  p90   3.7  under 15: 1.00  under 30: 1.00   | n     2  median  38.9  p90  67.0  under 15: 0.50  under 30: 0.50   |   3.7
-      Corner           Contour     unambiguous  n    17  median  22.5  p90  82.5  under 15: 0.29  under 30: 0.53   | n    39  median  23.7  p90  82.5  under 15: 0.23  under 30: 0.54   |  45.0
-      Corner           PEAK_CHAIN  known        n     2  median  16.2  p90  20.5  under 15: 0.50  under 30: 1.00   | n    19  median  52.5  p90  55.9  under 15: 0.16  under 30: 0.21   |  52.5
-      Corner           PEAK_CHAIN  unambiguous  n    14  median  30.0  p90  75.1  under 15: 0.29  under 30: 0.50   | n    22  median  43.9  p90  83.8  under 15: 0.27  under 30: 0.41   |  45.0
-      EndStopped       Contour     by_tangent   n     6  median   4.6  p90  39.9  under 15: 0.83  under 30: 0.83   | n    12  median   7.4  p90  72.3  under 15: 0.67  under 30: 0.75   |   3.8
-      EndStopped       Contour     unambiguous  n   245  median  56.3  p90  86.2  under 15: 0.03  under 30: 0.26   | n   313  median  56.2  p90  86.2  under 15: 0.04  under 30: 0.25   |  63.8
-      EndStopped       PEAK_CHAIN  by_tangent   n     2  median   0.0  p90   0.0  under 15: 1.00  under 30: 1.00   | n    13  median  19.1  p90  49.9  under 15: 0.46  under 30: 0.77   |   9.5
-      EndStopped       PEAK_CHAIN  unambiguous  n   237  median  39.5  p90  90.0  under 15: 0.08  under 30: 0.41   | n   294  median  39.9  p90  87.1  under 15: 0.12  under 30: 0.41   |  45.0
-      Orientation      Contour     known        n   457  median   0.0  p90   7.5  under 15: 0.96  under 30: 0.99   | n   512  median   0.0  p90   7.5  under 15: 0.96  under 30: 0.99   |   0.0
+      Orientation      Contour     known        n   658  median   0.0  p90   7.5  under 15: 0.97  under 30: 1.00   | n   716  median   0.0  p90   7.5  under 15: 0.97  under 30: 0.99   |   0.0
       Orientation      Contour     unambiguous  n     1  median  15.1  p90  15.1  under 15: 0.00  under 30: 1.00   | n     1  median  15.1  p90  15.1  under 15: 0.00  under 30: 1.00   |  30.0
       Orientation      PEAK_CHAIN  by_tangent   n    20  median   5.7  p90  13.2  under 15: 0.95  under 30: 0.95   | n    33  median   6.2  p90  44.7  under 15: 0.76  under 30: 0.79   |   3.8
       Orientation      PEAK_CHAIN  unambiguous  n   359  median   3.8  p90  10.9  under 15: 0.99  under 30: 1.00   | n   388  median   3.8  p90  13.2  under 15: 0.97  under 30: 0.97   |   3.8
-      ALL                                        n  3009  median   5.5  p90  83.7  under 15: 0.71  under 30: 0.78   | n  3591  median   7.1  p90  82.5  under 15: 0.66  under 30: 0.74
+      ALL                                        n  2379  median   3.7  p90   9.5  under 15: 0.96  under 30: 0.99   | n  2774  median   3.7  p90  15.0  under 15: 0.90  under 30: 0.94
+
+3. THE TESTS OF AMENDMENT 3.2
+
+   THE RULE: a kind's orientation is used iff at least half of its detections on smooth boundary lie within 15 degrees of truth.
+      CONTOUR_PEAK     0.97 within 15 degrees of the true TANGENT (n 813) -> USED
+      ContourFragment  0.00 within 15 degrees of the true TANGENT (n 236) -> ABSENT
+      Corner           0.37 within 15 degrees of the true TANGENT (n 19) -> ABSENT  (a bisector is not a tangent: judged in 3a)
+      EndStopped       0.09 within 15 degrees of the true TANGENT (n 480) -> ABSENT
+      Orientation      0.99 within 15 degrees of the true TANGENT (n 609) -> USED
+
+   a. Corner against the TRUE BISECTOR: 83 Corner detections, 33 with a true bisector
+      THE REGISTERED TEST (the internal bisector: the mean direction of the two arms): median 32.7 deg, p90 75.5, within 15: 0.24, within 30: 0.33 -> ABSENT
+      beside it, the perpendicular reading (the external-angle bisector, which is what the CORNER slot is documented to hold; NOT the registered truth): within 15: 0.21, within 30: 0.36
+         class CORNER    n  17: internal within 15: 0.47; external within 15: 0.35; median error to the internal 37.4
+         class JUNCTION  n  16: internal within 15: 0.00; external within 15: 0.06; median error to the internal 32.7
+
+   b. EndStopped: the winning channel against the locally dominant channel (max energy over frequencies at the detection)
+      on smooth boundary       n  480: winning = dominant 0.03; within one channel (15 deg) 0.13; median offset 60 deg; energy of the winning channel / dominant: median 0.06
+      at corners / junctions   n  175: winning = dominant 0.36; within one channel (15 deg) 0.45; median offset 45 deg; energy of the winning channel / dominant: median 0.89
+      away from any boundary   n   35: winning = dominant 0.29; within one channel (15 deg) 0.71; median offset 15 deg; energy of the winning channel / dominant: median 0.43
+
+   c. stream-2 polylines (the traces behind the contour regions and the ContourFragments) against the true tangent
+      (the as-traced call reproduces the observation's own contour count in 18 of 18 scenes)
+      as traced         polylines  234, closed   0, length median  27.8 px (p90  33.7, total    6689); local direction vs true tangent: median 90.0 deg, p10 74.3, p90 90.0, under 22.5: 0.00, over 67.5: 0.97
+      rotation removed  polylines  184, closed   2, length median  54.6 px (p90 121.8, total   12147); local direction vs true tangent: median 0.0 deg, p10 0.0, p90 18.1, under 22.5: 0.93, over 67.5: 0.01
+      VERDICT (registered: median as traced above 67.5 AND with the rotation removed below 22.5): the stream-2 tracer runs ACROSS edges; the rotation is applied to an index that already is the edge's orientation
