@@ -1206,3 +1206,257 @@ than the one 7.25 made.
 
 No constant, threshold or default was touched to produce any of the numbers
 above; the only code changes are the cache key and the T1 script's own guards.
+
+# STAGE 7 — "FIX THE REST".  PRE-REGISTRATION, WRITTEN BEFORE ANY OF IT RAN
+
+The review fixed the diagnosis and the order.  This section fixes the
+thresholds, the constants and the default rules BEFORE the numbers exist, so
+that each phase's falsifier is a prediction and not a rationalisation.  Every
+number below is reported whatever it says; a negative result is a deliverable.
+
+## 7.29 PHASE 0 — THE GATE: is any relation slot class-informative?
+
+**Population.** The 79 EVAL graphs as the front end builds them with
+`GRAPH_STAGE6_RELATIONS` ON (the stage-6 structure under test).  No matcher is
+run.
+
+**Unit of measurement: the edge.**  For every edge class in
+`core.schema.EDGE_UNIT_TABLE` and every one of its slots, the observation is the
+slot's bin on ONE edge.  Each edge is labelled with the class of the image it
+came from (`apple`, `car`, `cup`, `horse`).
+
+**Statistics, per slot.**  Let the bins be integers `b`, `c` the class label:
+
+  * BETWEEN/WITHIN RATIO.  `mu_c` = the mean bin over the edges of class `c`,
+    `mu` = the mean over all edges, `n_c` the edge count of class `c`,
+    `N = sum_c n_c`, `K` the number of classes with `n_c > 0`.
+      BETWEEN = (1 / (K - 1)) * sum_c n_c * (mu_c - mu)^2      (eta-squared
+                numerator: variance of the class means, weighted)
+      WITHIN  = (1 / (N - K)) * sum_c sum_{e in c} (b_e - mu_c)^2
+      RATIO   = BETWEEN / WITHIN, and 0 when WITHIN == 0 and BETWEEN == 0.
+    This is the F ratio of a one-way ANOVA on the bin, with NO model of
+    within-class structure: it asks how much of a slot's spread is explained by
+    the class label.  It is reported with eta-squared (BETWEEN / TOTAL) beside
+    it, because the ratio alone rewards a slot that barely varies at all.
+  * MUTUAL INFORMATION.  `I(b; c)` in bits, with the empirical joint
+    distribution over the same edges, and the NORMALISED form
+    `I / H(b)` (the share of the slot's own entropy that the class removes).
+  * A PERMUTATION NULL.  The class labels are permuted 200 times
+    (`random.Random(20261110)`), the statistic recomputed, and the slot's
+    PERCENTILE against that null is reported.  Shape statistics are
+    scale-dominated and a large-N slot wins on N alone; the permutation says
+    how much of the ratio is N.
+
+**Controls.**  The same three statistics on the node signatures' own slots
+(every lens type in `EDGE_UNIT_TABLE`'s sibling node tables, read through
+`TypedSignature.quantized`), so a relation slot can be compared with the thing
+the shipped matcher already uses.  The node control is the matcher's own
+information, not a baseline to beat by tuning.
+
+**THE THRESHOLD, FIXED NOW.**  A slot is INFORMATIVE iff ALL THREE hold:
+
+  1. RATIO > 1.25.  The margin over 1.0 is 25 %: an F ratio of 1.25 on ~600
+     edges per class is a real separation, and a slot that cannot clear a
+     quarter of the within-class variance is not a lever.  (Stated as a
+     margin, per the brief: "exceeds 1 by a margin you state".)
+  2. I(b; c) >= 0.01 bits AND I / H(b) >= 0.02.  0.01 bits is 1 % of a
+     two-outcome bit -- a small, checkable amount of class information; a slot
+     at 0 has none however large its ratio.
+  3. The ratio is at or above the 95th percentile of its own permutation null.
+
+   A slot that meets 1 and 2 but not 3 is reported as INFORMATIVE-BUT-NOISE:
+   the number is above threshold and indistinguishable from a relabelling.
+
+**THE FALSIFIER, FIXED NOW.**  If NO slot of BOUNDARY_ATTACHMENT,
+BOUNDARY_SUCCESSOR, ILLUSORY_INDUCER or any other structural relation class is
+INFORMATIVE, then STOP: the representation carries no class information in its
+relations, no matcher fix can help, and the report says the front end is the
+work.  "Structural relation class" means every class in `EDGE_UNIT_TABLE`
+except the attribute-only ones (BORDER_OWNERSHIP, SHARED_BOUNDARY,
+TEXTURE_BOUNDARY, COLOR_OPPONENT_BORDER, SURFACE_FOLD, MOTION_OPPOSITION), and
+the gate is decided on all of them, not only the three named.
+
+## 7.30 PHASE 1 — THE FRAGMENT TANGENT
+
+**The claim under test.**  `polar_boundary_fragments` takes the fragment's
+tangent as the chord `atan2(p1 - p0)` of its pixel polyline.  The polyline is
+traced along the association field's ridge, i.e. along the boundary, so its
+chord is the boundary's TANGENT -- but the measured error is a median 90.0 deg,
+which is the error of the NORMAL.  Something in the chain turns the tangent by
+90 deg.  Phase 1 finds it and fixes it at the source; it does not add a
+constant 90 deg at a consumer.  (If the turn is a `dx, dy` swap in one call,
+the fix is that swap; if it is a normal being stored where a tangent belongs,
+the fix is the stored quantity.  The commit says which.)
+
+**Pre-registered expectations, before the fix is written.**
+
+  * TANGENT ERROR against renderer truth for ContourFragment on smooth
+    boundary (the phase6_tangent_truth measurement, same code path): the
+    as-traced median is 90.0 deg.  Expected AFTER: median <= 15 deg, and the
+    share within 15 deg >= 0.75.  If the corrected tangent lands at 15-30 deg
+    the fix is directionally right and still not a measurement.
+  * AMBIGUOUS ATTACHMENTS, share of all features, on the same 18 scenes and
+    through the same census: expected to DROP.  The diagnosis says ~30 % of
+    attachments are ambiguous; a tangent can only decide between near-equal
+    hosts, so the expected drop is whatever share of the ambiguous sets is
+    decided by tangent agreement.  No number is fixed for the drop -- the
+    direction is.
+
+**THE FALSIFIER, FIXED NOW.**  If the corrected fragment tangent does NOT
+reduce the ambiguous share AND does not raise the tangent-decided share, the
+ambiguity is not direction-limited, Phase 1 was the wrong lever, and no
+consumer change is made.  EndStopped and Corner stay ABSENT: no direction is
+fabricated for them, whatever this phase finds.
+
+## 7.31 PHASE 2 — SEEDS
+
+**Bookkeeping correction, stated before the run.**  The diagnosis says "D1's
+topological tokens lost to the rule they replaced" with "F1 0.378 vs 0.451".
+Those two numbers are not two seed rules: 0.378 is the all-on row and 0.451 is
+the row with `SEED_TOPOLOGICAL` OFF (diagnostics/results/
+phase6_ablation_d0_d5.txt), so the 0.451 row carries D1 off TOGETHER WITH
+whatever else the flag reaches.  This phase measures the two seed rules
+against renderer truth directly, on all nine pairs, and the ablation row is
+only a pointer to it.
+
+**Both rules, as they stand in the code** (`matching/relation_walker.py`):
+  * TOPOLOGICAL (`SEED_TOPOLOGICAL = True`, D1): token rarity + shared tokens
+    + node similarity.
+  * MEASURED (`SEED_TOPOLOGICAL = False`): the number of relation classes in
+    which some relation agrees within one bin, then similarity.
+
+**Metrics, against renderer truth.**  Per pair and per rule: seeds chosen,
+seeds whose two ends are TRUE CORRESPONDENTS (the M3-6 "same physical role"
+criterion, so the two phases' numbers are comparable), SEED PRECISION =
+right / chosen, SEED RECALL = right / the number of true correspondent pairs
+in the smaller FRAME (a count, not a rate, so a rule cannot win by seeding
+less), and then the mapping that grows from those seeds: mapped, pointwise
+precision and recall, role F1.
+
+**THE DEFAULT RULE, FIXED NOW.**  MEASURED is the default iff its seed
+precision is higher than TOPOLOGICAL's on at least 6 of the 9 pairs (a strict
+majority, paired); otherwise TOPOLOGICAL stays the default.  The flag that is
+not defaulted stays behind its switch, and the reason is written with the
+table.  I note here, before the numbers, that the ablation's F1 0.451 belongs
+to the MEASURED rule, so the prior is that MEASURED wins; that prior does not
+change the rule.
+
+**THE NEXT ARM, registered in advance but NOT run.**  If the measured-
+agreement rule is still under 50 % precise, the next seed arm is a
+DISTINCTIVENESS RANK: rank the agreeing pairs by the rarity of the agreeing
+bin pattern (the carrier count of the pattern in each graph, ascending), and
+take seeds in that order.  No third rule is written before the second is
+measured; this paragraph only fixes what the third would be.
+
+## 7.32 PHASE 3 — ADMISSION BY STRENGTH
+
+**What is already there.**  Agreement is the mean over the shared axes of
+`max(0, 1 - d / MARGIN)`, `MARGIN = 4.0` bins, computed by `_agreement`.  The
+admission code is `agree = _agreement(hu, hv) or 0.0`: a proposal always has an
+agreement value, and an UNMEASURED relation (`None`) becomes 0.0 instead of
+rejecting.  Requiring a measurement (`is not None`) rejects 0 pairs in the
+current data -- measured, so it is not the lever.
+
+**Arm A -- RELATIVE ONLY.**  At admission, compare the proposal's agreement `a`
+with the best agreement `a*` offered by ANY rival on the same node: admit iff
+`a >= a* - ADMIT_MARGIN`.
+
+    ADMIT_MARGIN = 1.0   (one bin, of four)
+
+  WHY 1.0: `MARGIN = 4.0` bins is where agreement reaches 0, so one bin is a
+  quarter of the whole agreement scale -- the largest tolerance that still
+  separates two proposals by more than their quantisation error (slots are
+  8-12 bins wide, and `BIN_TOLERANCE = 1.0` is already the walker's declared
+  "same bin" unit everywhere else).  It is the widest band that is still a
+  comparison rather than a pass.
+
+**Arm B -- FLOOR + RELATIVE.**  Arm A AND `a >= ADMIT_FLOOR`.
+
+    ADMIT_FLOOR = 0.5   (half the agreement scale)
+
+  WHY 0.5: a proposal must agree on average within 2 of the 4 bins on every
+  shared axis to score 0.5.  `NODE_FLOOR = 0.30` already rejects signatures
+  below 0.30, so 0.5 is the smallest floor that is STRICTER than the gate the
+  pipeline already applies and therefore the most conservative floor that can
+  be told apart from the node gate.
+
+**How it is applied without a second mechanism.**  The proposal heap already
+serves best-supported first; the arms gate the POP, not the push: a popped
+candidate is admitted only if its agreement satisfies the arm.  Both arms are
+run on the nine pairs with everything else at its pre-registered value.
+FAN-OUT is counted as candidate POPs per admitted true pair; the budget spent
+is `res.examined` against `res.budget`.
+
+**THE MECHANISM TO CONFIRM.**  Fan-out falls AND recall rises, together.
+
+**THE FALSIFIER, FIXED NOW.**  If fan-out falls and recall does NOT rise, then
+growth-by-relation is the wrong mechanism for this representation: stop, say
+so, do not tune the margin, and the walker stays off.
+
+**DEFAULT RULE, FIXED NOW.**  An arm is defaulted only if it raises pointwise
+recall on at least 6 of the 9 pairs against the shipped setting AND does not
+lower pointwise precision on more than 2 of them.  If both arms qualify, the
+one with the higher mean role F1 is defaulted; if neither qualifies, neither is
+defaulted and the walker stays exactly as it is.
+
+## 7.33 PHASE 4 — THE OBJECTIVE
+
+**(a) A SCORE THAT CAN ARBITRATE ACROSS NODE SETS.**  Raw Q stays as it is (the
+mean over the union; it is the number every stage-6 result is stated in).
+Added, for argmax only:
+
+    score_for_class = Q * |M| / min(frame_q, frame_r)
+
+No tuned constant: the factor is the share of the SMALLER frame that the
+mapping covers, so a closed sub-mapping is paid exactly for the frame it does
+not map.  It is reported beside raw Q on the nine pairs, and the loophole's
+status is decided on the measured number, not asserted.
+
+**(b) THE COVERAGE LOOPHOLE -- which form closes it, and the experiment.**
+If a closed sub-mapping of 82 % of the frame still reads 1.000 because every
+relation it contains is preserved, then (a) alone moves it to 0.82 while a
+mapping that maps the same nodes badly is unaffected.  The alternative is that
+R must count the relations incident to the FRAME, not to M: the denominator
+becomes the query's own relation mass and an unmapped node's relations are
+missed relations, not absent ones.  WHICH FORM IS USED IS DECIDED BY THE
+COMMON-SET RE-SCORE:
+
+    the nine pairs re-scored with (a) and with each R form, and the form that
+    makes a 50 %-complete sub-mapping of the SAME mapping score below its
+    100 %-complete counterpart on every pair is the form that closes it.
+
+The R form is NOT changed unless that test passes; the objective change (a) is
+reported either way.
+
+## 7.34 PHASE 5 — THE SHIPPED MATCHER'S ABSENCE BIAS
+
+**The criterion, fixed BEFORE the measurement.**  Let `p_r` be the share of
+EVAL-75 queries whose argmax is reference `r`, and `e_r` the share of the
+four references' edges that `r` holds.  The bias statistic is
+`B = max_r |p_r - e_r|`.  The criterion is a PAIR, both fixed now:
+
+    (i)  `B` must fall below 0.10, and
+    (ii) the ranking of the four references by `p_r` must agree with their
+         ranking by `e_r` (Spearman rho = 1 on four points).
+
+`B` is not a function of accuracy, so this cannot be passed by moving accuracy
+up: it asks only whether a reference's size decides how often it wins.  The
+two forms measured are the current `edge_absence` and the symmetric (union)
+absence form.  Reported: per-reference prediction counts and per-class hits
+under both.
+
+**THE DEFAULT RULE, FIXED NOW.**  The symmetric form is defaulted iff it meets
+the criterion above on BOTH windows (full, v1) AND does not lower EVAL-75
+accuracy.  Accuracy alone never flips this: a noise-level accuracy change is
+neither necessary nor sufficient.
+
+## 7.35 PHASE 6 AND 7 — PINS AND CLEANUP
+
+Phase 6's pins are stated before writing them: a pin on each of
+BOUNDARY_ATTACHMENT, BOUNDARY_SUCCESSOR and ILLUSORY_INDUCER that FAILS if the
+relation stops being written; a pin that their slots take more than one value
+on a real scene; the FRAME partition pin (exists); an ambiguity pin (AMBIGUOUS
+writes ABSENT, never a guess); and a pin that the cache key moves when a
+graph-side switch moves (written in 7.28).  Phase 7 is mechanical and is done
+last, after every number above exists, so no diagnostic can be re-run against
+a half-cleaned tree.
