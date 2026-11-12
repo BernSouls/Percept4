@@ -1103,3 +1103,32 @@ Each fix, and the number it moved, all measured (not estimated):
   * D3 relative gate: F1 0.390 (floor only) -> 0.378.  WORSE by a little.
   * D4 order proposing: no change to three decimals.  DEAD on this workload.
   * D5 beam: F1 0.372 (one hypothesis) -> 0.378.  The only D that helps.
+
+### 7.27 DO THE RELATIONS REPEAT ACROSS TWO IMAGES? (descriptive, after the verdict)
+
+M3-6 is red, and the question underneath it is not "are there relations in a
+graph" (R6 counted those inside one graph) but "is the SAME relation there in
+the other graph".  `diagnostics/phase6_relation_repeatability.py` measures it
+against renderer truth and decides nothing; the numbers are in
+results/phase6_relation_repeatability.txt.  True correspondents: same lens
+type, same labels within one scale, box-normalised position within 0.10 of the
+box (finer than M3-6's role, and defined after the verdict saw the numbers --
+recorded as such).
+
+  other geometry, 8 pairs both directions, ALL CLASSES: 4,688 relations,
+  present 0.85, REPEATS 0.73, chance 0.462.  Same geometry (1 pair): 0.90 of
+  0.92 against chance 0.594.
+  Best above chance: AMODAL_LINK 7.7x, RADIALITY 6.3x, CURVE_CONTAINMENT 9.6x
+  and 4.9x (but present only 0.67/0.71), COCIRCULAR 3.4x,
+  BOUNDARY_ATTACHMENT i PEAK_CHAIN 3.8x / 2.5x, JUNCTION_CONTOUR i Corner 2.3x
+  with repeats 1.00.
+  Below chance: BOUNDARY_ATTACHMENT o EndStopped (0.15 repeats against 0.141
+  chance, present 0.44) -- the EndStopped class that the tangent work already
+  found ABSENT as a measurement (truth v2, 0.09 used).
+
+Read with T1: the relations DO repeat across images (0.73 against 0.462
+chance), and the old matcher's accuracy does not move at all when they are
+added (T1: 0 of 75 queries changed).  So the stage-6 relations are real and
+repeated, and the shipped matcher does not read them.  That is the honest
+summary of the stage: the roads were built and they are there; the walker that
+would use them loses to the matcher on the metric that was fixed in advance.
